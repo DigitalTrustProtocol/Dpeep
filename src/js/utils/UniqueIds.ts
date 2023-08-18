@@ -46,5 +46,4 @@ export class UniqueIds {
 
 export const STR = UniqueIds.str;
 export const ID = UniqueIds.id;
-export const PUB = UniqueIds.str;
 export const BECH32 = UniqueIds.bech32;

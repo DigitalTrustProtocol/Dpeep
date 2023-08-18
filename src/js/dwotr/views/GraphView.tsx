@@ -12,6 +12,7 @@ import { Vertice } from '../model/Graph';
 import { debounce } from 'lodash';
 import ItemName from '../components/ItemName';
 import { ID } from '@/utils/UniqueIds';
+import { useKey } from '../hooks/useKey';
 
 type GraphViewProps = {
   npub?: string;
@@ -65,11 +66,13 @@ const GraphView = (props: GraphViewProps) => {
   // State is preserved on route change, when props change
   // Each time props change, we update the state
 
-  const [entitytype, setEntityType] = useState<string>(getEntityType(props.npub));
+  const {uid, bech32Key, hexKey, isMe, setKey} = useKey(props.npub); // [beck32Key, hexKey, isMe
 
-  const [npub, setNpubPrivate] = useState<string>(
-    props.npub || (Key.toNostrBech32Address(Key.getPubKey(), 'npub') as string),
-  );
+  const [entitytype, setEntityType] = useState<string>(getEntityType(bech32Key));
+
+  // const [npub, setNpubPrivate] = useState<string>(
+  //   props.npub || (Key.toNostrBech32Address(Key.getPubKey(), 'npub') as string),
+  // );
   const [trusttype, setTrustType] = useState<string>(props.trusttype || 'trust');
   const [dir, setDirection] = useState<string>(props.dir || 'out');
   const [view, setView] = useState<string>(props.view || 'graph');
@@ -78,8 +81,8 @@ const GraphView = (props: GraphViewProps) => {
 
   const [unsubscribe] = useState<Array<() => void>>([]);
 
-  const hexKey = Key.toNostrHexAddress(npub) as string;
-  const me = hexKey == Key.getPubKey();
+  //const hexKey = Key.toNostrHexAddress(npub) as string;
+  //const me = hexKey == Key.getPubKey();
 
   const callFilter = debounce((filter: string) => setFilter(filter), 500, { trailing: true }); // 'maxWait':
 
@@ -88,7 +91,7 @@ const GraphView = (props: GraphViewProps) => {
   //-------------------------------------------------------------------------
   useEffect(() => {
     graphNetwork.whenReady(() => {
-      setVertice(graphNetwork.g.vertices[ID(npub)]);
+      setVertice(graphNetwork.g.vertices[uid]);
 
       setState((prevState) => ({
         ...prevState,
@@ -104,9 +107,7 @@ const GraphView = (props: GraphViewProps) => {
   // Set the npub and vertice when the npub changes
   //-------------------------------------------------------------------------
   const setNpub = useCallback((npub: string) => {
-    setVertice(graphNetwork.g.vertices[ID(npub)]);
-    setNpubPrivate(npub);
-    setEntityType(getEntityType(npub));
+    setKey(npub);
   }, []);
 
   //-------------------------------------------------------------------------
@@ -114,18 +115,16 @@ const GraphView = (props: GraphViewProps) => {
   // Check if the props have changed
   //-------------------------------------------------------------------------
   useEffect(() => {
+    setVertice(graphNetwork.g.vertices[uid]); // uid follows bech32Key
+    setEntityType(getEntityType(bech32Key));
+  }, [bech32Key]);
 
-    if (props.npub != npub) { 
-      let pub = props.npub || (Key.toNostrBech32Address(Key.getPubKey(), 'npub') as string);
-      setEntityType(getEntityType(pub));
-      setNpub(pub);
-    }
-
+  useEffect(() => {
     if (props.trusttype != trusttype) setTrustType(props.trusttype || 'trust');
     if (props.dir != dir) setDirection(props.dir || 'out');
     if (props.view != view) setView(props.view || 'graph');
     if (props.filter != filter) setFilter(props.filter || '');
-  }, [props.npub, props.trusttype, props.dir, props.view, props.filter]);
+  }, [props.trusttype, props.dir, props.view, props.filter]);
 
 
   //-------------------------------------------------------------------------
@@ -133,7 +132,7 @@ const GraphView = (props: GraphViewProps) => {
   //-------------------------------------------------------------------------
   function setSearch(params: any) {
     const p = {
-      npub,
+      npub: bech32Key,
       trusttype,
       dir,
       view,
@@ -151,7 +150,7 @@ const GraphView = (props: GraphViewProps) => {
   //-------------------------------------------------------------------------
   const renderView = () => {
     let props = {
-      npub,
+      npub : bech32Key,
       hexKey,
       entitytype,
       trusttype,
@@ -176,8 +175,8 @@ const GraphView = (props: GraphViewProps) => {
       <Header />
       <div className="flex justify-between mb-4">
         <span className="text-2xl font-bold">
-          <a className="link" href={`/${npub}`}>
-            { entitytype == 'key' && (<Name pub={npub} />)}
+          <a className="link" href={`/${bech32Key}`}>
+            { entitytype == 'key' && (<Name pub={bech32Key} />)}
             { entitytype == 'item' && (<ItemName str={hexKey} />)}
           </a>
           <span style={{ flex: 1 }} className="ml-1">
@@ -185,13 +184,13 @@ const GraphView = (props: GraphViewProps) => {
           </span>
         </span>
       </div>
-      {renderScoreLine(vertice?.score, npub, true)}
+      {renderScoreLine(vertice?.score, bech32Key, true)}
       <div className="text-sm flex flex-2 gap-2">
         In the context of <Name pub={Key.getPubKey()} />
       </div>
       <hr className="-mx-2 opacity-10 my-2" />
       <div className="flex flex-wrap gap-8">
-        <GraphViewSelect view={view} setSearch={setSearch} me={me} />
+        <GraphViewSelect view={view} setSearch={setSearch} me={isMe} />
         <form>
           <label>
             <input
