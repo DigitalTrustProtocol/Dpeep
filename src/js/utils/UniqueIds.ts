@@ -10,8 +10,11 @@ export class UniqueIds {
   static currentUniqueId = 0;
 
   static id(str: string): UID {
-    if (str.startsWith('npub') || str.startsWith('note')) {
-      throw new Error('use hex instead of npub ' + str);
+    if(!str) throw new Error('ID(str) is undefined');
+
+    if (str.startsWith('npub') || str.startsWith('note') || str.startsWith('nsec')) {
+      str = Key.toNostrHexAddress(str) as string; // Convert to hex
+      if(!str) throw new Error('ID(str) is invalid or empty');
     }
     const existing = UniqueIds.strToUniqueId.get(str);
     if (existing) {

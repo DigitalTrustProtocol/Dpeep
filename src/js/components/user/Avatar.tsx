@@ -1,8 +1,4 @@
-import { sha256 } from '@noble/hashes/sha256';
-import Identicon from 'identicon.js';
-
 import Component from '../../BaseComponent';
-import Key from '../../nostr/Key';
 import { Unsubscribe } from '../../nostr/PubSub';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
@@ -10,7 +6,7 @@ import SafeImg from '../SafeImg';
 import profileManager from '../../dwotr/ProfileManager';
 import { ProfileMemory } from '../../dwotr/model/ProfileRecord';
 import { ProfileEvent } from '../../dwotr/network/ProfileEvent';
-import { ID } from '@/utils/UniqueIds';
+import { ID, STR } from '@/utils/UniqueIds';
 
 type Props = {
   str: unknown;
@@ -37,23 +33,6 @@ class MyAvatar extends Component<Props, State> {
 
   handleEvent: any;
 
-  updateAvatar() {
-    const hash = sha256(this.props.str as string);
-    // convert to hex
-    const hex = Array.from(new Uint8Array(hash))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-
-      const identicon = new Identicon(hex, {
-        width: this.props.width,
-        format: `svg`,
-      });
-      this.setState({
-        avatar: `data:image/svg+xml;base64,${identicon.toString()}`,
-      });
-    }
-  
-
   componentDidMount() {
     const str = this.props.str as string;
     if (!str) {
@@ -61,6 +40,7 @@ class MyAvatar extends Component<Props, State> {
     }
 
     let id = ID(str);
+    this.hex = STR(id);
 
     this.handleEvent = (e: any) => {
       let p = e.detail as ProfileMemory;
