@@ -134,24 +134,24 @@ class WOTPubSub {
     let d: string = '';
     let context, v, note: string;
     let authorPubkey = event.pubkey;
-    let timestamp = event.created_at;
+    let timestamp = event.created_at; 
 
     if (event.tags) {
       for (const tag of event.tags) {
         switch (tag[0]) {
-          case 'p':
+          case 'p': // Subject is a pubkey (Key) Optional, Multiple
             pTags.push(tag[1]);
             break;
-          case 'e':
+          case 'e': // Subject is an entity (Item) Optional, Multiple
             eTags.push(tag[1]);
             break;
-          case 'c':
+          case 'c': // Context
             context = tag[1];
             break;
-          case 'd':
+          case 'd': // The unique identifier of the claim, d = target[hex-address|v|context
             d = tag[1];
             break;
-          case 'v':
+          case 'v': // The value of the claim
             v = tag[1];
             break;
         }
