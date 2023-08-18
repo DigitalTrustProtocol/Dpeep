@@ -27,8 +27,6 @@ export class MyDexie extends Dexie {
   }
 }
 
-const INITIAL_EVENT_LOAD_LIMIT = 5000;
-
 const db = new MyDexie();
 
 const handleEvent = (event: Event & { id: string }) => {
@@ -94,16 +92,10 @@ const IndexedDB = {
   async init() {
     const myPub = Key.getPubKey();
 
-    await db.events.where({ pubkey: myPub }).each(handleEvent);
+    await db.events.where({ pubkey: myPub, kind: 3 }).each(handleEvent); // maybe should be in localstorage?
+    await db.events.where({ pubkey: myPub, kind: 0 }).each(handleEvent);
     await db.events.where({ kind: 3 }).each(handleEvent);
     await db.events.where({ kind: 0 }).each(handleEvent);
-    await db.events.where({ kind: 4 }).each(handleEvent);
-    await db.events
-      .orderBy('created_at')
-      .reverse()
-      .filter((event) => event.kind === 1)
-      .limit(INITIAL_EVENT_LOAD_LIMIT)
-      .each(handleEvent);
   },
 
   subscribeToAuthors: throttle(async function (this: typeof IndexedDB, limit?: number) {
