@@ -1,25 +1,24 @@
 import { useEffect, useState } from 'react';
 
-import SocialNetwork from '../nostr/SocialNetwork';
 import { ID } from '../utils/UniqueIds.ts';
+import profileManager from '../dwotr/ProfileManager';
 
-export const useProfile = (pub: string) => {
-  const [nostrAddr] = useState(pub);
-  const [profile, setProfile] = useState(SocialNetwork.profiles.get(ID(nostrAddr)));
+export const useProfile = (address: string) => {
+  const [profile, setProfile] = useState(profileManager.getDefaultProfile(ID(address)));
 
   useEffect(() => {
-    if (!nostrAddr) return;
+    if (!address) return;
 
-    const unsub = SocialNetwork.getProfile(nostrAddr, (p) => {
-      if (p) {
-        setProfile(p);
-      }
-    });
+    // const unsub = profileManager.getProfile(address, (p) => {
+    //   if (p) {
+    //     setProfile(p);
+    //   }
+    // });
 
     return () => {
-      unsub();
+      //unsub();
     };
-  }, [nostrAddr]);
+  }, [address]);
 
   return profile;
 };

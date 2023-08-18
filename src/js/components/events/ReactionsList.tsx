@@ -10,6 +10,9 @@ import { decodeInvoice, formatAmount } from '../../utils/Lightning.ts';
 import Modal from '../modal/Modal';
 import Avatar from '../user/Avatar';
 import Name from '../user/Name';
+import TrustScore from '../../dwotr/model/TrustScore';
+import { RenderScoreDistrustLink, RenderScoreTrustLink } from '@/dwotr/components/RenderGraph';
+import Key from '@/nostr/Key';
 
 type ReactionData = {
   pubkey: string;
@@ -29,13 +32,18 @@ const Reaction = memo(({ data }: { data: ReactionData }) => {
   );
 });
 
-const ReactionsList = ({ event }) => {
+const ReactionsList = ({ event, wot }) => {
+
   const [likes, setLikes] = useState(new Set());
   const [reposts, setReposts] = useState(new Set());
   const [zapAmountByUser, setZapAmountByUser] = useState(new Map());
   const [formattedZapAmount, setFormattedZapAmount] = useState('');
   const [modalReactions, setModalReactions] = useState([] as ReactionData[]);
   const [modalTitle, setModalTitle] = useState('');
+
+  const score = wot?.vertice?.score as TrustScore;
+  const hasTrust = score?.hasTrustScore();
+  const hasDistrust = score?.hasDistrustScore();
 
   useEffect(() => {
     const unsubFuncs = [] as any[]; // To store unsubscribe functions
@@ -149,6 +157,16 @@ const ReactionsList = ({ event }) => {
                 <small className="text-neutral-500"> ({formattedZapAmount})</small>
               )}
             </a>
+          </div>
+        )}
+        {hasTrust && (
+          <div className="flex-shrink-0" title="Degree 0/1/2">
+            {RenderScoreTrustLink(score, Key.toNostrBech32Address(event.id, 'note') as string, true)}
+          </div>
+        )}
+        {hasDistrust && (
+          <div className="flex-shrink-0" title="Degree 0/1/2">
+            {RenderScoreDistrustLink(score, Key.toNostrBech32Address(event.id, 'note') as string, true)}
           </div>
         )}
       </div>

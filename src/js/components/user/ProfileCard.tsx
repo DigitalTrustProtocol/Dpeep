@@ -19,6 +19,7 @@ import Avatar from './Avatar';
 import ProfileDropdown from './Dropdown';
 import Name from './Name';
 import ProfilePicture from './ProfilePicture';
+import TrustProfileButtons from '../../dwotr/components/TrustProfileButtons';
 import Stats from './Stats';
 
 const ProfileCard = (props: { hexPub: string; npub: string }) => {
@@ -165,11 +166,18 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
           <div className={profile.banner ? '-mt-24' : ''}>{profilePicture}</div>
           <div className="flex-1 justify-end items-center flex gap-2">
             <div onClick={onClickHandler}>
+              {/* <a href={'/history/' + hexPub} className="link px-2">
+                History
+              </a> */}
+              <a href={'/graph/' + npub} className="link px-2">
+                Web of Trust
+              </a>
               <Show when={isMyProfile}>
                 <a className="btn btn-sm btn-neutral" href="/profile/edit">
                   {t('edit_profile')}
                 </a>
               </Show>
+
               <Show when={!isMyProfile}>
                 <Follow key={`${hexPub}follow`} id={hexPub} />
                 <button
@@ -204,6 +212,9 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
               <HyperText textOnly={true}>{profile.about?.slice(0, 500)}</HyperText>
             </p>
             <div className="flex flex-1 flex-row align-center justify-center mt-4">
+              <Show when={!isMyProfile}>
+                <TrustProfileButtons str={hexPub} />
+              </Show>
               <Show when={lightning}>
                 <div className="flex-1">
                   <a

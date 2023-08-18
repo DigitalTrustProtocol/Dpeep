@@ -35,6 +35,7 @@ import Relays from './Relays';
 import Session from './Session';
 import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
+import profileManager from '../dwotr/ProfileManager';
 
 const startTime = Date.now() / 1000;
 
@@ -225,37 +226,28 @@ const Events = {
   },
   handleMetadata(event: Event) {
     if (!event.content?.length) {
-      return;
+      return false;
     }
+    
     try {
-      const existing = SocialNetwork.profiles.get(ID(event.pubkey));
-      if (existing?.created_at >= event.created_at) {
-        return false;
-      }
-      if (existing) {
-        EventDB.findAndRemove({ authors: [event.pubkey], kinds: [0] });
-      }
-      EventDB.insert(event);
-      const profile = JSON.parse(event.content);
-      // if we have previously deleted our account, log out. appease app store.
-      if (event.pubkey === Key.getPubKey() && profile.deleted) {
-        Session.logOut();
-        return;
-      }
-      profile.created_at = event.created_at;
-      delete profile['nip05valid']; // not robust
-      SocialNetwork.profiles.set(ID(event.pubkey), profile);
-      const key = Key.toNostrBech32Address(event.pubkey, 'npub');
-      FuzzySearch.add({
-        key,
-        name: profile.name,
-        display_name: profile.display_name,
-        followers: SocialNetwork.followersByUser.get(ID(event.pubkey)) ?? new Set(),
-      });
+      let profile = profileManager.addProfileEvent(event); 
+      if(profile) return true; 
+       
+      // const profile = JSON.parse(event.content);
+      // // if we have previously deleted our account, log out. appease app store.
+      // if (event.pubkey === Key.getPubKey() && profile.deleted) {
+      //   Session.logOut();
+      //   return;
+      // }
+      // profile.created_at = event.created_at;
+      // delete profile['nip05valid']; // not robust
+      // SocialNetwork.profiles.set(event.pubkey, profile);
       //}
     } catch (e) {
       console.log('error parsing nostr profile', e, event);
+      
     }
+    return false;
   },
   handleDelete(event: Event) {
     const id = event.tags?.find((tag) => tag[0] === 'e')?.[1];

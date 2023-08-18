@@ -2,10 +2,10 @@ import EventDB from '@/nostr/EventDB.ts';
 
 import localState from '../LocalState';
 import { ID, STR, UID } from '../utils/UniqueIds.ts';
-
-import Events from './Events';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
+import Events from './Events';
+import profileManager from '../dwotr/ProfileManager';
 
 export default {
   followDistanceByUser: new Map<UID, number>(),
@@ -302,6 +302,7 @@ export default {
     verifyNip05 = false,
   ): Unsubscribe {
     const id = ID(address);
+    const hexPub = STR(id);
     const callback = () => {
       cb?.(this.profiles.get(id), address);
     };
@@ -314,15 +315,21 @@ export default {
         Key.verifyNip05Address(profile.nip05, address).then((isValid) => {
           console.log('NIP05 address is valid?', isValid, profile.nip05, address);
           profile.nip05valid = isValid;
-          this.profiles.set(id, profile);
+
+          profileManager.dispatchProfile(profile); // Sets the profile in memory if it's not already there and is newer
           callback();
         });
       }
     } else {
-      fetch(`https://api.iris.to/profile/${address}`).then((res) => {
-        if (res.status === 200) {
-          res.json().then((profile) => {
-            // TODO verify sig
+      profileManager.loadProfile(hexPub).then((profile) => {
+        if (profile) {
+          // exists in DB
+
+          profileManager.dispatchProfile(profile);
+          callback();
+        } else {
+          profileManager.fetchProfile(hexPub).then((profile) => {
+            if (!profile) return;
             Events.handle(profile);
             callback();
           });
@@ -331,6 +338,7 @@ export default {
     }
     return PubSub.subscribe({ kinds: [0], authors: [address] }, callback, false);
   },
+
   setMetadata(data: any) {
     const event = {
       kind: 0,

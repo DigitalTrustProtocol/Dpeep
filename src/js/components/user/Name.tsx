@@ -1,72 +1,30 @@
-import { memo, useEffect, useState } from 'react';
-
-import Key from '../../nostr/Key';
-import SocialNetwork from '../../nostr/SocialNetwork';
-import AnimalName from '../../utils/AnimalName.ts';
 import { ID } from '../../utils/UniqueIds.ts';
 
 import Badge from './Badge';
+import useVerticeMonitor from '../../dwotr/hooks/useVerticeMonitor';
+import { useProfile } from '../../dwotr/hooks/useProfile';
 
 type Props = {
   pub: string;
+  hexKey?: string;
   placeholder?: string;
   hideBadge?: boolean;
 };
 
+
 const Name = (props: Props) => {
-  if (!props.pub) {
-    console.error('Name component requires a pub', props);
-    return null;
-  }
+  const profile = useProfile(props.pub);
 
-  const [nostrAddr] = useState(Key.toNostrHexAddress(props.pub) || '');
-  const [profile, setProfile] = useState(profileInitializer);
-
-  function profileInitializer() {
-    let name;
-    let displayName;
-    let isNameGenerated = false;
-
-    const profile = SocialNetwork.profiles.get(ID(nostrAddr));
-    // should we change SocialNetwork.getProfile() and use it here?
-    if (profile) {
-      name = profile.name?.trim().slice(0, 100) || '';
-      displayName = profile.display_name?.trim().slice(0, 100);
-    }
-    if (!name) {
-      name = AnimalName(Key.toNostrBech32Address(props.pub, 'npub') || props.pub);
-      isNameGenerated = true;
-    }
-
-    return { name, displayName, isNameGenerated };
-  }
-
-  useEffect(() => {
-    if (!nostrAddr) return;
-
-    const unsub = SocialNetwork.getProfile(nostrAddr, (p) => {
-      if (p) {
-        const name = p.name?.trim().slice(0, 100) || '';
-        const displayName = p.display_name?.trim().slice(0, 100) || '';
-        const isNameGenerated = p.name || p.display_name ? false : true;
-
-        setProfile({ name, displayName, isNameGenerated });
-      }
-    });
-
-    return () => {
-      unsub();
-    };
-  }, [nostrAddr]);
+  const wot = useVerticeMonitor(ID(props.pub), ['badName', 'neutralName', 'goodName'], '');
 
   return (
     <>
-      <span className={profile.isNameGenerated ? 'text-neutral-500' : ''}>
-        {profile.name || profile.displayName || props.placeholder}
+      <span className={(profile.isDefault ? 'text-neutral-500' : '') + ' ' + wot?.option}>
+        {profile.name || profile.display_name || props.placeholder}
       </span>
       {props.hideBadge ? '' : <Badge pub={props.pub} />}
     </>
   );
 };
 
-export default memo(Name);
+export default Name;

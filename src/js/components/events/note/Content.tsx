@@ -34,9 +34,11 @@ type Props = {
   asInlineQuote?: boolean;
   event: any;
   isPreview?: boolean;
+  wot: any;
 };
 
-const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPreview }: Props) => {
+
+const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPreview, wot }: Props) => {
   const [translatedText, setTranslatedText] = useState('');
   const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState('');
@@ -106,7 +108,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
         <div
           className={`preformatted-wrap pb-1 ${emojiOnly && 'text-2xl'} ${
             fullWidth ? 'full-width-note' : ''
-          } ${asInlineQuote ? 'inline-quote' : ''}`}
+          } ${asInlineQuote ? 'inline-quote' : ''} ${wot?.option}`}
         >
           <HyperText event={event}>{text}</HyperText>
           <Show when={translatedText}>
@@ -133,6 +135,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
           settings={{ showLikes, showZaps, showReposts }}
           standalone={standalone}
           event={event}
+          wot={wot}
         />
       </Show>
       <Show when={isQuote && !loadReactions}>

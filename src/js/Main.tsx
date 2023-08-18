@@ -31,6 +31,11 @@ import localState from './LocalState';
 import '@fontsource/lato/400.css';
 import '@fontsource/lato/700.css';
 import '../css/cropper.min.css';
+import "./dwotr/views/style.css";
+import DWoTRSetup from './dwotr/components/DWoTRSetup';
+import GraphView from './dwotr/views/GraphView';
+import Demo from './dwotr/views/Demo';
+import View32010 from './dwotr/views/View32010.tsx';
 
 type Props = Record<string, unknown>;
 
@@ -81,8 +86,8 @@ class Main extends Component<Props, ReactState> {
     if (s.activeRoute && s.activeRoute.length > 1) {
       title = Helpers.capitalize(s.activeRoute.replace('/', '').split('?')[0]);
     }
-    const titleTemplate = s.unseenMsgsTotal ? `(${s.unseenMsgsTotal}) %s | iris` : '%s | iris';
-    const defaultTitle = s.unseenMsgsTotal ? `(${s.unseenMsgsTotal}) iris` : 'iris';
+    const titleTemplate = s.unseenMsgsTotal ? `(${s.unseenMsgsTotal}) %s | Dpeep` : '%s | Dpeep';
+    const defaultTitle = s.unseenMsgsTotal ? `(${s.unseenMsgsTotal}) Dpeep` : 'Dpeep';
     if (!s.translationLoaded) {
       return <div />;
     }
@@ -138,9 +143,15 @@ class Main extends Component<Props, ReactState> {
               <Profile path="/:id/likes" tab="likes" />
               <Follows path="/follows/:id" />
               <Follows followers={true} path="/followers/:id" />
+
+              <GraphView path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?" />
+              <View32010 path="/32010/" />
+              <Demo path="/demo/:id?" />
+
               <NoteOrProfile path="/:id" />
             </Router>
           </div>
+          {s.loggedIn ? <DWoTRSetup /> : null}
           <Footer />
         </section>
 

@@ -1,12 +1,12 @@
-import { sha256 } from '@noble/hashes/sha256';
-import Identicon from 'identicon.js';
-
 import Component from '../../BaseComponent';
-import Key from '../../nostr/Key';
 import { Unsubscribe } from '../../nostr/PubSub';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
 import SafeImg from '../SafeImg';
+import profileManager from '../../dwotr/ProfileManager';
+import { ProfileMemory } from '../../dwotr/model/ProfileRecord';
+import { ProfileEvent } from '../../dwotr/network/ProfileEvent';
+import { ID } from '@/utils/UniqueIds';
 
 type Props = {
   str: unknown;
@@ -23,47 +23,46 @@ type State = {
   activity: string | null;
   avatar: string | null;
   hasError: boolean;
+  created_at: number;
 };
 
 class MyAvatar extends Component<Props, State> {
   activityTimeout?: ReturnType<typeof setTimeout>;
   unsub: Unsubscribe | undefined;
+  handleEvent: any;
 
-  updateAvatar() {
-    const hash = sha256(this.props.str as string);
-    // convert to hex
-    const hex = Array.from(new Uint8Array(hash))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    const identicon = new Identicon(hex, {
-      width: this.props.width,
-      format: `svg`,
-    });
-    this.setState({
-      avatar: `data:image/svg+xml;base64,${identicon.toString()}`,
-    });
-  }
 
   componentDidMount() {
-    const pub = this.props.str as string;
-    if (!pub) {
+    const str = this.props.str as string;
+    if (!str) {
       return;
     }
 
-    this.updateAvatar();
+    let id = ID(str);
 
-    const nostrAddr = Key.toNostrHexAddress(pub);
-    if (nostrAddr) {
-      this.unsub = SocialNetwork.getProfile(nostrAddr, (profile) => {
-        profile &&
-          this.setState({
-            // TODO why profile undefined sometimes?
-            picture: profile.picture,
-            name: profile.name,
-          });
+    this.handleEvent = (e: any) => {
+      let p = e.detail as ProfileMemory;
+      let created_at = this.state.created_at || 0;
+      if (!p || p.id != id || p.created_at <= created_at) return;
+      this.setState({
+        picture: p.picture,
+        name: p.name,
+        created_at: p.created_at,
       });
-    }
+    };
+  
+
+    ProfileEvent.add(this.handleEvent);
+
+    let profile = profileManager.getMemoryProfile(id);
+
+    this.setState({
+      picture: profile.picture,
+      name: profile.name,
+      avatar: profileManager.createImageUrl(str, this.props.width),
+    });
+
+    this.unsub = profileManager.subscribe(str);
 
     this.setState({ activity: null });
   }
@@ -73,6 +72,12 @@ class MyAvatar extends Component<Props, State> {
     if (this.activityTimeout !== undefined) {
       clearTimeout(this.activityTimeout);
     }
+    const pub = this.props.str as string;
+    if (!pub) {
+      return;
+    }
+
+    ProfileEvent.remove(this.handleEvent);
     this.unsub?.();
   }
 

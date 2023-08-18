@@ -16,6 +16,10 @@ import EventComponent from '../EventComponent';
 import Avatar from './Avatar';
 import Content from './Content';
 
+import useVerticeMonitor from '../../../dwotr/hooks/useVerticeMonitor';
+import { ID } from '@/utils/UniqueIds';
+
+
 const Note = ({
   event,
   meta = {} as any,
@@ -44,6 +48,8 @@ const Note = ({
   if (fullWidth === undefined) {
     fullWidth = !isReply && !isQuoting && !isQuote && !asInlineQuote;
   }
+
+  const wot = useVerticeMonitor(ID(event.id), ["badMessage", "neutralMessage", "goodMessage"], "" ) as any;
 
   const className = useMemo(() => {
     const classNames = [] as string[];
@@ -157,6 +163,7 @@ const Note = ({
             isQuote={isQuote}
             asInlineQuote={asInlineQuote}
             fullWidth={fullWidth}
+            wot={wot}
           />
         </div>
       </div>
