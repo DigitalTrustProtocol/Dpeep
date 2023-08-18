@@ -4,7 +4,7 @@ import { Event } from 'nostr-tools';
 import Filter from '@/nostr/Filter.ts';
 import { ID, STR } from '@/utils/UniqueIds.ts';
 
-class EventDB {
+export class EventDB {
   private db: any;
   private eventsCollection: any;
 
@@ -17,7 +17,7 @@ class EventDB {
   }
 
   get(id: any): Event | undefined {
-    const event = this.eventsCollection.by('id', id);
+    const event = this.eventsCollection.by('id', ID(id));
     if (event) {
       return this.unpack(event);
     }
@@ -80,10 +80,8 @@ class EventDB {
   }
 
   remove(eventId: string): void {
-    const doc = this.get(eventId);
-    if (doc) {
-      this.eventsCollection.remove(doc);
-    }
+    const id = ID(eventId);
+    this.eventsCollection.findAndRemove({ id });
   }
 
   find(filter: Filter, callback: (event: Event) => void): void {
@@ -94,6 +92,32 @@ class EventDB {
   }
 
   findArray(filter: Filter): Event[] {
+    const query: any = this.constructQuery(filter);
+
+    let chain = this.eventsCollection
+      .chain()
+      .find(query)
+      .where((e: Event) => {
+        if (filter.keywords && !filter.keywords.some((keyword) => e.content?.includes(keyword))) {
+          return false;
+        }
+        return true;
+      })
+      .simplesort('created_at', true);
+
+    if (filter.limit) {
+      chain = chain.limit(filter.limit);
+    }
+
+    return chain.data().map((e) => this.unpack(e));
+  }
+
+  findAndRemove(filter: Filter) {
+    const query: any = this.constructQuery(filter);
+    this.eventsCollection.findAndRemove(query);
+  }
+
+  private constructQuery(filter: Filter): any {
     const query: any = {};
 
     if (filter.ids) {
@@ -106,7 +130,6 @@ class EventDB {
         query.kind = { $in: filter.kinds };
       }
       if (filter['#e']) {
-        // hmm $contains doesn't seem to use binary indexes
         query.flatTags = { $contains: 'e_' + filter['#e'].map(ID) };
       } else if (filter['#p']) {
         query.flatTags = { $contains: 'p_' + filter['#p'].map(ID) };
@@ -122,28 +145,7 @@ class EventDB {
       }
     }
 
-    let chain = this.eventsCollection
-      .chain()
-      .find(query)
-      .where((e: Event) => {
-        if (filter.keywords && !filter.keywords.some((keyword) => e.content?.includes(keyword))) {
-          return false;
-        }
-        return true;
-      })
-      .simplesort('created_at', true)
-      .map((e) => this.unpack(e));
-
-    if (filter.limit) {
-      chain = chain.limit(filter.limit);
-    }
-
-    return chain.data();
-  }
-
-  findAndRemove(filter: Filter) {
-    const eventsToRemove = this.findArray(filter);
-    eventsToRemove.forEach((event) => this.remove(event.id));
+    return query;
   }
 
   findOne(filter: Filter): Event | undefined {

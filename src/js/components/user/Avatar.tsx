@@ -1,4 +1,8 @@
+import { sha256 } from '@noble/hashes/sha256';
+import Identicon from 'identicon.js';
+
 import Component from '../../BaseComponent';
+import Key from '../../nostr/Key';
 import { Unsubscribe } from '../../nostr/PubSub';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
@@ -29,8 +33,26 @@ type State = {
 class MyAvatar extends Component<Props, State> {
   activityTimeout?: ReturnType<typeof setTimeout>;
   unsub: Unsubscribe | undefined;
+  hex: string | null = null;
+
   handleEvent: any;
 
+  updateAvatar() {
+    const hash = sha256(this.props.str as string);
+    // convert to hex
+    const hex = Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+
+      const identicon = new Identicon(hex, {
+        width: this.props.width,
+        format: `svg`,
+      });
+      this.setState({
+        avatar: `data:image/svg+xml;base64,${identicon.toString()}`,
+      });
+    }
+  
 
   componentDidMount() {
     const str = this.props.str as string;
@@ -89,7 +111,7 @@ class MyAvatar extends Component<Props, State> {
       this.state.picture &&
       !this.state.hasError &&
       !this.props.hidePicture &&
-      !SocialNetwork.isBlocked(this.props.str as string);
+      !SocialNetwork.isBlocked(this.hex as string);
     const hasPictureStyle = hasPicture ? 'has-picture' : '';
     const showTooltip = this.props.showTooltip ? 'tooltip' : '';
 

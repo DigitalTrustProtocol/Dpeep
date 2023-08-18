@@ -6,6 +6,7 @@ import Filter from '@/nostr/Filter';
 const { authenticate } = nip42;
 
 import EventDB from '@/nostr/EventDB.ts';
+import { ID } from '@/utils/UniqueIds.ts';
 
 import localState from '../LocalState';
 import Events from '../nostr/Events';
@@ -25,7 +26,7 @@ const relayPool = new RelayPool(Relays.enabledRelays(), {
   autoReconnect: true,
   externalGetEventById: (id) => {
     return (
-      (Events.seen.has(id) && {
+      (Events.seen.has(ID(id)) && {
         sig: '',
         id: '',
         kind: 0,
@@ -113,6 +114,8 @@ const PubSub = {
     if (filter.authors) {
       filter.authors.forEach((a) => this.subscribedAuthors.add(a));
     }
+
+    // TODO if filter.ids & found in EventDB, don't ask others
 
     callback && EventDB.find(filter, callback);
 

@@ -1,4 +1,4 @@
-import Key from '../nostr/Key.ts';
+import Key from "@/nostr/Key";
 
 // should this be a class instead? convert all strings to internal representation, enable comparison
 export type UID = number;
@@ -11,10 +11,7 @@ export class UniqueIds {
 
   static id(str: string): UID {
     if (str.startsWith('npub') || str.startsWith('note')) {
-      str = Key.toNostrHexAddress(str) || '';
-      if (!str) {
-        throw new Error('str->id: invalid str ' + str);
-      }
+      throw new Error('use hex instead of npub ' + str);
     }
     const existing = UniqueIds.strToUniqueId.get(str);
     if (existing) {
