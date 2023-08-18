@@ -16,6 +16,7 @@ const SETTINGS = {
   language: 'language',
   social_network: 'social_network',
   iris_account: undefined as string | undefined,
+  dwotr: 'DWoTR',
 };
 
 if (['iris.to', 'beta.iris.to', 'localhost'].includes(window.location.hostname)) {

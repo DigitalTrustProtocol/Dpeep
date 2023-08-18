@@ -1,3 +1,4 @@
+import View32010 from '@/dwotr/views/View32010.js';
 import Component from '../../BaseComponent';
 
 import Account from './Account.js';
@@ -24,6 +25,7 @@ export default class SettingsContent extends Component {
     social_network: SocialNetwork,
     iris_account: IrisAccount,
     dev: Dev,
+    dwotr: View32010,
   };
 
   constructor() {
