@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { sha256 } from '@noble/hashes/sha256';
-import Identicon from 'identicon.js';
 
-import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
 import SafeImg from '../SafeImg';
+
 import profileManager from '../../dwotr/ProfileManager';
 import { ProfileMemory } from '../../dwotr/model/ProfileRecord';
-import { ProfileEvent } from '../../dwotr/network/ProfileEvent';
-import { ID, STR } from '@/utils/UniqueIds';
+import { useKey } from '@/dwotr/hooks/useKey';
+import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 
 type Props = {
-  str: unknown;
+  str: string | undefined;
   hidePicture?: boolean;
   showTooltip?: boolean;
   activity?: string;
@@ -20,62 +18,46 @@ type Props = {
   width: number;
 };
 
-type State = {
-  picture: string | null;
-  name: string | null;
-  activity: string | null;
-  avatar: string | null;
-  hasError: boolean;
-};
+function getProfile(hexKey: string, profile: any, hasError: boolean, hidePicture: boolean = false, width?: number) {
+  let hasPic = profile?.picture && !hasError && !hidePicture && !SocialNetwork.isBlocked(hexKey);
+  let avatar = !hasPic ? profileManager.createImageUrl(hexKey, width) : '';
 
-  const hex = React.useMemo(() => Key.toNostrHexAddress(props.str as string), [props.str]);
+  return { ...profile, hasPic, avatar };
+}
+
+const MyAvatar: React.FC<Props> = (props) => {
+  const isMounted = useIsMounted();
+  const { hexKey, uid } = useKey(props.str);
+
+  const [profile, setProfile] = useState<any>(
+    getProfile(hexKey, profileManager.getMemoryProfile(uid), false, props?.hidePicture, props.width),
+  );
+
+  const [activity] = useState<string | null>(null); // TODO
+
+  const [hasError, setHasError] = useState<boolean>(false);
 
   useEffect(() => {
-    const updateAvatar = () => {
-      const hash = sha256(hex || (props.str as string));
-      const hexVal = Array.from(new Uint8Array(hash))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
+    const handleEvent = (e: any) => {
+      if (!isMounted()) return;
+      let p = e.detail as ProfileMemory;
 
-      const identicon = new Identicon(hexVal, {
-        width: props.width,
-        format: 'svg',
-      });
-
-      setAvatar(`data:image/svg+xml;base64,${identicon.toString()}`);
+      setProfile(getProfile(hexKey, p, hasError, props?.hidePicture, props.width));
     };
 
-    if (hex) {
-      updateAvatar();
+    // uid follows the hexKey automatically
+    setProfile(getProfile(hexKey, profileManager.getMemoryProfile(uid), false, props?.hidePicture, props.width));
 
-  componentDidMount() {
-    const pub = this.props.str as string;
-    if (!pub) {
-      return;
-    }
-
-    this.updateAvatar();
-
-    this.hex = Key.toNostrHexAddress(pub);
-    if (this.hex) {
-      this.unsub = SocialNetwork.getProfile(this.hex, (profile) => {
-        profile &&
-          this.setState({
-            // TODO why profile undefined sometimes?
-            picture: profile.picture,
-            name: profile.name,
-          });
-      });
-    }
-
-      return () => unsub?.();
-    }
-    this.unsub?.();
-  }
+    let unsub = profileManager.subscribe(hexKey, handleEvent);
+    return () => {
+      unsub?.();
+    };
+  }, [hexKey]);
 
   const width = props.width;
   const isActive = ['online', 'active'].includes(activity || '');
-  const hasPic = picture && !hasError && !props.hidePicture && !SocialNetwork.isBlocked(hex || '');
+  const hasPic = profile?.hasPic;
+  //const hasPic = picture && !hasError && !props.hidePicture && !SocialNetwork.isBlocked(hexKey || '');
 
   return (
     <div
@@ -93,18 +75,18 @@ type State = {
         <Show when={hasPic}>
           <SafeImg
             className="object-cover rounded-full"
-            src={picture || ''}
+            src={profile?.picture || ''}
             width={width}
             square={true}
             onError={() => setHasError(true)}
           />
         </Show>
         <Show when={!hasPic}>
-          <img width={width} className="max-w-full rounded-full" src={avatar || ''} />
+          <img width={width} className="max-w-full rounded-full" src={profile?.avatar || ''} />
         </Show>
       </div>
-      <Show when={props.showTooltip && name}>
-        <span className="tooltiptext">{name}</span>
+      <Show when={props.showTooltip && profile?.name}>
+        <span className="tooltiptext">{profile?.name}</span>
       </Show>
     </div>
   );

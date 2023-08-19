@@ -270,8 +270,8 @@ class ProfileManager {
     return profile;
   }
 
-  getDefaultProfile(id: number | undefined) : ProfileRecord | undefined {
-    if (!id) return undefined;
+  getDefaultProfile(id: number) : ProfileRecord {
+    //if (!id) return this.createDefaultProfile("");
     const profile = SocialNetwork.profiles.get(id);
     if (profile) return profile;
     return this.createDefaultProfile(STR(id));
@@ -365,12 +365,16 @@ class ProfileManager {
 
   subscriptionCallback(event: Event) {
     let profile = SocialNetwork.profiles.get(ID(event.pubkey));
+    if (!profile) return;
     profileManager.dispatchProfile(profile);
   }
 
-  subscribe(address: string): Unsubscribe {
+  subscribe(address: string, cb?: (e: any) => void): Unsubscribe {
     const hexPub = Key.toNostrHexAddress(address) as string;
     const id = ID(hexPub);
+
+    if (cb)
+      ProfileEvent.add(cb);
 
     let profile = SocialNetwork.profiles.get(id);
 
@@ -395,13 +399,18 @@ class ProfileManager {
       });
     }
 
+
     // Then subscribe to updates via nostr relays
     let unsub = PubSub.subscribe(
       { kinds: [0], authors: [hexPub] },
       this.subscriptionCallback,
       false,
     );
-    return unsub;
+    return () => {
+      if (cb)
+        ProfileEvent.remove(cb);
+      unsub?.();
+    }
   }
 
   dispatchProfile(profile: ProfileRecord) {
