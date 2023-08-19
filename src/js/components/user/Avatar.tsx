@@ -1,5 +1,8 @@
-import Component from '../../BaseComponent';
-import { Unsubscribe } from '../../nostr/PubSub';
+import React, { useEffect, useState } from 'react';
+import { sha256 } from '@noble/hashes/sha256';
+import Identicon from 'identicon.js';
+
+import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
 import SafeImg from '../SafeImg';
@@ -23,108 +26,88 @@ type State = {
   activity: string | null;
   avatar: string | null;
   hasError: boolean;
-  created_at: number;
 };
 
-class MyAvatar extends Component<Props, State> {
-  activityTimeout?: ReturnType<typeof setTimeout>;
-  unsub: Unsubscribe | undefined;
-  hex: string | null = null;
+  const hex = React.useMemo(() => Key.toNostrHexAddress(props.str as string), [props.str]);
 
-  handleEvent: any;
+  useEffect(() => {
+    const updateAvatar = () => {
+      const hash = sha256(hex || (props.str as string));
+      const hexVal = Array.from(new Uint8Array(hash))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      const identicon = new Identicon(hexVal, {
+        width: props.width,
+        format: 'svg',
+      });
+
+      setAvatar(`data:image/svg+xml;base64,${identicon.toString()}`);
+    };
+
+    if (hex) {
+      updateAvatar();
 
   componentDidMount() {
-    const str = this.props.str as string;
-    if (!str) {
-      return;
-    }
-
-    let id = ID(str);
-    this.hex = STR(id);
-
-    this.handleEvent = (e: any) => {
-      let p = e.detail as ProfileMemory;
-      let created_at = this.state.created_at || 0;
-      if (!p || p.id != id || p.created_at <= created_at) return;
-      this.setState({
-        picture: p.picture,
-        name: p.name,
-        created_at: p.created_at,
-      });
-    };
-  
-
-    ProfileEvent.add(this.handleEvent);
-
-    let profile = profileManager.getMemoryProfile(id);
-
-    this.setState({
-      picture: profile.picture,
-      name: profile.name,
-      avatar: profileManager.createImageUrl(str, this.props.width),
-    });
-
-    this.unsub = profileManager.subscribe(str);
-
-    this.setState({ activity: null });
-  }
-
-  componentWillUnmount() {
-    super.componentWillUnmount();
-    if (this.activityTimeout !== undefined) {
-      clearTimeout(this.activityTimeout);
-    }
     const pub = this.props.str as string;
     if (!pub) {
       return;
     }
 
-    ProfileEvent.remove(this.handleEvent);
+    this.updateAvatar();
+
+    this.hex = Key.toNostrHexAddress(pub);
+    if (this.hex) {
+      this.unsub = SocialNetwork.getProfile(this.hex, (profile) => {
+        profile &&
+          this.setState({
+            // TODO why profile undefined sometimes?
+            picture: profile.picture,
+            name: profile.name,
+          });
+      });
+    }
+
+      return () => unsub?.();
+    }
     this.unsub?.();
   }
 
-  render() {
-    const width = this.props.width;
-    const activity =
-      ['online', 'active'].indexOf(this.state.activity ?? '') > -1 ? this.state.activity : '';
-    const hasPicture =
-      this.state.picture &&
-      !this.state.hasError &&
-      !this.props.hidePicture &&
-      !SocialNetwork.isBlocked(this.hex as string);
-    const hasPictureStyle = hasPicture ? 'has-picture' : '';
-    const showTooltip = this.props.showTooltip ? 'tooltip' : '';
+  const width = props.width;
+  const isActive = ['online', 'active'].includes(activity || '');
+  const hasPic = picture && !hasError && !props.hidePicture && !SocialNetwork.isBlocked(hex || '');
 
-    return (
-      <div
-        style={{
-          maxWidth: `${width}px`,
-          maxHeight: `${width}px`,
-          cursor: this.props.onClick ? 'pointer' : undefined,
-        }}
-        className={`inline-flex flex-col flex-shrink-0 items-center justify-center relative select-none ${hasPictureStyle} ${showTooltip} ${activity}`}
-        onClick={this.props.onClick}
-      >
-        <div>
-          <Show when={hasPicture}>
-            <SafeImg
-              className="object-cover rounded-full"
-              src={this.state.picture as string}
-              width={width}
-              square={true}
-              onError={() => this.setState({ hasError: true })}
-            />
-          </Show>
-          <Show when={!hasPicture}>
-            <img width={width} className="max-w-full rounded-full" src={this.state.avatar || ''} />
-          </Show>
-        </div>
-        <Show when={this.props.showTooltip && this.state.name}>
-          <span className="tooltiptext">{this.state.name}</span>
+  return (
+    <div
+      style={{
+        maxWidth: `${width}px`,
+        maxHeight: `${width}px`,
+        cursor: props.onClick ? 'pointer' : undefined,
+      }}
+      className={`inline-flex flex-col flex-shrink-0 items-center justify-center relative select-none ${
+        hasPic ? 'has-picture' : ''
+      } ${props.showTooltip ? 'tooltip' : ''} ${isActive ? activity : ''}`}
+      onClick={props.onClick}
+    >
+      <div>
+        <Show when={hasPic}>
+          <SafeImg
+            className="object-cover rounded-full"
+            src={picture || ''}
+            width={width}
+            square={true}
+            onError={() => setHasError(true)}
+          />
+        </Show>
+        <Show when={!hasPic}>
+          <img width={width} className="max-w-full rounded-full" src={avatar || ''} />
         </Show>
       </div>
-    );
-  }
-}
+      <Show when={props.showTooltip && name}>
+        <span className="tooltiptext">{name}</span>
+      </Show>
+    </div>
+  );
+};
 
 export default MyAvatar;
