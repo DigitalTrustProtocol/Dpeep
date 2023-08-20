@@ -32,7 +32,8 @@ const db = new MyDexie();
 
 const handleEvent = (event: Event & { id: string }) => {
   /*😆*/
-  requestAnimationFrame(() => {
+  //requestAnimationFrame(() => { // this is causing a lot of lag
+  setTimeout(() => {
     Events.handle(event, false, false);
   });
 };

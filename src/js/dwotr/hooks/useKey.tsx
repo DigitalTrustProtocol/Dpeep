@@ -21,6 +21,8 @@ export function useKey(str: string | undefined, prefix: string = 'npub') {
   const [keyData, setKeyData] = useState(createKeyData(str, prefix));
 
   const setKey = (str: string | undefined) => {
+    if(!str || str === keyData.key) return; // No change
+    
     const data = createKeyData(str, prefix);
     setKeyData(data);
   };

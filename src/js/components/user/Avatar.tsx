@@ -33,11 +33,13 @@ const MyAvatar: React.FC<Props> = (props) => {
   const { hexKey } = useKey(props.str);
   const [hasError, setHasError] = useState<boolean>(false);
   const profile = useProfile(hexKey);
-  const [state, setState] = useState<any>(getProfileState(profile, hasError, props));
+  const [state, setState] = useState<any>(null); // Will be set in useEffect
 
   useEffect(() => {
     setState(getProfileState(profile, hasError, props));
   }, [profile, hasError, props?.activity]);
+
+  if(!state) return null; // Will return null this in first render
 
   const width = props.width;
   const hasPic = state.hasPic;

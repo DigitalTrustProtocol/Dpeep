@@ -7,7 +7,7 @@ import { TrustScoreEvent } from "../network/TrustScoreEvent";
 
 const useVerticeMonitor = (id: number, options?: any, option?: any) => {
     
-    const [state, setState] = useState({id, options, option});
+    const [state, setState] = useState({id, options, option} as any);
 
     useEffect(() => {
         if(!id) return; // No id, no monitor. id = 0 is a non existing id cause by the use of ID("") in the code
@@ -16,8 +16,7 @@ const useVerticeMonitor = (id: number, options?: any, option?: any) => {
             let vertice = graphNetwork.g.vertices[item.id] as Vertice;
             if(!vertice) return;
             let option = graphNetwork.findOption(vertice, options);
-            setState((prevState) => ({ ...prevState, ...item, option, vertice }));
-            
+            setState({ ...item, option, vertice }); 
         }
 
         const cb = (e: any) => {
@@ -28,14 +27,11 @@ const useVerticeMonitor = (id: number, options?: any, option?: any) => {
             findOption(item);
         }
 
-        
         graphNetwork.addVerticeMonitor(id);
         TrustScoreEvent.add(cb);
 
         // Call manually the graphNetwork.resolveTrust the first time
-        let eventItem = new TrustScoreEvent(new MonitorItem(id));
-        if (eventItem?.detail) 
-            findOption(eventItem.detail);   
+        findOption(new MonitorItem(id));   
 
         return () => {
             graphNetwork.removeVerticeMonitor(id);

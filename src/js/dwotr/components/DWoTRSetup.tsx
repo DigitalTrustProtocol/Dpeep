@@ -3,6 +3,7 @@ import graphNetwork from "../GraphNetwork";
 import Key from "../../nostr/Key";
 import PubSub from "@/nostr/PubSub";
 import profileManager from "../ProfileManager";
+import diagnostics from "../Utils/Diagnostics";
 //import PubSub from "@/nostr/PubSub";
 
 
@@ -14,10 +15,12 @@ export default function DWoTRSetup() {
             graphNetwork.init(author);
         }
 
-        setInterval(() => {
-            console.log("PubSub / Profile subscriptions: ", PubSub.subscriptions.size, profileManager.subscriptions.unsubscribe.size);
+        //setInterval(() => {
+            //console.log("PubSub / Profile subscriptions: ", PubSub.subscriptions.size, profileManager.subscriptions.unsubscribe.size);
+            // console.log("-------------------------------------- DIAGNOSTICS --------------------------------------");
+            // diagnostics.printAll();
 
-        }, 3000);
+        //}, 3000);
 
         return () => {
             // Gets called on page change
