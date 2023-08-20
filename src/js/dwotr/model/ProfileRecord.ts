@@ -1,3 +1,5 @@
+import { ID } from "@/utils/UniqueIds";
+
 class ProfileRecord {
 
     //id: number = 0; // autoincrement by dexie
@@ -29,6 +31,14 @@ export class ProfileMemory extends ProfileRecord {
     constructor(id: number) {
         super();
         this.id = id;
+    }
+
+    static fromRecord(profile: ProfileRecord) : ProfileMemory {
+        let mem = profile as ProfileMemory;
+        if(mem?.id) return mem;
+        let id = ID(profile.key);
+        if(!mem?.id || mem.id == 0) mem.id = id;
+        return mem;
     }
 }
 

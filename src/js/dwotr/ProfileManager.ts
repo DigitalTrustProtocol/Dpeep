@@ -372,48 +372,38 @@ class ProfileManager {
     profileManager.dispatchProfile(profile);
   }
 
-  callback(profile: ProfileRecord | undefined, cb: (e: any) => void) {
-    if (!profile) return;
-    let id = ID(profile.key);
-    let mem = profile as ProfileMemory;
-    if(!mem?.id || mem.id == 0) mem.id = id;
-
-    cb(new ProfileEvent(mem));
-  }
 
   subscribe(address: string, cb: (e: any) => void): Unsubscribe {
     const hexPub = Key.toNostrHexAddress(address) as string;
     const id = ID(hexPub);
 
     let subsciptionIndex = this.subscriptions.add(id, cb);
-    let profile = SocialNetwork.profiles.get(id);
+    let profile = this.getMemoryProfile(id);
 
-    if (!profile || profile.isDefault) {
+    if (profile.isDefault) {
       // Check if profile is in IndexedDB
-      this.loadProfile(hexPub).then((profile) => {
-        if (profile) {
+      this.loadProfile(hexPub).then((record) => {
+        if (record) {
           // exists in DB
-          //this.dispatchProfile(profile);
-          this.callback(profile, cb);
+          this.subscribeCallback(record, cb);
         } else {
           // Check if profile is in API
           profileManager.fetchProfile(hexPub).then((data) => {
             // TODO verify sig
             if (!data) return;
 
-            let profile = this.addProfileEvent(data);
+            let eventProfile = this.addProfileEvent(data);
 
-            //this.dispatchProfile(profile as ProfileRecord);
-            this.callback(profile, cb);
+            this.subscribeCallback(eventProfile, cb);
           });
         }
       });
-    } else {
-      // Profile exists in memory
-      //this.dispatchProfile(profile);
-      this.callback(profile, cb);
-    }
+    } 
 
+    // Instantly send the profile to the callback
+    this.subscribeCallback(profile, cb);
+    
+    // If not already subscribed to updates
     if (!this.subscriptions.hasUnsubscribe(id)) {
       // Then subscribe to updates via nostr relays, but only once per address
       let unsub = PubSub.subscribe(
@@ -429,17 +419,27 @@ class ProfileManager {
 
   }
 
+  subscribeCallback(profile: ProfileRecord | undefined, cb: (e: any) => void) {
+    if (!profile) return;
+
+    if (this.isProfileNewer(profile)) this.addProfileToMemory(profile);
+
+    let mem = ProfileMemory.fromRecord(profile);
+    
+    cb(new ProfileEvent(mem));
+  }
+
+
   dispatchProfile(profile: ProfileRecord) {
     if (!profile) return;
 
     if (this.isProfileNewer(profile)) this.addProfileToMemory(profile);
 
     //ProfileEvent.dispatch(ID(profile.key), profile as ProfileMemory);
-    let id = ID(profile.key);
-    let mem = profile as ProfileMemory;
-    if(!mem?.id || mem.id == 0) mem.id = id;
+    let mem = ProfileMemory.fromRecord(profile);
+    let event = new ProfileEvent(mem);
 
-    this.subscriptions.dispatch(id, mem);
+    this.subscriptions.dispatch(mem.id, event);
   }
 
   // if (verifyNip05 && profile.nip05 && !profile.nip05valid) {
