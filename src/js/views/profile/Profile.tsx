@@ -1,10 +1,10 @@
-import { Helmet } from 'react-helmet';
 import { route } from 'preact-router';
 
+import BaseComponent from '@/BaseComponent.ts';
 import SimpleImageModal from '@/components/modal/Image.tsx';
 import { getEventReplyingTo } from '@/nostr/utils.ts';
+import ProfileHelmet from '@/views/profile/Helmet.tsx';
 
-import Copy from '../../components/buttons/Copy.tsx';
 import Feed from '../../components/feed/Feed.tsx';
 import Show from '../../components/helpers/Show.tsx';
 import { isSafeOrigin } from '../../components/SafeImg.tsx';
@@ -13,48 +13,33 @@ import localState from '../../LocalState.ts';
 import Key from '../../nostr/Key.ts';
 import SocialNetwork from '../../nostr/SocialNetwork.ts';
 import { translate as t } from '../../translations/Translation.mjs';
-import Helpers from '../../utils/Helpers.tsx';
 import View from '../View.tsx';
 
-
-class Profile extends View {
+class Profile extends BaseComponent {
   subscriptions: any[];
   unsub: any;
+  state = {
+    hexPub: '',
+    npub: '',
+    name: '',
+    display_name: '',
+    profile: {} as any,
+    banner: '',
+    fullBanner: '',
+    picture: '',
+    website: '',
+    lightning: '',
+    blocked: false,
+    bannerModalOpen: false,
+    notFound: false,
+  };
 
   constructor() {
     super();
-    this.state = {
-      followedUserCount: 0,
-      followerCount: 0,
-      bannerModalOpen: false,
-    };
-    this.id = 'profile';
     this.subscriptions = [];
   }
 
-  getNotification() {
-    if (this.state.noFollowers /* && this.followers.has(Key.getPubKey()) */) {
-      return (
-        <div className="msg">
-          <div className="msg-content">
-            <p>Share your profile link so {this.state.name || 'this user'} can follow you:</p>
-            <p>
-              <Copy text={t('copy_link')} copyStr={Helpers.getMyProfileLink()} />
-            </p>
-            <small>{t('no_followers_yet_info')}</small>
-          </div>
-        </div>
-      );
-    }
-  }
-
-  async viewAs(event) {
-    event.preventDefault();
-    route('/');
-    Key.login({ rpub: this.state.hexPub });
-  }
-
-  renderView() {
+  render() {
     const {
       hexPub,
       display_name,
@@ -79,7 +64,7 @@ class Profile extends View {
     const setBannerModalOpen = (bannerModalOpen) => this.setState({ bannerModalOpen });
 
     return (
-      <>
+      <View>
         <Show when={banner}>
           <div
             className="mb-4 h-48 bg-cover bg-center cursor-pointer"
@@ -91,17 +76,12 @@ class Profile extends View {
           </Show>
         </Show>
         <div>
-          <Helmet>
-            <title>{title}</title>
-            <meta name="description" content={description} />
-            <meta property="og:type" content="profile" />
-            <Show when={picture}>
-              <meta property="og:image" content={picture} />
-              <meta name="twitter:image" content={picture} />
-            </Show>
-            <meta property="og:title" content={ogTitle} />
-            <meta property="og:description" content={description} />
-          </Helmet>
+          <ProfileHelmet
+            title={title}
+            description={description}
+            picture={picture}
+            ogTitle={ogTitle}
+          />
           <ProfileCard npub={this.state.npub} hexPub={this.state.hexPub} />
           <Show when={!blocked}>
             <Feed
@@ -126,7 +106,7 @@ class Profile extends View {
             />
           </Show>
         </div>
-      </>
+      </View>
     );
   }
 
@@ -149,7 +129,6 @@ class Profile extends View {
   loadProfile(hexPub: string) {
     const isMyProfile = hexPub === Key.getPubKey();
     localState.get('isMyProfile').put(isMyProfile);
-    localState.get('noFollowers').on(this.inject());
     this.subscriptions.push(
       SocialNetwork.getProfile(hexPub, (profile) => {
         let banner, fullBanner;
@@ -172,10 +151,9 @@ class Profile extends View {
   }
 
   componentDidMount() {
-    this.restoreScrollPosition();
     const pub = this.props.id;
     const npub = Key.toNostrBech32Address(pub, 'npub');
-    localState.get('loggedIn').on(this.inject());
+    //localState.get('loggedIn').on(this.inject());
     if (npub && npub !== pub) {
       route(`/${npub}`, true);
       return;
