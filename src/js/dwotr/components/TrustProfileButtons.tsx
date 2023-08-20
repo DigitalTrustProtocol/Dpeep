@@ -8,10 +8,8 @@ import { ID } from '@/utils/UniqueIds';
 
 const TrustProfileButtons = ({str}: any) => {
   const [state, setState] = useState({
-    showTrustsList: false,
     trusted: false,
 
-    showDistrustsList: false,
     distrusted: false,
     renderTrustScore: '',
     renderDistrustScore: '',
@@ -30,14 +28,13 @@ const TrustProfileButtons = ({str}: any) => {
     let distrusted = score.isDirectDistrusted();
 
     // Get the direct trust, dont search the graph
-    setState((prevState) => ({
-      ...prevState,
+    setState({
       trusted,
       distrusted,
       renderTrustScore: trusted ? score.renderTrustCount() : '',
       renderDistrustScore: distrusted ? score.renderDistrustCount() : '',
       processing: false,
-    }));
+    });
   }, [wot]);
 
   function trustBtnClicked(e) {

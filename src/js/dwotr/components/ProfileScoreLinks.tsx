@@ -3,10 +3,10 @@ import TrustScore from '../model/TrustScore';
 import useVerticeMonitor from '../hooks/useVerticeMonitor';
 import { RenderScoreDistrustLink, RenderScoreTrustLink } from './RenderGraph';
 import { ID } from '@/utils/UniqueIds';
-import { useBech32 } from '../hooks/useBECH32';
+import { useKey } from '../hooks/useKey';
 
 const ProfileScoreLinks = ({ str }: any) => {
-  const beck32 = useBech32(str);
+  const { bech32Key } = useKey(str);
   const [score, setScore] = useState<TrustScore | undefined>(undefined);
 
   const wot = useVerticeMonitor(ID(str), undefined, '') as any;
@@ -17,8 +17,8 @@ const ProfileScoreLinks = ({ str }: any) => {
 
   return (
     <>
-      {RenderScoreTrustLink(score, beck32, true)}
-      {RenderScoreDistrustLink(score, beck32, true)}
+      {RenderScoreTrustLink(score, bech32Key, true)}
+      {RenderScoreDistrustLink(score, bech32Key, true)}
     </>
   );
 };
