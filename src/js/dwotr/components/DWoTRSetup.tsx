@@ -1,6 +1,8 @@
 import { useEffect } from "preact/hooks";
 import graphNetwork from "../GraphNetwork";
 import Key from "../../nostr/Key";
+import PubSub from "@/nostr/PubSub";
+import profileManager from "../ProfileManager";
 //import PubSub from "@/nostr/PubSub";
 
 
@@ -13,7 +15,7 @@ export default function DWoTRSetup() {
         }
 
         // setInterval(() => {
-        //     console.log("PubSub.subscriptions: ", PubSub.subscriptions.size);
+        //     console.log("PubSub / Profile subscriptions: ", PubSub.subscriptions.size, profileManager.subscriptions.sizeAll());
         // }, 3000);
 
         return () => {

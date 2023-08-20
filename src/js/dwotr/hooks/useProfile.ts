@@ -10,7 +10,7 @@ export const useProfile = (address: string) => {
 
   const isMounted = useIsMounted();
 
-  const [profile, setProfile] = useState<ProfileRecord>(() => profileManager.getMemoryProfile(ID(address)));
+  const [profile, setProfile] = useState<ProfileRecord>(profileManager.getMemoryProfile(ID(address)));
 
   useEffect(() => {
     let id = ID(address);
@@ -21,14 +21,13 @@ export const useProfile = (address: string) => {
     }
 
     const handleEvent = (e: any) => {
-      if(!isMounted()) return; // ignore events after unmount
+      if(!isMounted()) return; // ignore events after unmount, however should not happen
       let p = e.detail as ProfileMemory;
       if(!p || p.id != id) return; // not for me
 
-      setProfile(prevProfile => {
-        if (p.created_at <= prevProfile.created_at) return prevProfile; // ignore older events
-        return { ...p }; // Make sure to copy the object, otherwise React may not re-render
-      });
+      if (p.created_at <= profile.created_at) return; // ignore older events
+
+      setProfile({ ...p }); // Make sure to copy the object, otherwise React may not re-render
     };
 
     return profileManager.subscribe(address, handleEvent);
