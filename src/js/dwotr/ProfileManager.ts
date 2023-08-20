@@ -13,6 +13,7 @@ import { hexName } from './Utils';
 import { ProfileEvent } from './network/ProfileEvent';
 import FuzzySearch from '@/nostr/FuzzySearch';
 import { ID, STR } from '@/utils/UniqueIds';
+import Subscriptions from './model/Subscriptions';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -361,7 +362,9 @@ class ProfileManager {
 
   // ---- New system ----
 
-  subscriptions = new Map<string, any>();
+  subscriptions = new Subscriptions();
+  
+
 
   subscriptionCallback(event: Event) {
     let profile = SocialNetwork.profiles.get(ID(event.pubkey));
@@ -369,13 +372,20 @@ class ProfileManager {
     profileManager.dispatchProfile(profile);
   }
 
-  subscribe(address: string, cb?: (e: any) => void): Unsubscribe {
+  callback(profile: ProfileRecord | undefined, cb: (e: any) => void) {
+    if (!profile) return;
+    let id = ID(profile.key);
+    let mem = profile as ProfileMemory;
+    if(!mem?.id || mem.id == 0) mem.id = id;
+
+    cb(new ProfileEvent(mem));
+  }
+
+  subscribe(address: string, cb: (e: any) => void): Unsubscribe {
     const hexPub = Key.toNostrHexAddress(address) as string;
     const id = ID(hexPub);
 
-    if (cb)
-      ProfileEvent.add(cb);
-
+    let subsciptionIndex = this.subscriptions.add(id, cb);
     let profile = SocialNetwork.profiles.get(id);
 
     if (!profile || profile.isDefault) {
@@ -383,7 +393,8 @@ class ProfileManager {
       this.loadProfile(hexPub).then((profile) => {
         if (profile) {
           // exists in DB
-          this.dispatchProfile(profile);
+          //this.dispatchProfile(profile);
+          this.callback(profile, cb);
         } else {
           // Check if profile is in API
           profileManager.fetchProfile(hexPub).then((data) => {
@@ -391,26 +402,31 @@ class ProfileManager {
             if (!data) return;
 
             let profile = this.addProfileEvent(data);
-            if (!profile) return;
 
-            this.dispatchProfile(profile as ProfileRecord);
+            //this.dispatchProfile(profile as ProfileRecord);
+            this.callback(profile, cb);
           });
         }
       });
+    } else {
+      // Profile exists in memory
+      //this.dispatchProfile(profile);
+      this.callback(profile, cb);
     }
 
-
-    // Then subscribe to updates via nostr relays
-    let unsub = PubSub.subscribe(
-      { kinds: [0], authors: [hexPub] },
-      this.subscriptionCallback,
-      false,
-    );
+    if (!this.subscriptions.hasUnsubscribe(id)) {
+      // Then subscribe to updates via nostr relays, but only once per address
+      let unsub = PubSub.subscribe(
+        { kinds: [0], authors: [hexPub] },
+        this.subscriptionCallback,
+        false,
+      );
+      this.subscriptions.addUnsubscribe(id, unsub);
+    } 
     return () => {
-      if (cb)
-        ProfileEvent.remove(cb);
-      unsub?.();
+      this.subscriptions.remove(id, subsciptionIndex);
     }
+
   }
 
   dispatchProfile(profile: ProfileRecord) {
@@ -418,7 +434,12 @@ class ProfileManager {
 
     if (this.isProfileNewer(profile)) this.addProfileToMemory(profile);
 
-    ProfileEvent.dispatch(ID(profile.key), profile as ProfileMemory);
+    //ProfileEvent.dispatch(ID(profile.key), profile as ProfileMemory);
+    let id = ID(profile.key);
+    let mem = profile as ProfileMemory;
+    if(!mem?.id || mem.id == 0) mem.id = id;
+
+    this.subscriptions.dispatch(id, mem);
   }
 
   // if (verifyNip05 && profile.nip05 && !profile.nip05valid) {
