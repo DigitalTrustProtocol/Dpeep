@@ -1,36 +1,52 @@
+import { useEffect, useState } from 'react';
+
 import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import { translate as t } from '../../translations/Translation.mjs';
+import Name from '../user/Name';
 
-import Block from './Block';
+type Props = {
+  id: string;
+  showName?: boolean;
+  className?: string;
+  onClick?: (e) => void;
+};
 
-class Report extends Block {
-  constructor() {
-    super();
-    this.cls = 'block';
-    this.key = 'reported';
-    this.activeClass = 'blocked';
-    this.action = t('report_public');
-    this.actionDone = t('reported');
-    this.hoverAction = t('unreport');
-  }
+const Report = ({ id, showName = false, className, onClick }: Props) => {
+  const [hover, setHover] = useState(false);
+  const [isReported, setIsReported] = useState(false);
 
-  onClick(e) {
-    e.preventDefault();
-    const newValue = !this.state[this.key];
-    if (confirm(newValue ? 'Publicly report this user?' : 'Unreport user?')) {
-      const hex = Key.toNostrHexAddress(this.props.id);
-      hex && SocialNetwork.flag(hex, newValue);
-    }
-  }
-
-  componentDidMount() {
+  useEffect(() => {
     SocialNetwork.getFlaggedUsers((flags) => {
-      const hex = Key.toNostrHexAddress(this.props.id);
-      const reported = hex && flags?.has(hex);
-      this.setState({ reported });
+      const reported = flags?.has(Key.toNostrHexAddress(id) as string);
+      setIsReported(!!reported);
     });
-  }
-}
+  }, [id]);
+
+  const onButtonClick = (e) => {
+    e.preventDefault();
+    const newValue = !isReported;
+    if (window.confirm(newValue ? 'Publicly report this user?' : 'Unreport user?')) {
+      const hex = Key.toNostrHexAddress(id);
+      hex && SocialNetwork.flag(hex, newValue);
+      onClick?.(e);
+    }
+  };
+
+  const buttonText = isReported ? (hover ? t('unreport') : t('reported')) : t('report_public');
+
+  return (
+    <button
+      className={`block ${isReported ? 'blocked' : ''} ${className || 'reported'}`}
+      onClick={onButtonClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <span>
+        {buttonText} {showName ? <Name pub={id} hideBadge={true} /> : ''}
+      </span>
+    </button>
+  );
+};
 
 export default Report;

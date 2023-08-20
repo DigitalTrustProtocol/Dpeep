@@ -1,17 +1,17 @@
 import CreateNoteForm from '@/components/create/CreateNoteForm';
 import FeedComponent from '@/components/feed/Feed';
 import Show from '@/components/helpers/Show';
-import OnboardingNotification from '@/components/OnboardingNotification';
+import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
 import Key from '@/nostr/Key';
 import { Unsubscribe } from '@/nostr/PubSub';
-import { getEventReplyingTo } from '@/nostr/utils.ts';
+import { getEventReplyingTo } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
-import { ID, STR } from '@/utils/UniqueIds.ts';
+import { ID, STR } from '@/utils/UniqueIds';
 
 import SocialNetwork from '../../nostr/SocialNetwork';
 import View from '../View';
 
-class Feed extends View {
+class Home extends View {
   unsub?: Unsubscribe;
 
   constructor() {
@@ -74,4 +74,4 @@ class Feed extends View {
   }
 }
 
-export default Feed;
+export default Home;

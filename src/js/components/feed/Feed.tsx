@@ -3,15 +3,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import EventComponent from '@/components/events/EventComponent';
 import DisplaySelector from '@/components/feed/DisplaySelector';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
-import ImageGrid from '@/components/feed/ImageGrid.tsx';
+import ImageGrid from '@/components/feed/ImageGrid';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import { DisplayAs, FeedProps } from '@/components/feed/types';
 import InfiniteScroll from '@/components/helpers/InfiniteScroll';
 import Show from '@/components/helpers/Show';
 import useSubscribe from '@/hooks/useSubscribe';
 import { useLocalState } from '@/LocalState';
-import Key from '@/nostr/Key.ts';
-import Helpers from '@/utils/Helpers.tsx';
+import Key from '@/nostr/Key';
+import Helpers from '@/utils/Helpers';
+
+import { translate as t } from '../../translations/Translation.mjs';
 
 const Feed = (props: FeedProps) => {
   const fetchEvents = props.fetchEvents || useSubscribe;
@@ -48,6 +50,7 @@ const Feed = (props: FeedProps) => {
     filter: filterOption.filter,
     filterFn,
     sinceLastOpened: false,
+    mergeSubscriptions: false,
   });
 
   if (events.length && events[0].pubkey === Key.getPubKey() && events[0].created_at > showUntil) {
@@ -98,7 +101,9 @@ const Feed = (props: FeedProps) => {
           activeDisplay={displayAs}
         />
       </Show>
-      <Show when={isEmpty}>{emptyMessage || 'No Posts'}</Show>
+      <Show when={isEmpty}>
+        <div className="m-2 md:mx-4">{emptyMessage || t('no_posts_yet')}</div>
+      </Show>
       <Show when={displayAs === 'grid'}>
         <ImageGrid key={infiniteScrollKeyString} events={events} loadMore={loadMore} />
       </Show>

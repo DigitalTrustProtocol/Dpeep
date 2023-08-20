@@ -1,4 +1,5 @@
-import Component from '../../BaseComponent';
+import { useEffect, useState } from 'react';
+
 import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import { translate as t } from '../../translations/Translation.mjs';
@@ -11,77 +12,39 @@ type Props = {
   onClick?: (e) => void;
 };
 
-class Block extends Component<Props> {
-  key: string;
-  cls?: string;
-  actionDone: string;
-  action: string;
-  activeClass: string;
-  hoverAction: string;
+const Block = ({ id, showName = false, className, onClick }: Props) => {
+  const [hover, setHover] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
-  constructor() {
-    super();
-    this.cls = 'block-btn';
-    this.key = 'blocked';
-    this.activeClass = 'blocked';
-    this.action = t('block');
-    this.actionDone = t('blocked');
-    this.hoverAction = t('unblock');
-    this.state = { ...this.state, hover: false };
-  }
-
-  handleMouseEnter = () => {
-    this.setState({ hover: true });
-  };
-
-  handleMouseLeave = () => {
-    this.setState({ hover: false });
-  };
-
-  onClick(e) {
-    e.preventDefault();
-    const newValue = !this.state[this.key];
-    const hex = Key.toNostrHexAddress(this.props.id);
-    hex && SocialNetwork.block(hex, newValue);
-    this.props.onClick?.(e);
-  }
-
-  componentDidMount() {
+  useEffect(() => {
     SocialNetwork.getBlockedUsers((blocks) => {
-      const blocked = blocks?.has(Key.toNostrHexAddress(this.props.id) as string);
-      this.setState({ blocked });
+      const blocked = blocks?.has(Key.toNostrHexAddress(id) as string);
+      setIsBlocked(!!blocked);
     });
-  }
+  }, [id]);
 
-  render() {
-    const isBlocked = this.state[this.key];
-    const isHovering = this.state.hover;
+  const onButtonClick = (e) => {
+    e.preventDefault();
+    const newValue = !isBlocked;
+    const hex = Key.toNostrHexAddress(id);
+    hex && SocialNetwork.block(hex, newValue);
+    onClick?.(e);
+  };
 
-    let buttonText;
+  const buttonText = isBlocked ? (hover ? t('unblock') : t('blocked')) : t('block');
 
-    if (isBlocked && isHovering) {
-      buttonText = this.hoverAction;
-    } else if (isBlocked && !isHovering) {
-      buttonText = this.actionDone;
-    } else {
-      buttonText = this.action;
-    }
-
-    return (
-      <button
-        className={`${this.cls || this.key} ${isBlocked ? this.activeClass : ''} ${
-          this.props.className || ''
-        }`}
-        onClick={(e) => this.onClick(e)}
-        onMouseEnter={this.handleMouseEnter}
-        onMouseLeave={this.handleMouseLeave}
-      >
-        <span>
-          {t(buttonText)} {this.props.showName ? <Name pub={this.props.id} hideBadge={true} /> : ''}
-        </span>
-      </button>
-    );
-  }
-}
+  return (
+    <button
+      className={`block-btn ${isBlocked ? 'blocked' : ''} ${className || ''}`}
+      onClick={onButtonClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <span>
+        {buttonText} {showName && <Name pub={id} hideBadge={true} />}
+      </span>
+    </button>
+  );
+};
 
 export default Block;

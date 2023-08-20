@@ -1,12 +1,12 @@
 import CreateNoteForm from '@/components/create/CreateNoteForm';
 import FeedComponent from '@/components/feed/Feed';
-import OnboardingNotification from '@/components/OnboardingNotification';
-import { getEventReplyingTo } from '@/nostr/utils.ts';
+import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
+import { getEventReplyingTo } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
 
 import View from '../View';
 
-class Feed extends View {
+class Global extends View {
   constructor() {
     super();
     this.state = { sortedMessages: [] };
@@ -47,4 +47,4 @@ class Feed extends View {
   }
 }
 
-export default Feed;
+export default Global;

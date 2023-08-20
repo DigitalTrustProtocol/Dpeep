@@ -6,23 +6,22 @@ import Footer from './components/Footer';
 import Show from './components/helpers/Show';
 import Menu from './components/Menu';
 import Modal from './components/modal/Modal';
-import Session from './nostr/Session';
 import { translationLoaded } from './translations/Translation.mjs';
-import Helpers from './utils/Helpers.tsx';
+import Helpers from './utils/Helpers';
 import About from './views/About';
 import Chat from './views/chat/Chat';
-import EditProfile from './views/EditProfile';
 import Global from './views/feeds/Global';
 import Home from './views/feeds/Home';
 import Notifications from './views/feeds/Notifications';
 import SearchFeed from './views/feeds/Search';
-import Follows from './views/Follows';
 import KeyConverter from './views/KeyConverter';
-import Login from './views/Login';
-import LogoutConfirmation from './views/LogoutConfirmation';
+import Login from './views/login/Login.tsx';
 import Note from './views/Note';
-import Profile from './views/Profile';
+import EditProfile from './views/profile/EditProfile.tsx';
+import Follows from './views/profile/Follows.tsx';
+import Profile from './views/profile/Profile.tsx';
 import Search from './views/Search';
+import LogoutConfirmation from './views/settings/LogoutConfirmation.tsx';
 import Settings from './views/settings/Settings';
 import Subscribe from './views/Subscribe';
 import Component from './BaseComponent';
@@ -48,8 +47,6 @@ type ReactState = {
   translationLoaded: boolean;
   showLoginModal: boolean;
 };
-
-Session.init({ autologin: false, autofollow: false });
 
 class Main extends Component<Props, ReactState> {
   componentDidMount() {
@@ -168,7 +165,5 @@ class Main extends Component<Props, ReactState> {
     );
   }
 }
-
-Helpers.showConsoleWarning();
 
 export default Main;

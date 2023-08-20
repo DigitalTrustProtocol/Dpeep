@@ -9,7 +9,7 @@ import {
 } from 'nostr-tools';
 import { EventTemplate } from 'nostr-tools';
 
-import EventDB from '@/nostr/EventDB.ts';
+import EventDB from '@/nostr/EventDB';
 import {
   getEventReplyingTo,
   getEventRoot,
@@ -18,8 +18,8 @@ import {
   getOriginalPostEventId,
   getRepostedEventId,
   isRepost,
-} from '@/nostr/utils.ts';
-import { ID, STR, UID, UniqueIds } from '@/utils/UniqueIds.ts';
+} from '@/nostr/utils';
+import { ID, STR, UniqueIds } from '@/utils/UniqueIds';
 
 import localState from '../LocalState';
 import { Node } from '../LocalState';
@@ -27,7 +27,7 @@ import { DecryptedEvent } from '../views/chat/ChatMessages';
 import { addGroup, setGroupNameByInvite } from '../views/chat/NewChat';
 
 import EventMetaStore from './EventsMeta';
-import FuzzySearch from './FuzzySearch.ts';
+import FuzzySearch from './FuzzySearch';
 import IndexedDB from './IndexedDB';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
@@ -66,7 +66,6 @@ const Events = {
   DEFAULT_GLOBAL_FILTER,
   getEventHash,
   eventsMetaDb: new EventMetaStore(),
-  seen: new Set<UID>(),
   deletedEvents: new Set<string>(),
   latestNotificationByTargetAndKind: new Map<string, string>(),
   notifications: new SortedLimitedEventSet(MAX_LATEST_MSGS),
@@ -431,11 +430,11 @@ const Events = {
     return true;
   },
   handle(event: Event & { id: string }, force = false, saveToIdb = true, retries = 2): boolean {
-    if (!event) return false;
-    const id = ID(event.id);
-    if (!force && this.seen.has(id)) {
+    if (!event?.id) return false;
+    if (!force && UniqueIds.has(event.id)) {
       return false;
     }
+    ID(event.id); // add to UniqueIds
     if (!force && !this.acceptEvent(event)) {
       if (retries) {
         // should we retry only if iris has been opened within the last few seconds or the social graph changed?
@@ -471,8 +470,6 @@ const Events = {
       }
       return false;
     }
-
-    this.seen.add(id);
 
     this.handledMsgsPerSecond++;
 

@@ -1,21 +1,21 @@
 import { Link } from 'preact-router';
 
-import Component from '../BaseComponent';
+import Show from '@/components/helpers/Show';
+import { RouteProps } from '@/views/types';
+
 import Follow from '../components/buttons/Follow';
 import Header from '../components/Header';
 import Avatar from '../components/user/Avatar';
 import Name from '../components/user/Name';
 import { translate as t } from '../translations/Translation.mjs';
-import Helpers from '../utils/Helpers.tsx';
+import Helpers from '../utils/Helpers';
 
 const IRIS_INFO_ACCOUNT = 'npub1wnwwcv0a8wx0m9stck34ajlwhzuua68ts8mw3kjvspn42dcfyjxs4n95l8';
 const KEUTMANN_INFO_ACCOUNT = 'npub1srpfc36pes9urzcnmrev38c9ypewahmggqc56dj7czr4k6zd4qcs4m5mn8';
 
-class About extends Component {
-  render() {
-    return (
-      <>
-        <Header />
+const About: React.FC<RouteProps> = () => (
+  <>
+    <Header />
         <div className="main-view prose" id="settings">
           <div className="px-2 md:px-4 py-2">
             <h2 className="mt-0">{t('about')}</h2>
@@ -43,12 +43,12 @@ class About extends Component {
                 <p>
                   <ul>
                     <li>
-                      <a target="_blank" href="https://dpeep.com">
-                        dpeep.com
+                      <a target="_blank" href="https://iris.to">
+                        iris.to
                       </a>{' '}
                       (web)
                     </li>
-                    {/* <li>
+                    <li>
                       <a
                         target="_blank"
                         href="https://github.com/irislib/iris-messenger/releases/latest"
@@ -80,25 +80,20 @@ class About extends Component {
                         apk
                       </a>
                       )
-                    </li> */}
+                    </li>
                   </ul>
                 </p>
               </>
             )}
 
-
-
-            <h3>Docs</h3>
+            <h3>Iris docs</h3>
             <p>
               Visit Iris <a href="https://docs.iris.to">docs</a> for features, explanations and
               troubleshooting.
             </p>
-            <p>
-              Visit Dpeep <a href="https://github.com/DigitalTrustProtocol/DWoTR-Documentation">docs</a> explanations on the Decentralized Web of Trust Reputation system.
-            </p>
 
-            <h3>Privacy</h3>
-            <p>{t('application_security_warning')}</p>
+        <h3>Privacy</h3>
+        <p>{t('application_security_warning')}</p>
 
             <h3>Follow</h3>
             <div className="flex flex-row items-center w-full justify-between">
@@ -108,29 +103,19 @@ class About extends Component {
               </Link>
               <Follow className="btn btn-neutral btn-sm" id={IRIS_INFO_ACCOUNT} />
             </div>
-            <div className="flex flex-row items-center w-full justify-between py-5">
-              <Link href={`/${KEUTMANN_INFO_ACCOUNT}`} className="flex flex-row items-center gap-2">
-                <Avatar str={KEUTMANN_INFO_ACCOUNT} width={40} />
-                <Name pub={KEUTMANN_INFO_ACCOUNT} placeholder="Iris" />
-              </Link>
-              <Follow className="btn btn-neutral btn-sm" id={KEUTMANN_INFO_ACCOUNT} />
-            </div>
 
-            {/* <p>
-              <a href="https://t.me/irismessenger">Telegram</a> channel.
-            </p> */}
-
-            <h3>Released under MIT license</h3>
             <p>
-              Dpeep code:&nbsp;
-              <a href="https://github.com/DigitalTrustProtocol/Dpeep">Github</a>.
+              <a href="https://t.me/irismessenger">Telegram</a> channel.
+            </p>
+
+            <p>
+              Released under MIT license. Code:{' '}
+              <a href="https://github.com/irislib/iris-messenger">Github</a>.
             </p>
             <br />
           </div>
         </div>
-      </>
-    );
-  }
-}
+        </>
+);
 
 export default About;

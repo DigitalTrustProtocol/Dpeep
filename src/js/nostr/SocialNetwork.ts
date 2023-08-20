@@ -1,10 +1,11 @@
-import EventDB from '@/nostr/EventDB.ts';
+import EventDB from '@/nostr/EventDB';
 
 import localState from '../LocalState';
-import { ID, STR, UID } from '../utils/UniqueIds.ts';
+import { ID, STR, UID } from '../utils/UniqueIds';
+
+import Events from './Events';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
-import Events from './Events';
 import profileManager from '../dwotr/ProfileManager';
 
 export default {
