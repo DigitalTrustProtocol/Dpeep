@@ -39,7 +39,7 @@ const MyAvatar: React.FC<Props> = (props) => {
     setState(getProfileState(profile, hasError, props));
   }, [profile, hasError, props?.activity]);
 
-  if(!state) return null; // Will return null this in first render
+  if(!state) return null; // Will return null in first render
 
   const width = props.width;
   const hasPic = state.hasPic;
