@@ -11,7 +11,6 @@ import VisGraph from './VisGraph';
 import { Vertice } from '../model/Graph';
 import { debounce } from 'lodash';
 import ItemName from '../components/ItemName';
-import { ID } from '@/utils/UniqueIds';
 import { useKey } from '../hooks/useKey';
 
 type GraphViewProps = {
@@ -60,19 +59,14 @@ function getEntityType(npub: string | undefined) {
 // GraphView - The main view for the graph
 //*************************************************************************
 const GraphView = (props: GraphViewProps) => {
-  // Create a ref to provide DOM access
   const [state, setState] = useState<any>({ ready: false });
 
-  // State is preserved on route change, when props change
-  // Each time props change, we update the state
+  const [npub, setNpub] = useState<string>(props.npub || '');
 
-  const {uid, bech32Key, hexKey, isMe, setKey} = useKey(props.npub); // [beck32Key, hexKey, isMe
+  const {uid, bech32Key, hexKey, isMe } = useKey(npub); // [beck32Key, hexKey, isMe
 
   const [entitytype, setEntityType] = useState<string>(getEntityType(bech32Key));
 
-  // const [npub, setNpubPrivate] = useState<string>(
-  //   props.npub || (Key.toNostrBech32Address(Key.getPubKey(), 'npub') as string),
-  // );
   const [trusttype, setTrustType] = useState<string>(props.trusttype || 'trust');
   const [dir, setDirection] = useState<string>(props.dir || 'out');
   const [view, setView] = useState<string>(props.view || 'graph');
@@ -80,9 +74,6 @@ const GraphView = (props: GraphViewProps) => {
   const [vertice, setVertice] = useState<Vertice | null>(null);
 
   const [unsubscribe] = useState<Array<() => void>>([]);
-
-  //const hexKey = Key.toNostrHexAddress(npub) as string;
-  //const me = hexKey == Key.getPubKey();
 
   const callFilter = debounce((filter: string) => setFilter(filter), 500, { trailing: true }); // 'maxWait':
 
@@ -106,9 +97,9 @@ const GraphView = (props: GraphViewProps) => {
   //-------------------------------------------------------------------------
   // Set the npub and vertice when the npub changes
   //-------------------------------------------------------------------------
-  const setNpub = useCallback((npub: string) => {
-    setKey(npub);
-  }, []);
+  // const setNpub = useCallback((npub: string) => {
+  //   setNpub(npub);
+  // }, []);
 
   //-------------------------------------------------------------------------
   // Update the state when the props change

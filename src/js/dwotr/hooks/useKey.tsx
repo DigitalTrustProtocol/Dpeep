@@ -20,16 +20,10 @@ function createKeyData(str: string | undefined, prefix: string = 'npub') {
 export function useKey(str: string | undefined, prefix: string = 'npub') {
   const [keyData, setKeyData] = useState(createKeyData(str, prefix));
 
-  const setKey = (str: string | undefined) => {
-    if(!str || str === keyData.key) return; // No change
-    
+  useEffect(() => {
     const data = createKeyData(str, prefix);
     setKeyData(data);
-  };
+  }, [str, prefix]);
 
-  useEffect(() => {
-    setKey(str);
-  }, [str]);
-
-  return {...keyData, setKey};
+  return keyData;
 }
