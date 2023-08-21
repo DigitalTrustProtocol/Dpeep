@@ -8,7 +8,6 @@ import SearchBox from '../components/SearchBox';
 import Avatar from '../components/user/Avatar';
 import Name from '../components/user/Name';
 import useCachedFetch from '../hooks/useCachedFetch';
-//import { useProfile } from '../hooks/useProfile';
 import Events from '../nostr/Events';
 import Key from '../nostr/Key';
 import { useProfile } from '../dwotr/hooks/useProfile';

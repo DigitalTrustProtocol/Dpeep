@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { sha256 } from '@noble/hashes/sha256';
+import Identicon from 'identicon.js';
 
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
