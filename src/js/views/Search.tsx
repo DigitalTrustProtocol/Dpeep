@@ -4,7 +4,7 @@ import { Link, route } from 'preact-router';
 
 import FollowButton from '../components/buttons/Follow';
 import SmallFeed from '../components/feed/SmallFeed';
-import SearchBox from '../components/SearchBox';
+import SearchBox from '../components/searchbox/SearchBox.tsx';
 import Avatar from '../components/user/Avatar';
 import Name from '../components/user/Name';
 import Events from '../nostr/Events';
