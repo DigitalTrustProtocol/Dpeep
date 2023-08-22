@@ -126,7 +126,7 @@ const Main = () => {
             <NoteOrProfile path="/:id" />
           </Router>
         </div>
-          {s.loggedIn ? <DWoTRSetup /> : null}
+          {loggedIn ? <DWoTRSetup /> : null}
         <Footer />
       </section>
 
