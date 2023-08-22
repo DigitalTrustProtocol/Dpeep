@@ -3,16 +3,15 @@ import { Cog8ToothIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { ArrowLeftIcon, HeartIcon as HeartIconFull } from '@heroicons/react/24/solid';
 import { Link, route } from 'preact-router';
 
-import Component from '../BaseComponent';
-import Key from '../nostr/Key';
-import Relays from '../nostr/Relays';
-import localState from '../state/LocalState.ts';
-import { translate as t } from '../translations/Translation.mjs';
-import Icons from '../utils/Icons';
-
-import Show from './helpers/Show';
-import SearchBox from './searchbox/SearchBox.tsx';
-import Name from './user/Name';
+import Component from '../../BaseComponent.ts';
+import Key from '../../nostr/Key.ts';
+import Relays from '../../nostr/Relays.ts';
+import localState from '../../state/LocalState.ts';
+import { translate as t } from '../../translations/Translation.mjs';
+import Icons from '../../utils/Icons.tsx';
+import Show from '../helpers/Show.tsx';
+import SearchBox from '../searchbox/SearchBox.tsx';
+import Name from '../user/Name.tsx';
 
 declare global {
   interface Window {
@@ -61,7 +60,7 @@ export default class Header extends Component {
 
     if (activeRoute.indexOf('/chat/') === 0 && activeRoute.indexOf('/chat/new') !== 0) {
       this.userId = replaced.length < activeRoute.length ? replaced : null;
-      if (activeRoute.indexOf('/chat/') === 0 && this.userId === Key.getPubKey()) {
+      if (activeRoute.indexOf('/chat/') === 0 && Key.isMine(this.userId || '')) {
         title = (
           <>
             <b className="mr-5">📝</b> <b>{t('note_to_self')}</b>

@@ -14,7 +14,7 @@ import PubSub from '../../nostr/PubSub';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import Helpers from '../../utils/Helpers';
-import SortedMap from '../../utils/SortedMap';
+import SortedMap from '../../utils/SortedMap/SortedMap.tsx';
 
 import ChatMessageForm from './ChatMessageForm';
 import { addGroup, sendSecretInvite } from './NewChat';
@@ -287,7 +287,7 @@ function ChatMessages({ id }) {
         setSortedMessages(Array.from(messages.current.values()));
       };
       subs.push(PubSub.subscribe({ kinds: [4], '#p': [Key.getPubKey()], authors: [chatId] }, cb));
-      if (chatId !== Key.getPubKey()) {
+      if (!Key.isMine(chatId)) {
         subs.push(PubSub.subscribe({ kinds: [4], '#p': [chatId], authors: [Key.getPubKey()] }, cb));
       }
     };

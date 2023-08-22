@@ -40,7 +40,6 @@ type ResultItem = {
 type State = {
   results: Array<Result>;
   query: string;
-  showFollowSuggestions: boolean;
   offsetLeft: number;
   selected: number;
 };
@@ -53,7 +52,6 @@ class SearchBox extends Component<Props, State> {
     this.state = {
       results: [],
       query: '',
-      showFollowSuggestions: true,
       offsetLeft: 0,
       selected: -1, // -1 - 'search by keyword'
     };
@@ -91,7 +89,6 @@ class SearchBox extends Component<Props, State> {
   };
 
   componentDidMount() {
-    localState.get('showFollowSuggestions').on(this.inject());
     localState.get('searchIndexUpdated').on(this.sub(() => this.search()));
     localState.get('activeRoute').on(
       this.sub(() => {
@@ -186,7 +183,7 @@ class SearchBox extends Component<Props, State> {
         Key.getPubKeyByNip05Address(query).then((pubKey) => {
           // if query hasn't changed since we started the request
           if (pubKey && query === String(this.props.query || this.inputRef.current.value)) {
-            this.props.onSelect?.({ key: pubKey });
+            this.props.onSelect?.({ key: pubKey.hex });
           }
         });
       }
@@ -239,8 +236,6 @@ class SearchBox extends Component<Props, State> {
   }
 
   render() {
-    console.log('SearchBox');
-
     return (
       <div className={`relative ${this.props.class}`}>
         <Show when={!this.props.resultsOnly}>

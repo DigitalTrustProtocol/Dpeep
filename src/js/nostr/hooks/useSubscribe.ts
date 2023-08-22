@@ -5,7 +5,7 @@ import { Event } from 'nostr-tools';
 
 import Filter from '@/nostr/Filter.ts';
 import PubSub from '@/nostr/PubSub.ts';
-import SortedMap from '@/utils/SortedMap.tsx';
+import SortedMap from '@/utils/SortedMap/SortedMap.tsx';
 import { debounce } from 'lodash';
 
 interface SubscribeOptions {
