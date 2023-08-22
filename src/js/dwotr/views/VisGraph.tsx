@@ -14,7 +14,6 @@ import { useIsMounted } from '../hooks/useIsMounted';
 import { loadItemVertice, loadKeyVertice } from './VisPath';
 import Show from '@/components/helpers/Show';
 import Key from '@/nostr/Key';
-import ProfileRecord from '../model/ProfileRecord';
 import { BECH32, ID, STR } from '@/utils/UniqueIds';
 
 //*******************************
