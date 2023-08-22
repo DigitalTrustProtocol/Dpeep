@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
-import SafeImg from '../SafeImg';
+import ProxyImg from '../ProxyImg.tsx';
 
 import profileManager from '../../dwotr/ProfileManager';
 import { useKey } from '@/dwotr/hooks/useKey';
@@ -58,7 +58,7 @@ const MyAvatar: React.FC<Props> = (props) => {
     >
       <div>
         <Show when={hasPic}>
-          <SafeImg
+          <ProxyImg
             className="object-cover rounded-full"
             src={state.picture || ''}
             width={width}
