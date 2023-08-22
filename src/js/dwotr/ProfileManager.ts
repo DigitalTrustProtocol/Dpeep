@@ -442,15 +442,16 @@ class ProfileManager {
     this.subscriptions.dispatch(mem.id, event);
   }
 
-  // if (verifyNip05 && profile.nip05 && !profile.nip05valid) {
-  //   // TODO verify NIP05 address
-  //   Key.verifyNip05Address(profile.nip05, address).then((isValid) => {
-  //     console.log('NIP05 address is valid?', isValid, profile.nip05, address);
-  //     profile.nip05valid = isValid;
-  //     SocialNetwork.profiles.set(id, profile);
-  //     callback();
-  //   });
-  // }
+
+  async verifyNip05Profile(profile: ProfileRecord, pubkey: string) {
+   if (!profile.nip05) return false;
+    // TODO verify NIP05 address
+    let isValid = Key.verifyNip05Address(profile.nip05, pubkey);
+
+      //console.log('NIP05 address is valid?', isValid, profile.nip05, pubkey);
+    profile["nip05valid"] = isValid;
+    return isValid;
+  }
 
 }
 

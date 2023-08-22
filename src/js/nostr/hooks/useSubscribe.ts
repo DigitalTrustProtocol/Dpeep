@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import throttle from 'lodash/throttle';
+
 import { Event } from 'nostr-tools';
 
 import Filter from '@/nostr/Filter.ts';
 import PubSub from '@/nostr/PubSub.ts';
 import SortedMap from '@/utils/SortedMap.tsx';
+import { debounce } from 'lodash';
 
 interface SubscribeOptions {
   filter: Filter;
@@ -15,6 +17,9 @@ interface SubscribeOptions {
 }
 
 const useSubscribe = (ops: SubscribeOptions) => {
+
+  const eventQueue = useRef<Event[]>([]);
+
   const defaultOps = useMemo(
     () => ({
       enabled: true,
@@ -36,6 +41,24 @@ const useSubscribe = (ops: SubscribeOptions) => {
   const [events, setEvents] = useState<Event[]>([]);
   const lastUntilRef = useRef<number | null>(null);
 
+  // const queueEvent = useCallback(
+  //   throttle(() => {
+  //     let queue = eventQueue.current;
+  //     eventQueue.current = [];
+
+  //     for(let event of queue) {
+  //       sortedEvents.current.set(event.created_at + event.id, event);
+  //     }
+
+
+  //     const newEvents = [...sortedEvents.current.values()].reverse().slice(0, 10);
+  //     if (events.length !== newEvents.length) {
+  //       setEvents(newEvents);
+  //     }
+  
+  //   }, 1000, { trailing: true })
+  // , []);
+
   const addEventToSortedEvents = (event: Event, shouldUpdateState = true) => {
     if (sortedEvents.current.has(event.id)) return;
 
@@ -44,6 +67,10 @@ const useSubscribe = (ops: SubscribeOptions) => {
     if (filter.keywords && !filter.keywords.some((keyword) => event.content?.includes(keyword)))
       return;
 
+    // Saved for later
+    //eventQueue.current.push(event);
+    //queueEvent();
+  
     sortedEvents.current.set(event.created_at + event.id, event);
     if (shouldUpdateState) {
       const newEvents = [...sortedEvents.current.values()].reverse();
@@ -91,6 +118,10 @@ const useSubscribe = (ops: SubscribeOptions) => {
       }
     };
   }, [loadMore]);
+
+
+
+
 
   return { events, loadMore };
 };

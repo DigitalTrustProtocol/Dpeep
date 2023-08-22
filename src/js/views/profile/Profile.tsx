@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { route } from 'preact-router';
 
 import SimpleImageModal from '@/components/modal/Image.tsx';
-import { useProfile } from '@/nostr/hooks/useProfile.ts';
+
 import { getEventReplyingTo, isRepost } from '@/nostr/utils.ts';
 import useLocalState from '@/state/useLocalState.ts';
 import ProfileHelmet from '@/views/profile/Helmet.tsx';
@@ -15,16 +15,17 @@ import Key from '../../nostr/Key.ts';
 import SocialNetwork from '../../nostr/SocialNetwork.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import View from '../View.tsx';
+import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 
 function Profile(props) {
   const [blocked, setBlocked] = useState(false);
-  const [hexPub, setHexPub] = useState('');
+  const [hexPub, setHexPub] = useState(Key.toNostrHexAddress(props.id) || '');
   const [npub, setNpub] = useState('');
   const [banner, setBanner] = useState('');
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const setIsMyProfile = useLocalState('isMyProfile', false)[1];
 
-  const profile = useProfile(hexPub);
+  const profile = useProfile(hexPub) as any;
 
   useEffect(() => {
     if (!hexPub) {

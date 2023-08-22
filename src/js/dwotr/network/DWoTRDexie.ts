@@ -22,9 +22,9 @@ export class DWoTRDexie extends Dexie {
     //   profiles: '++id, key'
     // });
 
-    this.version(2).stores({
+    this.version(3).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
-      profiles: 'key'
+      profiles: 'key, nip05'
     });
   }
 }

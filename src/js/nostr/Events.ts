@@ -231,6 +231,7 @@ const Events = {
     }
     
     try {
+      // TODO: CK - Look at this.
       let profile = profileManager.addProfileEvent(event); 
       if(profile) return true; 
        
