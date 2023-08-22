@@ -33,8 +33,8 @@ const Header = () => {
         <div className="flex items-center justify-between h-12 overflow-hidden">
           <Show when={isHome}>
             <div className="flex flex-row items-center gap-2 md:hidden">
-              <img src="/img/icon128.png" width="30" height="30" />
-              <h1 className=" text-3xl">iris</h1>
+              <img src="/img/dwotr/logo30.png" style="padding-top:5px" />
+              <h1 className="text-3xl">Dpeep</h1>
             </div>
           </Show>
           <Show when={!isHome}>

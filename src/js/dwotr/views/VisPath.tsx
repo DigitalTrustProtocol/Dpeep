@@ -12,7 +12,6 @@ import { Link } from 'preact-router';
 import { useIsMounted } from '../hooks/useIsMounted';
 import Key from '../../nostr/Key';
 import { filterNodes } from './VisGraph';
-import Events from '../../nostr/Events';
 import eventManager from '../EventManager';
 import ProfileRecord from '../model/ProfileRecord';
 import { BECH32, ID, STR } from '@/utils/UniqueIds';

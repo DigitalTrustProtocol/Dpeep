@@ -1,6 +1,5 @@
 import { debounce } from 'lodash';
-import ErrorBoundary from './ErrorBoundary';
-import Header from './Header';
+import ErrorBoundary from './helpers/ErrorBoundary';
 
 import { PropsWithChildren, useEffect, useState } from 'react'
 

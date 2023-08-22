@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Link } from 'preact-router';
 
 import graphNetwork from '../GraphNetwork';
-import Header from '../../components/Header';
+import Header from '../../components/header/Header';
 
 import ScrollView from '@/components/ScrollView';
 import WOTPubSub from '../network/WOTPubSub';

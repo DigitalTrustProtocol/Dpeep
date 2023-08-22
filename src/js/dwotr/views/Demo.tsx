@@ -2,7 +2,7 @@ import { JSX } from 'react';
 import { useEffect, useState } from 'preact/hooks';
 import Key from '../../nostr/Key';
 import graphNetwork from '../GraphNetwork';
-import Header from '../../components/Header';
+import Header from '../../components/header/Header';
 import profileManager from '../ProfileManager';
 import { toTimestamp } from '../Utils';
 import Name from '../../components/user/Name';

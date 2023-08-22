@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import Key from '../../nostr/Key';
 import graphNetwork from '../GraphNetwork';
 import GraphViewSelect from '../components/GraphViewSelect';
 import { translate as t } from '../../translations/Translation.mjs';
-import Header from '../../components/Header';
+import Header from '../../components/header/Header';
 import Name from '../../components/user/Name';
 import TrustList, { renderScoreLine } from './TrustList';
 import VisPath from './VisPath';
