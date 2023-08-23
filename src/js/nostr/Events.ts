@@ -132,14 +132,12 @@ const Events = {
     this.likesByMessageId.get(id)?.add(event.pubkey);
     EventDB.insert(event);
   },
-  handleFollow(event: Event) {
-    const existing = EventDB.findOne({ kinds: [3], authors: [event.pubkey] });
-    if (existing && existing.created_at >= event.created_at) {
+  handleFollowList(event: Event) {
+    const existing = SocialNetwork.followListTimestamps.get(ID(event.pubkey));
+    if (existing && existing >= event.created_at) {
       return;
     }
-    if (existing) {
-      //EventDB.findAndRemove({ kinds: [3], authors: [event.pubkey] });
-    }
+    SocialNetwork.followListTimestamps.set(ID(event.pubkey), event.created_at);
     // no need to store follow events in memory because they're already in SocialNetwork.
     // when we start doing p2p, we can perhaps keep them in memory or just ask from dexie
     //EventDB.insert(event);
@@ -172,6 +170,7 @@ const Events = {
       if ((SocialNetwork.followedByUser.get(ID(myPub))?.size || 0) > 10) {
         localState.get('showFollowSuggestions').put(false);
       }
+      localState.get('myFollowList').put(JSON.stringify(event));
     }
     if (event.pubkey === myPub && event.content?.length) {
       try {
@@ -502,7 +501,7 @@ const Events = {
           return false;
         }
         this.maybeAddNotification(event);
-        this.handleFollow(event);
+        this.handleFollowList(event);
         break;
       }
       case 6:

@@ -1,12 +1,15 @@
 import debounce from 'lodash/debounce';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { Component } from 'preact';
-import { route } from 'preact-router';
 
-import Events from '../../nostr/Events';
-import Key from '../../nostr/Key';
-import SocialNetwork from '../../nostr/SocialNetwork';
-import localState from '../../state/LocalState.ts';
+import localState from '@/state/LocalState.ts';
+import AccountName from '@/views/settings/irisaccount/AccountName.tsx';
+import ActiveAccount from '@/views/settings/irisaccount/ActiveAccount.tsx';
+import ReservedAccount from '@/views/settings/irisaccount/ReservedAccount.tsx';
+
+import Events from '../../../nostr/Events.ts';
+import Key from '../../../nostr/Key.ts';
+import SocialNetwork from '../../../nostr/SocialNetwork.ts';
 
 declare global {
   interface Window {
@@ -14,6 +17,7 @@ declare global {
   }
 }
 
+// TODO split into smaller components
 export default class IrisAccount extends Component {
   state = {
     irisToActive: false,
@@ -26,74 +30,26 @@ export default class IrisAccount extends Component {
     invalidUsernameMessage: null as any,
   };
 
-  renderAccountName(name, link = true) {
-    return (
-      <>
-        <p>
-          Username: <b>{name}</b>
-        </p>
-        <p>
-          Short link:{' '}
-          {link ? (
-            <a
-              href={`https://iris.to/${name}`}
-              onClick={(e) => {
-                e.preventDefault();
-                route(`/${name}`);
-              }}
-            >
-              iris.to/{name}
-            </a>
-          ) : (
-            <>iris.to/{name}</>
-          )}
-        </p>
-        <p>
-          Nostr address (nip05): <b>{name}@iris.to</b>
-        </p>
-      </>
-    );
-  }
-
   render() {
     let view: any;
 
     if (this.state.irisToActive) {
       const username = this.state.profile.nip05.split('@')[0];
-      view = this.renderAccountName(username);
+      view = <AccountName name={username} />;
     } else if (this.state.existing && this.state.existing.confirmed) {
       view = (
-        <div>
-          <div className="negative">
-            You have an active iris.to account:
-            {this.renderAccountName(this.state.existing.name)}
-          </div>
-          <p>
-            <button className="btn btn-sm btn-primary" onClick={() => this.setAsPrimary()}>
-              Set as primary Nostr address (nip05)
-            </button>
-          </p>
-        </div>
+        <ActiveAccount
+          name={this.state.existing.name}
+          setAsPrimary={() => this.setState({ irisToActive: true })}
+        />
       );
     } else if (this.state.existing) {
       view = (
-        <div>
-          <p className="text-iris-green">
-            Username iris.to/<b>{this.state.existing.name}</b> is reserved for you until 12 March
-            2023!
-          </p>
-          {this.renderAccountName(this.state.existing.name, false)}
-          <p>
-            <button className="btn btn-sm btn-primary" onClick={() => this.enableReserved()}>
-              Yes please
-            </button>
-          </p>
-          <p>
-            <button className="btn btn-sm btn-neutral" onClick={() => this.declineReserved()}>
-              No thanks
-            </button>
-          </p>
-        </div>
+        <ReservedAccount
+          name={this.state.existing.name}
+          enableReserved={() => this.enableReserved()}
+          declineReserved={() => this.declineReserved()}
+        />
       );
     } else if (this.state.error) {
       view = <div className="text-iris-red">Error: {this.state.error}</div>;
@@ -134,7 +90,7 @@ export default class IrisAccount extends Component {
               {this.state.newUserNameValid ? (
                 <>
                   <span className="text-iris-green">Username is available</span>
-                  {this.renderAccountName(this.state.newUserName, false)}
+                  <AccountName name={this.state.newUserName} link={false} />
                 </>
               ) : (
                 <span className="text-iris-red">{this.state.invalidUsernameMessage}</span>
@@ -261,23 +217,6 @@ export default class IrisAccount extends Component {
     }
   }
 
-  setAsPrimary() {
-    const newNip = this.state.existing.name + '@iris.to';
-    const timeout = setTimeout(() => {
-      SocialNetwork.setMetadata({ nip05: newNip });
-    }, 2000);
-    SocialNetwork.getProfile(Key.getPubKey(), (p) => {
-      if (p) {
-        clearTimeout(timeout);
-        if (p.nip05 !== newNip) {
-          p.nip05 = newNip;
-          SocialNetwork.setMetadata(p);
-        }
-      }
-      this.setState({ profile: p, irisToActive: true });
-    });
-  }
-
   async enableReserved() {
     const pubkey = Key.getPubKey();
     const event: any = {
@@ -298,7 +237,9 @@ export default class IrisAccount extends Component {
       body: JSON.stringify(event),
     });
     localState.get('showNoIrisToAddress').put(false);
-    localState.get('existingIrisToAddress').put({ confirmed: true, name });
+    localState
+      .get('existingIrisToAddress')
+      .put({ confirmed: true, name: this.state.existing.name });
     if (res.status === 200) {
       this.setState({
         error: null,
@@ -317,12 +258,12 @@ export default class IrisAccount extends Component {
   }
 
   async declineReserved() {
-    if (!confirm(`Are you sure you want to decline iris.to/${this.state.existing.name}?`)) {
+    if (!confirm(`Are you sure you want to decline iris.to/${name}?`)) {
       return;
     }
     const pubkey = Key.getPubKey();
     const event: Partial<Event> = {
-      content: `decline iris.to/${this.state.existing.name}`,
+      content: `decline iris.to/${name}`,
       kind: 1,
       tags: [],
       pubkey,

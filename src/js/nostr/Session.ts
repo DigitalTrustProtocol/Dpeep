@@ -55,6 +55,21 @@ const Session = {
   unsubscribe() {
     // wat dis
   },
+  loadMyFollowList() {
+    localState.get('myFollowList').once((myFollowList) => {
+      if (!myFollowList) {
+        return;
+      }
+      try {
+        const event = JSON.parse(myFollowList);
+        if (event?.kind === 3) {
+          Events.handle(event);
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
+  },
   onLoggedIn() {
     if (loggedIn) {
       return;
@@ -65,6 +80,7 @@ const Session = {
     SocialNetwork.followDistanceByUser.set(myId, 0);
     SocialNetwork.followersByUser.set(myId, new Set());
     SocialNetwork.usersByFollowDistance.set(0, new Set([myId]));
+    this.loadMyFollowList();
     const subscribe = (filters: Filter[], callback: (event: Event) => void): string => {
       const filter = filters[0];
       const key = filter['#d']?.[0];
@@ -116,7 +132,9 @@ const Session = {
       }
       document.documentElement.setAttribute('data-theme', 'dark');
     });
-    Relays.init();
+    if (window.location.pathname === '/') {
+      Relays.init();
+    }
     IndexedDB.init();
     const timeout = setTimeout(() => {
       IrisTo.checkExistingAccount(myPub);
@@ -152,6 +170,9 @@ const Session = {
     localState.get('isMyProfile').put(false);
     localState.get('loggedIn').on(() => this.onLoggedIn());
     Helpers.showConsoleWarning();
+    if (window.location.pathname !== '/') {
+      Relays.init();
+    }
   },
 };
 
