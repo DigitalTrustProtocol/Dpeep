@@ -128,7 +128,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
         </a>
       </Show>
       <Show when={!isPreview && !asInlineQuote && loadReactions}>
-        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} />
+        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} wot={wot} />
       </Show>
       <Show when={isQuote && !loadReactions}>
         <div style={{ marginBottom: '15px' }}></div>
