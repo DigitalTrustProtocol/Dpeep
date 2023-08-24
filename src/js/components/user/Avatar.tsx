@@ -36,6 +36,8 @@ const MyAvatar: React.FC<Props> = (props) => {
   const [state, setState] = useState<any>(null); // Will be set in useEffect
 
   useEffect(() => {
+    if (!profile) return; // Will not set State before profile is ready
+
     setState(getProfileState(profile, hasError, props));
   }, [profile, hasError, props?.activity]);
 

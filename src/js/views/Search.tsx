@@ -14,6 +14,9 @@ import useCachedFetch from '@/utils/useCachedFetch';
 
 const SuggestionProfile = memo(({ pubkey }: { pubkey: string }) => {
   const profile = useProfile(pubkey) as any;
+
+  if(!profile) return null; // Will not render before profile is ready
+
   return (
     <Link
       href={`/${nip19.npubEncode(pubkey)}`}

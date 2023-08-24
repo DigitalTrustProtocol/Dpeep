@@ -17,6 +17,8 @@ const Name = (props: Props) => {
 
   const wot = useVerticeMonitor(ID(props.pub), ['badName', 'neutralName', 'goodName'], '');
 
+  if (!profile) return null; // Will not render before profile is ready
+
   return (
     <>
       <span className={(profile.isDefault ? 'text-neutral-500' : '') + ' ' + wot?.option}>

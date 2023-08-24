@@ -10,13 +10,15 @@ export const useProfile = (address: string) => {
 
   const isMounted = useIsMounted();
 
-  const [profile, setProfile] = useState<ProfileMemory>(profileManager.getMemoryProfile(ID(address)));
+  const [profile, setProfile] = useState<ProfileMemory>();
 
   useEffect(() => {
+    if(!address) return; // ignore empty address
+
     let id = ID(address);
 
     let mem = profileManager.getMemoryProfile(id);
-    if(profile.created_at != mem.created_at) {
+    if(!profile || profile.created_at != mem.created_at) {
       setProfile(mem);
     }
 
@@ -25,7 +27,7 @@ export const useProfile = (address: string) => {
       let p = e.detail as ProfileMemory;
       if(!p || p.id != id) return; // not for me
 
-      if (p.created_at <= profile.created_at) return; // ignore older events
+      if (profile && p.created_at <= profile.created_at) return; // ignore older events
 
       setProfile({ ...p }); // Make sure to copy the object, otherwise React may not re-render
     };

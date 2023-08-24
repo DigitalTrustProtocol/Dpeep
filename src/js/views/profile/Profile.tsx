@@ -18,15 +18,25 @@ import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 
+function getNpub(id: string) {
+  if (!id) return Key.getPubKey(); // Default to my profile
+  if (id.startsWith('npub')) return id; // Already a npub
+  return '';
+}
+
 function Profile(props) {
-  const [npub, setNpub] = useState(props.id);
-  const { hexKey: hexPub, bech32Key, isMe } = useKey(npub);
+  const [npub, setNpub] = useState(getNpub(props.id));
+  const { hexKey: hexPub, bech32Key, isMe } = useKey(npub, false); //
   const profile = useProfile(hexPub) as any;
+
+  const [blocked, setBlocked] = useState(false);
+  const [bannerModalOpen, setBannerModalOpen] = useState(false);
+  const setIsMyProfile = useLocalState('isMyProfile', false)[1];
+
   // many of these hooks should be moved to useProfile or hooks directory
   const banner = useMemo(() => {
-    if (!profile) {
-      return;
-    }
+    if (!profile) return;
+
     let bannerURL;
 
     try {
@@ -44,10 +54,7 @@ function Profile(props) {
       console.log('Invalid banner URL', profile.banner);
       return '';
     }
-  }, [profile.banner]);
-  const [blocked, setBlocked] = useState(false);
-  const [bannerModalOpen, setBannerModalOpen] = useState(false);
-  const setIsMyProfile = useLocalState('isMyProfile', false)[1];
+  }, [profile?.banner]);
 
   useEffect(() => {
     setIsMyProfile(isMe);
@@ -57,30 +64,25 @@ function Profile(props) {
   }, [hexPub]);
 
   useEffect(() => {
-    try {
-      if (bech32Key !== props.id) {
-        route(`/${bech32Key}`, true);
-        return;
-      }
-    } catch (e) {
-      let nostrAddress = props.id;
+    if (npub) return; // Already set
 
-      if (!nostrAddress.match(/.+@.+\..+/)) {
-        if (nostrAddress.match(/.+\..+/)) {
-          nostrAddress = '_@' + nostrAddress;
-        } else {
-          nostrAddress = nostrAddress + '@iris.to';
-        }
-      }
+    let nostrAddress = props.id; // npub or nostr address
 
-      Key.getPubKeyByNip05Address(nostrAddress).then((pubKey) => {
-        if (pubKey) {
-          setNpub(pubKey.npub);
-        } else {
-          route(`/`, true);
-        }
-      });
+    if (!nostrAddress.match(/.+@.+\..+/)) {
+      if (nostrAddress.match(/.+\..+/)) {
+        nostrAddress = '_@' + nostrAddress;
+      } else {
+        nostrAddress = nostrAddress + '@iris.to';
+      }
     }
+
+    Key.getPubKeyByNip05Address(nostrAddress).then((pubKey) => {
+      if (pubKey) {
+        setNpub(pubKey.npub);
+      } else {
+        route(`/`, true); // Redirect to home if profile not found
+      }
+    });
 
     setTimeout(() => {
       window.prerenderReady = true;
@@ -89,7 +91,7 @@ function Profile(props) {
     return () => {
       setIsMyProfile(false);
     };
-  }, [props.id]);
+  }, [npub]);
 
   const filterOptions = useMemo(() => {
     return [
@@ -114,6 +116,8 @@ function Profile(props) {
   if (!hexPub) {
     return <div></div>;
   }
+
+  if (!profile) return null; // Profile not ready yet or not found
 
   const title = profile.display_name || profile.name || 'Profile';
   const ogTitle = `${title} | Iris`;
@@ -143,7 +147,7 @@ function Profile(props) {
           picture={profile.picture}
           ogTitle={ogTitle}
         />
-        <ProfileCard npub={npub} hexPub={hexPub} />
+        <ProfileCard npub={bech32Key} hexPub={hexPub} />
         <Show when={!blocked}>
           <Feed key={`posts${hexPub}`} filterOptions={filterOptions} />
         </Show>
