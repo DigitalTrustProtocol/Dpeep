@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Link } from 'preact-router';
 
 import graphNetwork from '../GraphNetwork';
-import Header from '../../components/header/Header';
 
 import ScrollView from '@/components/ScrollView';
 import WOTPubSub from '../network/WOTPubSub';
@@ -116,19 +115,8 @@ const View32010 = (props: TestDataProps) => {
 
   return (
     <>
-      <Header />
-      <div className="flex justify-between mb-4">
-        <span className="text-2xl font-bold">
-          <span style={{ flex: 1 }} className="ml-1">
-            Kind 32010 events
-          </span>
-        </span>
-      </div>
-      <hr className="-mx-2 opacity-10 my-2" />
       List of all events created with kind:32010 (Trust1)
-      <hr className="-mx-2 opacity-10 my-2" />
       <div className="flex flex-wrap gap-4">Status: {state?.message}</div>
-      <hr className="-mx-2 opacity-10 my-2" />
       <div className="flex flex-col w-full gap-4">
         <ScrollView>{renderProfiles()}</ScrollView>
       </div>

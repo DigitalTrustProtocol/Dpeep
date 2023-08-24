@@ -1,4 +1,3 @@
-import View32010 from '@/dwotr/views/View32010.js';
 import IrisAccount from './irisaccount/IrisAccount.tsx';
 import Account from './Account.js';
 import Appearance from './Appearance';
@@ -9,6 +8,7 @@ import Language from './Language';
 import Network from './Network.js';
 import Payments from './Payments';
 import SocialNetwork from './SocialNetwork';
+import SettingsDWoTR from '@/dwotr/views/Settings.tsx';
 
 const SettingsContent = (props) => {
   const pages = {
@@ -22,7 +22,7 @@ const SettingsContent = (props) => {
     social_network: SocialNetwork,
     iris_account: IrisAccount,
     dev: Dev,
-    dwotr: View32010,
+    dwotr: SettingsDWoTR,
   };
 
   const SelectedContent = pages[props.id] || pages.account;
