@@ -1,13 +1,8 @@
-import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline';
 import { memo } from 'preact/compat';
-import { useEffect, useState } from 'preact/hooks';
-import { route } from 'preact-router';
 
 import Show from '@/components/helpers/Show';
 import localState from '@/state/LocalState.ts';
 
-import Events from '../../../nostr/Events';
-import Key from '../../../nostr/Key';
 import ReactionsList from '../ReactionsList';
 
 import { CheckCorrect, FlagMarkSolid } from '../../../dwotr/components/Icons';
@@ -17,6 +12,7 @@ import TrustScore from '../../../dwotr/model/TrustScore';
 import Like from './Like';
 import Repost from './Repost';
 import Zap from './Zap';
+import Reply from './Reply'; // Add this import
 
 let settings: any = {};
 localState.get('settings').on((s) => (settings = s));
@@ -132,23 +128,17 @@ const ReactionButtons = (props) => {
 
   return (
     <>
-      {props.standalone && <ReactionsList event={props.event} wot={wot} />}
+      {props.standalone && <ReactionsList event={props.event} />}
       <div className="flex gap-4">
-        <a
-          className="btn-ghost btn-sm hover:bg-transparent hover:text-iris-blue btn content-center gap-2 rounded-none text-neutral-500"
-          onClick={() => replyBtnClicked()}
-        >
-          <ChatBubbleOvalLeftIcon width={18} />
-          <span>{state.replyCount || ''}</span>
-        </a>
+        <Reply event={event} standalone={standalone} />
         <Show when={settings.showReposts !== false}>
-          <Repost event={props.event} />
+          <Repost event={event} />
         </Show>
         <Show when={settings.showLikes !== false}>
-          <Like event={props.event} />
+          <Like event={event} />
         </Show>
         <Show when={settings.showZaps !== false}>
-          <Zap event={props.event} />
+          <Zap event={event} />
         </Show>
         {trustBtns()}
       </div>
