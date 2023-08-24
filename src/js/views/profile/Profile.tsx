@@ -20,7 +20,7 @@ import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 
 function Profile(props) {
   const [hexPub, setHexPub] = useState('');
-  const profile = useProfile(hexPub);
+  const profile = useProfile(hexPub) as any;
   // many of these hooks should be moved to useProfile or hooks directory
   const banner = useMemo(() => {
     if (!profile) {
