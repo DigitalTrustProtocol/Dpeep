@@ -4,7 +4,6 @@ import IndexedDB from '../nostr/IndexedDB';
 import PubSub, { Unsubscribe } from '../nostr/PubSub';
 import SocialNetwork from '../nostr/SocialNetwork';
 import Key from '../nostr/Key';
-import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import { throttle } from 'lodash';
 import Identicon from 'identicon.js';
 import OneCallQueue from './Utils/OneCallQueue';
@@ -14,6 +13,7 @@ import { ProfileEvent } from './network/ProfileEvent';
 import FuzzySearch from '@/nostr/FuzzySearch';
 import { ID, STR } from '@/utils/UniqueIds';
 import Subscriptions from './model/Subscriptions';
+import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -110,16 +110,17 @@ class ProfileManager {
   //--------------------------------------------------------------------------------
   // Loading profiles from IndexedDB 
   //--------------------------------------------------------------------------------
-  async loadProfiles(addresses: Set<string>): Promise<ProfileRecord[]> {
-    return await storage.profiles.where('key').anyOf(Array.from(addresses)).toArray();
+  async loadProfiles(addresses: Set<string>): Promise<ProfileMemory[]> {
+    let list = await storage.profiles.where('key').anyOf(Array.from(addresses)).toArray() as ProfileMemory[];
+    return ProfileMemory.setIDs(list);
   }
 
   //--------------------------------------------------------------------------------
   // Loading a profile from IndexedDB
   //--------------------------------------------------------------------------------
-  async loadProfile(hexPub: string): Promise<ProfileRecord | undefined> {
-    let profile = await OneCallQueue<ProfileRecord>(`loadProfile${hexPub}`, async () => {
-      return storage.profiles.get({ key: hexPub });
+  async loadProfile(hexPub: string): Promise<ProfileMemory | undefined> {
+    let profile = await OneCallQueue<ProfileMemory>(`loadProfile${hexPub}`, async () => {
+      return ProfileMemory.setID(await storage.profiles.get({ key: hexPub }) as ProfileMemory);
     });
 
     if (profile?.isDefault) {
@@ -132,7 +133,7 @@ class ProfileManager {
   //--------------------------------------------------------------------------------
   // Loading or fetching a profile from IndexedDB or the API or memory
   //--------------------------------------------------------------------------------
-  async getProfile(address: string): Promise<ProfileRecord> {
+  async getProfile(address: string): Promise<ProfileMemory> {
     let result = await this.getProfiles([address]);
     return result?.[0];
   }
@@ -140,7 +141,7 @@ class ProfileManager {
   //--------------------------------------------------------------------------------
   // Loading or fetching profiles from IndexedDB or the API or memory
   //--------------------------------------------------------------------------------
-  async getProfiles(addresses: string[]): Promise<Array<ProfileRecord>> {
+  async getProfiles(addresses: string[]): Promise<Array<ProfileMemory>> {
     if (!addresses || addresses.length === 0) return [];
 
     let profiles: Array<any> = [];
@@ -205,7 +206,7 @@ class ProfileManager {
     return profiles;
   }
 
-  saveProfile(profile: ProfileRecord) {
+  saveProfile(profile: ProfileMemory) {
     if (profile?.isDefault || profile?.isDefault == undefined) return; // don't save default profiles
     this.#saveQueue.push(profile);
     this.saveBulk();
@@ -213,7 +214,7 @@ class ProfileManager {
 
   async loadAllProfiles() {
     console.time('Loading profiles from DWoTRDB');
-    const list = await storage.profiles.toArray();
+    const list = await storage.profiles.toArray() as ProfileMemory[];
     if (!list) return undefined;
     for (const p of list) {
       this.addProfileToMemory(p);
@@ -224,7 +225,7 @@ class ProfileManager {
     console.log('Loaded profiles from DWoTRDB - ' + list.length + ' profiles');
   }
 
-  sanitizeProfile(p: any, hexPub: string): ProfileRecord {
+  sanitizeProfile(p: any, hexPub: string): ProfileMemory {
     if (!p) return this.createDefaultProfile(hexPub);
 
     // Make sure we have a name
@@ -258,41 +259,41 @@ class ProfileManager {
       lud06,
       lud16,
       isDefault: false,
-    } as ProfileRecord;
+    } as ProfileMemory;
 
     return profile;
   }
 
-  createDefaultProfile(hexPub: string): ProfileRecord {
-    let profile = new ProfileRecord();
+  createDefaultProfile(hexPub: string): ProfileMemory {
+    let profile = new ProfileMemory(ID(hexPub));
     profile.key = hexPub;
     profile.name = hexName(hexPub);
     profile.isDefault = true;
     return profile;
   }
 
-  getDefaultProfile(id: number) : ProfileRecord {
-    //if (!id) return this.createDefaultProfile("");
+  // getDefaultProfile(id: number) : ProfileMemory {
+  //   //if (!id) return this.createDefaultProfile("");
+  //   const profile = SocialNetwork.profiles.get(id);
+  //   if (profile) return profile;
+  //   return this.createDefaultProfile(STR(id));
+  // }
+
+  // quickProfile(address: string) {
+  //   const id = ID(address);
+  //   const profile = SocialNetwork.profiles.get(id);
+  //   if (profile) return profile;
+  //   return this.createDefaultProfile(STR(id));
+  // }
+
+  getMemoryProfile(id: number): ProfileMemory {
     const profile = SocialNetwork.profiles.get(id);
+    ProfileMemory.setID(profile); // Make sure the profile has an ID
     if (profile) return profile;
     return this.createDefaultProfile(STR(id));
   }
 
-  quickProfile(address: string) {
-    const id = ID(address);
-    const profile = SocialNetwork.profiles.get(id);
-    if (profile) return profile;
-    return this.createDefaultProfile(STR(id));
-  }
-
-  getMemoryProfile(id: number): ProfileRecord {
-    const profile = SocialNetwork.profiles.get(id);
-
-    if (profile) return profile;
-    return this.createDefaultProfile(STR(id));
-  }
-
-  isProfileNewer(profile: ProfileRecord): boolean {
+  isProfileNewer(profile: ProfileMemory): boolean {
     if (!profile?.key) return false;
 
     const existingProfile = SocialNetwork.profiles.get(ID(profile.key));
@@ -303,7 +304,7 @@ class ProfileManager {
     );
   }
 
-  addProfileToMemory(profile: ProfileRecord) {
+  addProfileToMemory(profile: ProfileMemory) {
     if (!profile) return undefined;
 
     SocialNetwork.profiles.set(ID(profile.key), profile);
@@ -353,7 +354,7 @@ class ProfileManager {
     return `data:image/svg+xml;base64,${identicon.toString()}`;
   }
 
-  ensurePicture(profile: ProfileRecord): string {
+  ensurePicture(profile: ProfileMemory): string {
     if (!profile.picture) {
       profile.picture = this.createImageUrl(profile.key);
     }
@@ -419,7 +420,7 @@ class ProfileManager {
 
   }
 
-  subscribeCallback(profile: ProfileRecord | undefined, cb: (e: any) => void) {
+  subscribeCallback(profile: ProfileMemory | undefined, cb: (e: any) => void) {
     if (!profile) return;
 
     if (this.isProfileNewer(profile)) this.addProfileToMemory(profile);
@@ -430,7 +431,7 @@ class ProfileManager {
   }
 
 
-  dispatchProfile(profile: ProfileRecord) {
+  dispatchProfile(profile: ProfileMemory) {
     if (!profile) return;
 
     if (this.isProfileNewer(profile)) this.addProfileToMemory(profile);
@@ -443,7 +444,7 @@ class ProfileManager {
   }
 
 
-  async verifyNip05Profile(profile: ProfileRecord, pubkey: string) {
+  async verifyNip05Profile(profile: ProfileMemory, pubkey: string) {
    if (!profile.nip05) return false;
     // TODO verify NIP05 address
     let isValid = Key.verifyNip05Address(profile.nip05, pubkey);

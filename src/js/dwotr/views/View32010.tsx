@@ -51,7 +51,7 @@ const View32010 = (props: TestDataProps) => {
             e: Object.create(null),
             time: 0,
             history: [],
-            profile: profileManager.getDefaultProfile(ID(edge.authorPubkey)),
+            profile: profileManager.getMemoryProfile(ID(edge.authorPubkey)),
           };
 
         let user = profiles.current[edge.authorPubkey];

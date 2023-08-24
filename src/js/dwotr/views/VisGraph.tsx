@@ -79,7 +79,7 @@ export function filterNodes(
       return;
     }
 
-    let profile = profileManager.getDefaultProfile(node.id as number);
+    let profile = profileManager.getMemoryProfile(node.id as number);
 
     if (profile?.name?.toLowerCase().includes(filter.toLowerCase())) {
       if (!hasNode) target.add(node);

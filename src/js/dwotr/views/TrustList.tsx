@@ -30,7 +30,7 @@ export function filterByName(list: Vertice[], filter: string) {
   if (!filter || list.length == 0) return [...list]; // Return a copy of the list
 
   let result = list.filter((v) => {
-    let profile = profileManager.getDefaultProfile(v.id);
+    let profile = profileManager.getMemoryProfile(v.id);
 
     if (profile?.name?.toLowerCase().includes(filter.toLowerCase())) return true;
     if (profile?.display_name?.toLowerCase().includes(filter.toLowerCase())) return true;

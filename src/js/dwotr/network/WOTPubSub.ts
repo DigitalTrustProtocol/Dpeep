@@ -3,6 +3,7 @@ import PubSub, { Unsubscribe } from '../../nostr/PubSub';
 import Relays from '../../nostr/Relays';
 import { EdgeRecord, EntityType } from '../model/Graph';
 import Key from '../../nostr/Key';
+import getRelayPool from '@/nostr/relayPool';
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
 
@@ -27,7 +28,7 @@ class WOTPubSub {
     };
 
 
-    const unsub = PubSub.relayPool.subscribe(
+    const unsub = getRelayPool().subscribe(
       [filter],
       relays,
       (event: Event, afterEose: boolean, url: string | undefined) => {
@@ -40,7 +41,7 @@ class WOTPubSub {
       {
         // Options
         // enabled relays
-        //defaultRelays,
+       defaultRelays: Relays.enabledRelays(),
       },
     );
 

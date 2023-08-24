@@ -5,7 +5,6 @@ import SimpleImageModal from '@/components/modal/Image.tsx';
 
 import { getEventReplyingTo, isRepost } from '@/nostr/utils.ts';
 import useLocalState from '@/state/useLocalState.ts';
-import { PublicKey } from '@/utils/Hex/Hex.ts';
 import ProfileHelmet from '@/views/profile/Helmet.tsx';
 
 import Feed from '../../components/feed/Feed.tsx';
@@ -17,9 +16,11 @@ import SocialNetwork from '../../nostr/SocialNetwork.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';
+import { useKey } from '@/dwotr/hooks/useKey.tsx';
 
 function Profile(props) {
-  const [hexPub, setHexPub] = useState('');
+  const [npub, setNpub] = useState(props.id);
+  const { hexKey: hexPub, bech32Key, isMe } = useKey(npub);
   const profile = useProfile(hexPub) as any;
   // many of these hooks should be moved to useProfile or hooks directory
   const banner = useMemo(() => {
@@ -45,16 +46,11 @@ function Profile(props) {
     }
   }, [profile.banner]);
   const [blocked, setBlocked] = useState(false);
-  const [npub, setNpub] = useState('');
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const setIsMyProfile = useLocalState('isMyProfile', false)[1];
 
   useEffect(() => {
-    if (!hexPub) {
-      return;
-    }
-    const isMyProfile = Key.isMine(hexPub);
-    setIsMyProfile(isMyProfile);
+    setIsMyProfile(isMe);
     SocialNetwork.getBlockedUsers((blockedUsers) => {
       setBlocked(blockedUsers.has(hexPub));
     });
@@ -62,15 +58,10 @@ function Profile(props) {
 
   useEffect(() => {
     try {
-      const pub = new PublicKey(props.id);
-
-      if (pub.npub !== props.id) {
-        route(`/${pub.npub}`, true);
+      if (bech32Key !== props.id) {
+        route(`/${bech32Key}`, true);
         return;
       }
-
-      setHexPub(pub.hex);
-      setNpub(pub.npub);
     } catch (e) {
       let nostrAddress = props.id;
 
@@ -85,9 +76,8 @@ function Profile(props) {
       Key.getPubKeyByNip05Address(nostrAddress).then((pubKey) => {
         if (pubKey) {
           setNpub(pubKey.npub);
-          setHexPub(pubKey.hex);
         } else {
-          setNpub(''); // To indicate not found
+          route(`/`, true);
         }
       });
     }

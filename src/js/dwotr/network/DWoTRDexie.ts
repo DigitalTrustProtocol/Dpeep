@@ -10,7 +10,7 @@ export class DWoTRDexie extends Dexie {
   // We just tell the typing system this is the case
   //vertices!: Table<Vertice>; 
   edges!: Table<EdgeRecord>;
-  profiles!: Table<ProfileRecord>;
+  profiles!: Table<ProfileRecord>; // ProfileRecord is defined with minimal properties, so all empty property names are not serialized into the database.
 
   constructor() {
     super(DB_NAME);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import profileManager from '../ProfileManager';
-import ProfileRecord, { ProfileMemory } from '../model/ProfileRecord';
+import { ProfileMemory } from '../model/ProfileRecord';
 import { ID } from '@/utils/UniqueIds';
 import { useIsMounted } from './useIsMounted';
 
@@ -10,7 +10,7 @@ export const useProfile = (address: string) => {
 
   const isMounted = useIsMounted();
 
-  const [profile, setProfile] = useState<ProfileRecord>(profileManager.getMemoryProfile(ID(address)));
+  const [profile, setProfile] = useState<ProfileMemory>(profileManager.getMemoryProfile(ID(address)));
 
   useEffect(() => {
     let id = ID(address);

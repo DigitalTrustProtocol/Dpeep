@@ -7,7 +7,7 @@ import profileManager from '../ProfileManager';
 import { toTimestamp } from '../Utils';
 import Name from '../../components/user/Name';
 import InfoList from '../components/Display/InfoList';
-import ProfileRecord from '../model/ProfileRecord';
+import { ProfileMemory } from '../model/ProfileRecord';
 import { Edge } from '../model/Graph';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import { resetWoTDatabase } from '../network/DWoTRDexie';
@@ -263,7 +263,7 @@ const Diagnostics = (props: TestDataProps) => {
     if (!state?.profiles) return;
 
     // Convert into a list of InfoList objects
-    let list = state.profiles.map((p: ProfileRecord) => {
+    let list = state.profiles.map((p: ProfileMemory) => {
       return { name: p.name, value: Key.toNostrBech32Address(p.key, 'npub') };
     });
 

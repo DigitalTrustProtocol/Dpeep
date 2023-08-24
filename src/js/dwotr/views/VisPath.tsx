@@ -13,7 +13,6 @@ import { useIsMounted } from '../hooks/useIsMounted';
 import Key from '../../nostr/Key';
 import { filterNodes } from './VisGraph';
 import eventManager from '../EventManager';
-import ProfileRecord from '../model/ProfileRecord';
 import { BECH32, ID, STR } from '@/utils/UniqueIds';
 
 const defaultOptions = {
@@ -61,7 +60,7 @@ const defaultOptions = {
 };
 
 export function loadKeyVertice(vertice: Vertice, nodes: DataSetNodes) {
-  let profile = profileManager.getDefaultProfile(vertice.id) as ProfileRecord;
+  let profile = profileManager.getMemoryProfile(vertice.id);
   let image = profileManager.ensurePicture(profile);
 
   let node = nodes.get(vertice.id);
