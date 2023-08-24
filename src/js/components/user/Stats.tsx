@@ -1,6 +1,8 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import throttle from 'lodash/throttle';
 import { Link } from 'preact-router';
+
+import { ID, STR } from '@/utils/UniqueIds.ts';
 
 import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
@@ -11,63 +13,54 @@ import Name from './Name';
 import ProfileScoreLinks from '../../dwotr/components/ProfileScoreLinks';
 
 const ProfileStats = ({ address }) => {
-  const [followedUserCount, setFollowedUserCount] = useState<number>(0);
-  const [followerCount, setFollowerCount] = useState<number>(0);
-  const [followerCountFromApi, setFollowerCountFromApi] = useState<number>(0);
-  const [followedUserCountFromApi, setFollowedUserCountFromApi] = useState<number>(0);
-  const [knownFollowers, setKnownFollowers] = useState<string[]>([]);
+  const id = ID(address);
+  const [followedUserCount, setFollowedUserCount] = useState<number>(
+    SocialNetwork.followedByUser.get(id)?.size || 0,
+  );
+  const [followerCount, setFollowerCount] = useState<number>(
+    SocialNetwork.followersByUser.get(id)?.size || 0,
+  );
   const isMyProfile = Key.isMine(address);
 
+  const getKnownFollowers = useCallback(() => {
+    const followerSet = SocialNetwork.followersByUser.get(id);
+    followerSet?.delete(id);
+    const followers = Array.from(followerSet || new Set<number>());
+    return followers
+      ?.filter((id) => typeof id === 'number' && SocialNetwork.followDistanceByUser.get(id) === 1)
+      .map((id) => STR(id));
+  }, []);
+
+  const [knownFollowers, setKnownFollowers] = useState<string[]>(getKnownFollowers());
+
   useEffect(() => {
-    const subscriptions = [] as any[];
-
-    fetch(`https://eu.rbr.bio/${address}/info.json`).then((res) => {
-      if (!res.ok) {
-        return;
-      }
-      res.json().then((json) => {
-        if (json) {
-          setFollowedUserCountFromApi(json.following?.length);
-          setFollowerCountFromApi(json.followerCount);
-        }
-      });
-    });
-
-    const throttledSetKnownFollowers = throttle((followers) => {
-      const knownFollowers = new Set<string>();
-      for (const follower of followers) {
-        if (SocialNetwork.getFollowDistance(follower) === 1) {
-          knownFollowers.add(follower);
-        }
-      }
-      setKnownFollowers(Array.from(knownFollowers));
+    const throttledSetKnownFollowers = throttle(() => {
+      setKnownFollowers(getKnownFollowers());
     }, 1000);
 
-    setTimeout(() => {
-      subscriptions.push(
-        SocialNetwork.getFollowersByUser(address, (followers) => {
-          setFollowerCount(followers.size);
-          throttledSetKnownFollowers(followers);
-        }),
-      );
-      subscriptions.push(
-        SocialNetwork.getFollowedByUser(address, (followed) => setFollowedUserCount(followed.size)),
-      );
-    }, 1000); // this causes social graph recursive loading, so let some other stuff like feed load first
+    const subscriptions = [
+      SocialNetwork.getFollowersByUser(address, (followers: Set<string>) => {
+        setFollowerCount(followers.size);
+        throttledSetKnownFollowers();
+      }),
+      SocialNetwork.getFollowedByUser(address, (followed) => setFollowedUserCount(followed.size)),
+    ];
+
+    setTimeout(() => subscriptions.forEach((sub) => sub()), 1000);
 
     return () => {
       subscriptions.forEach((unsub) => unsub());
     };
-  }, [address]);
+  }, [address, getKnownFollowers]);
 
   return (
     <div>
       <div className="text-sm flex gap-4">
         <Link href={`/follows/${address}`}>
-          <b>{Math.max(followedUserCount, followedUserCountFromApi)}</b><span className="text-neutral-500"> {t('following')}</span>
+          <b>{followedUserCount}</b><span className="text-neutral-500"> {t('following')}</span>
         </Link>
         <Link href={`/followers/${address}`}>
-          <b>{Math.max(followerCount, followerCountFromApi)}</b><span className="text-neutral-500"> {t('followers')}</span>
+          <b>{followerCount}</b><span className="text-neutral-500"> {t('known_followers')}</span>
         </Link>
         <ProfileScoreLinks str={address} />
       </div>

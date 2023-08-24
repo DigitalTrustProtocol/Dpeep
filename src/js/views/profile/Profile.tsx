@@ -19,28 +19,10 @@ import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 
 function Profile(props) {
-  const [blocked, setBlocked] = useState(false);
-  const [hexPub, setHexPub] = useState(Key.toNostrHexAddress(props.id) || '');
-  const [npub, setNpub] = useState('');
-  const [banner, setBanner] = useState('');
-  const [bannerModalOpen, setBannerModalOpen] = useState(false);
-  const setIsMyProfile = useLocalState('isMyProfile', false)[1];
-
-  const profile = useProfile(hexPub) as any;
-
-  useEffect(() => {
-    if (!hexPub) {
-      return;
-    }
-    const isMyProfile = Key.isMine(hexPub);
-    setIsMyProfile(isMyProfile);
-    SocialNetwork.getBlockedUsers((blockedUsers) => {
-      setBlocked(blockedUsers.has(hexPub));
-    });
-  }, [hexPub]);
-
+  const [hexPub, setHexPub] = useState('');
+  const profile = useProfile(hexPub);
   // many of these hooks should be moved to useProfile or hooks directory
-  useEffect(() => {
+  const banner = useMemo(() => {
     if (!profile) {
       return;
     }
@@ -56,11 +38,27 @@ function Profile(props) {
         ? bannerURL
         : `https://imgproxy.iris.to/insecure/rs:fit:948:948/plain/${bannerURL}`;
 
-      setBanner(bannerURL);
+      return bannerURL;
     } catch (e) {
       console.log('Invalid banner URL', profile.banner);
+      return '';
     }
-  }, [profile]);
+  }, [profile.banner]);
+  const [blocked, setBlocked] = useState(false);
+  const [npub, setNpub] = useState('');
+  const [bannerModalOpen, setBannerModalOpen] = useState(false);
+  const setIsMyProfile = useLocalState('isMyProfile', false)[1];
+
+  useEffect(() => {
+    if (!hexPub) {
+      return;
+    }
+    const isMyProfile = Key.isMine(hexPub);
+    setIsMyProfile(isMyProfile);
+    SocialNetwork.getBlockedUsers((blockedUsers) => {
+      setBlocked(blockedUsers.has(hexPub));
+    });
+  }, [hexPub]);
 
   useEffect(() => {
     try {
@@ -135,15 +133,18 @@ function Profile(props) {
 
   return (
     <View>
-      <Show when={banner && !blocked}>
-        <div
-          className="mb-4 h-48 bg-cover bg-center cursor-pointer"
-          style={{ backgroundImage: `url(${banner})` }}
-          onClick={() => setBannerModalOpen(true)}
-        ></div>
-        <Show when={bannerModalOpen}>
-          <SimpleImageModal imageUrl={profile.banner} onClose={() => setBannerModalOpen(false)} />
-        </Show>
+      <div
+        className="mb-4 h-48 bg-cover bg-center cursor-pointer"
+        style={{
+          backgroundImage:
+            banner && !blocked
+              ? `url(${banner})`
+              : 'linear-gradient(120deg, #010101 0%, #1f0f26 50%, #010101 100%)',
+        }}
+        onClick={() => banner && !blocked && setBannerModalOpen(true)}
+      ></div>
+      <Show when={bannerModalOpen}>
+        <SimpleImageModal imageUrl={profile.banner} onClose={() => setBannerModalOpen(false)} />
       </Show>
       <div>
         <ProfileHelmet

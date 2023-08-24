@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import throttle from 'lodash/throttle';
 
 import { Event } from 'nostr-tools';
@@ -19,25 +19,15 @@ const useSubscribe = (ops: SubscribeOptions) => {
 
   const eventQueue = useRef<Event[]>([]);
 
-  const defaultOps = useMemo(
-    () => ({
-      enabled: true,
-      sinceLastOpened: false,
-      mergeSubscriptions: true,
-    }),
-    [],
-  );
-
   const {
     filter,
     filterFn,
-    enabled = defaultOps.enabled,
-    sinceLastOpened = defaultOps.sinceLastOpened,
-    mergeSubscriptions = defaultOps.mergeSubscriptions,
+    enabled = true,
+    sinceLastOpened = false,
+    mergeSubscriptions = true,
   } = ops;
 
-  const [events, setEvents] = useState<Event[]>([]);
-  const lastUntilRef = useRef<number | null>(null);
+  const shouldReturnEarly = !enabled || filter.limit === 0;
 
   // const queueEvent = useCallback(
   //   throttle(() => {
@@ -57,28 +47,33 @@ const useSubscribe = (ops: SubscribeOptions) => {
   //   }, 1000, { trailing: true })
   // , []);
 
-  const updateEvents = useCallback(() => {
-    // maybe we should still add filter by displaycount?
+  const getEvents = useCallback(() => {
+    if (shouldReturnEarly) return [];
     let e = EventDB.findArray({ ...filter, limit: undefined });
     if (filterFn) {
       e = e.filter(filterFn);
     }
-    setEvents(e);
-  }, [filter, filterFn]);
+    return e;
+  }, [filter, filterFn, shouldReturnEarly]);
+
+  const [events, setEvents] = useState<Event[]>(getEvents());
+  const lastUntilRef = useRef<number | null>(null);
+  const loadMoreCleanupRef = useRef<null | (() => void)>(null);
+
+  const updateEvents = useCallback(() => {
+    setEvents(getEvents());
+  }, [getEvents]);
 
   useEffect(() => {
     setEvents([]);
-  }, [filter, filterFn, enabled, sinceLastOpened, mergeSubscriptions]);
-
-  useEffect(() => {
-    if (!enabled || !filter) return;
+    if (shouldReturnEarly) return;
     return PubSub.subscribe(filter, updateEvents, sinceLastOpened, mergeSubscriptions);
-  }, [filter, filterFn, enabled, sinceLastOpened, mergeSubscriptions]);
-
-  const loadMoreCleanupRef = useRef<null | (() => void)>(null);
+  }, [filter, filterFn, shouldReturnEarly, sinceLastOpened, mergeSubscriptions]);
 
   const loadMore = useCallback(
     throttle(() => {
+      if (shouldReturnEarly) return;
+
       const until = events.length ? events[events.length - 1].created_at : undefined;
 
       if (!until || lastUntilRef.current === until) return;
@@ -92,10 +87,10 @@ const useSubscribe = (ops: SubscribeOptions) => {
 
       loadMoreCleanupRef.current = cleanup;
     }, 500),
-    [filter, filterFn, enabled, sinceLastOpened, mergeSubscriptions],
+    [filter, filterFn, shouldReturnEarly, sinceLastOpened, mergeSubscriptions],
   );
 
-  // New effect for cleaning up the loadMore subscription
+  // Clean up the loadMore subscription
   useEffect(() => {
     return () => {
       if (loadMoreCleanupRef.current) {

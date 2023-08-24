@@ -23,10 +23,30 @@ import TrustProfileButtons from '../../dwotr/components/TrustProfileButtons';
 import Stats from './Stats';
 
 const ProfileCard = (props: { hexPub: string; npub: string }) => {
+  const getWebsite = (websiteProfile: string) => {
+    try {
+      const tempWebsite = websiteProfile.match(/^https?:\/\//)
+        ? websiteProfile
+        : 'http://' + websiteProfile;
+      const url = new URL(tempWebsite);
+      return url.href.endsWith('/') ? url.href.slice(0, -1) : url.href;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const getLightning = (profile: any) => {
+    let lightning = profile.lud16 || profile.lud06;
+    if (lightning && !lightning.startsWith('lightning:')) {
+      lightning = 'lightning:' + lightning;
+    }
+    return lightning;
+  };
+
   const { hexPub, npub } = props;
   const [profile, setProfile] = useState<any>(SocialNetwork.profiles.get(ID(hexPub)) || {});
-  const [lightning, setLightning] = useState<string>('');
-  const [website, setWebsite] = useState<string>('');
+  const [lightning, setLightning] = useState<string>(getLightning(profile));
+  const [website, setWebsite] = useState<string>(getWebsite(profile.website));
   const [loggedIn, setLoggedIn] = useState<boolean>(false);
   const [nostrAddress, setNostrAddress] = useState<string>('');
   const [rawDataJson, setRawDataJson] = useState<string>('');
@@ -83,29 +103,8 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
             window.history.replaceState(previousState, '', newUrl);
           }
 
-          let lightning = profile.lud16 || profile.lud06;
-          if (lightning && !lightning.startsWith('lightning:')) {
-            lightning = 'lightning:' + lightning;
-          }
-          setLightning(lightning);
-
-          let website = '';
-
-          try {
-            const tempWebsite =
-              profile.website &&
-              (profile.website.match(/^https?:\/\//)
-                ? profile.website
-                : 'http://' + profile.website);
-
-            const url = new URL(tempWebsite);
-
-            website = url.href.endsWith('/') ? url.href.slice(0, -1) : url.href;
-          } catch (e) {
-            website = '';
-          }
-
-          setWebsite(website);
+          setLightning(getLightning(profile));
+          setWebsite(getWebsite(profile.website));
 
           setProfile(profile);
         },
@@ -142,6 +141,7 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
     const unsubBlocked = SocialNetwork.getBlockedUsers((blockedUsers) => {
       setBlocked(blockedUsers.has(hexPub));
     });
+
     return () => {
       unsubBlocked();
       unsubLoggedIn();
@@ -161,9 +161,9 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
 
   return (
     <div key={`${hexPub}details`}>
-      <div className="mb-2 mx-4 md:px-4 md:mx-0 flex flex-col gap-2">
+      <div className="mb-2 mx-2 md:px-4 md:mx-0 flex flex-col gap-2">
         <div className="flex flex-row">
-          <div className={profile.banner ? '-mt-24' : ''}>{profilePicture}</div>
+          <div className="-mt-24">{profilePicture}</div>
           <div className="flex-1 justify-end items-center flex gap-2">
             <div onClick={onClickHandler}>
               {/* <a href={'/history/' + hexPub} className="link px-2">
@@ -196,15 +196,18 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
             />
           </div>
         </div>
-        <div className="profile-header-stuff">
-          <div className="flex-1 profile-name">
-            <span className="text-xl">
+        <div>
+          <div className="flex-1">
+            <span className="text-xl mr-2">
               <Name pub={hexPub} />
             </span>
-            <Show when={profile.nip05 && profile.nip05valid}>
-              <br />
-              <small className="text-iris-green">{profile.nip05?.replace(/^_@/, '')}</small>
-            </Show>
+            <small
+              className={`inline-block text-iris-green ${
+                profile.nip05 && profile.nip05valid ? 'visible' : 'invisible'
+              }`}
+            >
+              {profile.nip05?.replace(/^_@/, '')}
+            </small>
           </div>
           <Stats address={hexPub} />
           <div className="py-2">
