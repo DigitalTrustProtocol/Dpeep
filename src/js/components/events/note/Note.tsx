@@ -5,7 +5,7 @@ import { Link, route } from 'preact-router';
 
 import InfiniteScroll from '@/components/helpers/InfiniteScroll';
 import useSubscribe from '@/nostr/hooks/useSubscribe.ts';
-import { getEventReplyingTo, getEventRoot } from '@/nostr/utils';
+import { getEventRoot, getNoteReplyingTo } from '@/nostr/utils';
 
 import Key from '../../../nostr/Key';
 import { translate as t } from '../../../translations/Translation.mjs';
@@ -42,7 +42,7 @@ const Note: React.FC<NoteProps> = ({
   isQuote = false,
   isQuoting = false,
 }) => {
-  const replyingTo = useMemo(() => getEventReplyingTo(event), [event.id]);
+  const replyingTo = useMemo(() => getNoteReplyingTo(event), [event.id]);
 
   const repliesFilter = useMemo(() => {
     const filter: Filter = { '#e': [event.id], kinds: [1] };
@@ -51,7 +51,7 @@ const Note: React.FC<NoteProps> = ({
     }
     return filter;
   }, [event.id, showReplies]);
-  const repliesFilterFn = useCallback((e) => getEventReplyingTo(e) === event.id, [event.id]);
+  const repliesFilterFn = useCallback((e) => getNoteReplyingTo(e) === event.id, [event.id]);
 
   const { events: replies } = useSubscribe({
     filter: repliesFilter,
@@ -70,21 +70,21 @@ const Note: React.FC<NoteProps> = ({
   const wot = useVerticeMonitor(ID(event.id), ["badMessage", "neutralMessage", "goodMessage"], "" ) as any;
 
   const computedIsQuote = useMemo(
-    () => isQuote || (!standalone && showReplies && replies.length),
+    () => isQuote || !!(!standalone && showReplies && replies.length),
     [isQuote, standalone, showReplies, replies.length],
   );
   const computedIsQuoting = useMemo(
-    () => isQuoting || (replyingTo && showRepliedMsg),
+    () => isQuoting || !!(replyingTo && showRepliedMsg),
     [isQuoting, replyingTo, showRepliedMsg],
   );
 
   const className = useMemo(() => {
     return classNames({
       'cursor-pointer transition-all ease-in-out duration-200 hover:bg-neutral-999': !standalone,
-      'quote pb-2': computedIsQuote,
-      'quoting pt-0': computedIsQuoting,
+      'pb-2': computedIsQuote,
+      'pt-0': computedIsQuoting,
       'pt-4': !computedIsQuoting,
-      'inline-quote border-2 border-neutral-900 rounded-lg my-2': asInlineQuote,
+      'border-2 border-neutral-900 rounded-lg my-2': asInlineQuote,
       'full-width':
         fullWidth || (!isReply && !computedIsQuoting && !computedIsQuote && !asInlineQuote),
     });
@@ -119,7 +119,7 @@ const Note: React.FC<NoteProps> = ({
     ) : null;
 
   const showThreadBtn = (
-    <Show when={!standalone && !showRepliedMsg && !isReply && !isQuoting && threadRootId}>
+    <Show when={!standalone && !showRepliedMsg && !isReply && !computedIsQuoting && threadRootId}>
       <Link
         className="text-iris-blue text-sm block mb-2"
         href={`/${Key.toNostrBech32Address(threadRootId || '', 'note')}`}
@@ -140,23 +140,28 @@ const Note: React.FC<NoteProps> = ({
         {showThreadBtn}
         <div className="flex flex-row" onClick={(e) => messageClicked(e)}>
           <Show when={!fullWidth}>
-            <Avatar event={event} isQuote={isQuote} standalone={standalone} fullWidth={fullWidth} />
+            <Avatar
+              event={event}
+              isQuote={computedIsQuote}
+              standalone={standalone}
+              fullWidth={fullWidth}
+            />
           </Show>
           <Content
             event={event}
             standalone={standalone}
-            isQuote={isQuote}
+            isQuote={computedIsQuote}
             asInlineQuote={asInlineQuote}
             fullWidth={fullWidth}
             wot={wot}
           />
         </div>
       </div>
-      <Show when={!(isQuote || asInlineQuote)}>
+      <Show when={!(computedIsQuote || asInlineQuote)}>
         <hr className="opacity-10" />
       </Show>
       <InfiniteScroll>
-        {replies.reverse().map((r) => (
+        {replies.slice(0, showReplies).map((r) => (
           <EventComponent
             key={r.id}
             id={r.id}
