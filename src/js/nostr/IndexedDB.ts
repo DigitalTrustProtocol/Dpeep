@@ -181,11 +181,14 @@ const IndexedDB = {
     if (filter.kinds) {
       query = query.where('kind').anyOf(filter.kinds);
     }
+    if (filter.search) {
+      query = query.filter((event: Event) => event.content?.includes(filter.search!));
+    }
     if (filter.limit) {
       query = query.limit(filter.limit);
     }
     // TODO test that the sort is actually working
-    await query.sortBy('created_at').reverse().each(handleEvent);
+    await query.each(handleEvent);
   },
 };
 
