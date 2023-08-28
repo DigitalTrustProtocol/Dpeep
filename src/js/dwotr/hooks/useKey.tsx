@@ -6,7 +6,7 @@ function createKeyData(str: string | undefined, defaultToMe: boolean = true, pre
   if(!str && !defaultToMe) {
     return {
       key: str,
-      uid: '',
+      uid: 0,
       bech32Key: '',
       hexKey: '',
       isMe: false,

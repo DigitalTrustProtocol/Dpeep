@@ -1,19 +1,18 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
-import { Event } from 'nostr-tools';
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
-import WOTPubSub from './network/WOTPubSub';
+import WOTPubSub, { MuteKind, Trust1Kind } from './network/WOTPubSub';
 import { MAX_DEGREE } from './model/TrustScore';
 import dwotrDB from './network/DWoTRDexie';
 import { debounce } from 'lodash';
-import { MonitorItem } from './model/MonitorItem';
-import { TrustScoreEvent } from './network/TrustScoreEvent';
 import Key from '@/nostr/Key';
-import { ID, STR } from '@/utils/UniqueIds';
+import { ID, STR, UID, UniqueIds } from '@/utils/UniqueIds';
+import eventManager from './EventManager';
+import muteManager from './MuteManager';
+import verticeMonitor from './VerticeMonitor';
 
 export type ResolveTrustCallback = (result: any) => any;
 
 export type ReadyCallback = () => void;
-
 
 export const TRUST1 = 'trust1';
 
@@ -31,7 +30,6 @@ class GraphNetwork {
   unsubs = {};
   subscriptionsCounter = 0;
 
-  verticeMonitor = Object.create(null); // Monitor vertices for changes
   maxDegree = MAX_DEGREE;
   readyCallbacks: ReadyCallback[] = [];
 
@@ -41,6 +39,7 @@ class GraphNetwork {
 
   submitTrustIndex = {};
   profilesLoaded = false;
+
 
   constructor(wotPubSub: typeof WOTPubSub, db: typeof dwotrDB) {
     this.wotPubSub = wotPubSub;
@@ -56,7 +55,8 @@ class GraphNetwork {
 
     let count = 0;
 
-    await this.db.edges.each((record) => { // Load one record at a time, to avoid memory issues (check that this is indeed the case with each())
+    await this.db.edges.each((record) => {
+      // Load one record at a time, to avoid memory issues (check that this is indeed the case with each())
       this.g.addEdge(record, false); // Load all edges from the DB into the graph with partial data
       count++;
     });
@@ -68,7 +68,7 @@ class GraphNetwork {
         Object.entries(this.g.vertices).length +
         ' vertices and ' +
         Object.entries(this.g.edges).length +
-        ' edges', 
+        ' edges',
       //'List: ' + list.length + ' edges'
     );
 
@@ -99,18 +99,15 @@ class GraphNetwork {
     entityType: EntityType = EntityType.Key,
     comment?: string,
     context: string = 'nostr',
-  ) : Promise<void> {
-    // console.time("GraphNetwork.publishTrust");
+  ): Promise<void> {
     // Add the trust to the local graph, and update the score
-    const timestamp = this.wotPubSub?.getTimestamp();
+    const timestamp = eventManager.getTimestamp();
     const props = { from: this.sourceKey, to, val, entityType, context, note: comment, timestamp };
 
     const { outV, inV, preVal, change } = await this.setTrust(props, false);
 
-    if(!change) return;
+    if (!change) return;
     // Update the vertice monitors
-    // graphNetwork.updateVerticeMonitor(outV); // Update the monitor for the source vertice before recalculating the score
-    // graphNetwork.updateVerticeMonitor(inV);
 
     // Update the Graph score
     this.addToProcessScoreQueue(outV, inV);
@@ -151,15 +148,15 @@ class GraphNetwork {
 
   addToProcessScoreQueue(outV: Vertice, inV: Vertice) {
     // Why is outV sometimes undefined?
-    if(!outV) console.log("addToProcessScoreQueue: outV is undefined, inV: " + inV);
+    if (!outV) console.log('addToProcessScoreQueue: outV is undefined, inV: ' + inV);
 
-    if (!outV || outV.degree > this.maxDegree) return; // No need to update the score
-    
-    if (outV.degree == this.maxDegree) {
+    if (!outV || outV.score.atDegree > this.maxDegree+1) return; // No need to update the score
+
+    if (outV.score.atDegree == this.maxDegree+1) { 
       this.processItems[inV.id as number] = true; // Add the vertice to the list of items to process
     } else {
       if (inV.entityType == EntityType.Key) {
-        if (inV.degree == this.maxDegree) {
+        if (inV.score.atDegree == this.maxDegree+1) {
           // Only process the score of all outV vertices
           this.processGraph = true; // For now, process the whole graph
         } else this.processGraph = true; // Set the flag to process the whole graph
@@ -171,24 +168,25 @@ class GraphNetwork {
 
   // Calculate the score of all vertices within degree of maxDegree
   processScore() {
-    let processItems = this.processGraph;
+    let changedItems : Array<Vertice> = [];
 
     if (this.processGraph) {
-      graphNetwork.g.calculateScore(graphNetwork.sourceId, this.maxDegree); // Calculate the score for all vertices within degree of maxDegree
+      changedItems = graphNetwork.g.calculateScore(graphNetwork.sourceId, this.maxDegree); // Calculate the score for all vertices within degree of maxDegree
     } else {
+      
       for (const key in graphNetwork.processItems) {
-        graphNetwork.g.calculateItemScore(parseInt(key)); // Calculate the score each single vertice in the list
-        processItems = true;
+        if(graphNetwork.g.calculateItemScore(parseInt(key))) // Calculate the score each single vertice in the list
+          changedItems.push(graphNetwork.g.vertices[key] as Vertice); // Add the vertice to the list of items to that have changed
       }
     }
 
-    // If processGraph was false and there was no items to process, then return
-    if (!processItems) return; // No need to process the monitors
+    if (changedItems.length === 0) return; // Nothing to process
 
-    for (const id in graphNetwork.verticeMonitor) {
+    // TODO: Only process the vertices that have changed
+    // TODO: The changedItems list is not of deep changes detection.
+    verticeMonitor.dispatchAll(); // Dispatch all the vertices that have changed
 
-      graphNetwork.callMonitor(parseInt(id));
-    }
+    muteManager.processChange(changedItems); // Process the aggregated mutes based on the vertices changed.
 
     if (this.processGraph) {
       // TODO: Make this async as it is slow
@@ -199,40 +197,7 @@ class GraphNetwork {
     this.processItems = {};
   }
 
-  callMonitor(id: number) {
-    let monitorItem = graphNetwork.verticeMonitor[id] as MonitorItem;
-    if(!monitorItem) return; // No monitorItem found
 
-    let vertice = this.g.vertices[id] as Vertice;
-    if (!vertice) return; // No vertice found, no need to process Elements that are subscribed to this vertice
-    if (!monitorItem.hasChanged(vertice)) return; // No change in the vertice
-
-    let clone = monitorItem.clone();
-    monitorItem.setScore(vertice); // Reset the old score to the current score
-
-    TrustScoreEvent.dispatch(clone); // Dispatch event with an clone of the monitorItem so oldScore is not changed when the syncScore() is called
-  }
-
-  addVerticeMonitor(id: number) {
-    let monitorItem = this.verticeMonitor[id];
-    if (!monitorItem) {
-      monitorItem = new MonitorItem(id);
-      this.verticeMonitor[id] = monitorItem;
-    }
-    monitorItem.counter++; // Increment the counter of elements that are subscribed to this monitor item
-  }
-
-
-  removeVerticeMonitor(id: number) {
-    let monitorItem = this.verticeMonitor[id];
-    if (!monitorItem) return;
-    
-    monitorItem.counter--; // Decrement the counter of elements that are subscribed to this monitor item
-
-    if (monitorItem.counter <= 0) { // If no more elements are subscribed to this monitor item, then delete it
-      delete this.verticeMonitor[id];
-    }
-  }
 
   updateSubscriptions() {
     let vertices = this.g.getUnsubscribedVertices(this.maxDegree);
@@ -247,14 +212,13 @@ class GraphNetwork {
     return { outV, inV, edge, preVal, change };
   }
 
-
   async putEdge(props: any, isExternal: boolean) {
     let { from, to, val, entityType, context, note, timestamp } = props;
     let type = 1; // Trust1
     let preVal = undefined;
     let change = false;
 
-    let key =  Edge.key(type, from, to, context); // Create the key for the edge
+    let key = Edge.key(type, from, to, context); // Create the key for the edge
     let edge = this.g.edges[key];
 
     if (!edge) {
@@ -288,7 +252,8 @@ class GraphNetwork {
         if (edge.val != val) edge.val = updateObject['val'] = val;
         if (edge.context != context) edge.context = updateObject['context'] = context;
         if (edge.note != note) edge.note = updateObject['note'] = note;
-        if (edge.entityType != entityType) edge.entityType = updateObject['entityType'] = entityType;
+        if (edge.entityType != entityType)
+          edge.entityType = updateObject['entityType'] = entityType;
 
         edge.timestamp = updateObject.timestamp = timestamp; // Update the timestamp to the latest event.
 
@@ -323,7 +288,7 @@ class GraphNetwork {
 
     vertices.forEach((v) => (v.subscribed = id)); // Mark the vertices as subscribed with the current subscription counter
 
-    self.unsubs[id] = self.wotPubSub?.subscribeTrust(authors, since, self.trustEvent); // Subscribe to trust events
+    self.unsubs[id] = self.wotPubSub?.subscribeTrust(authors, since, eventManager.eventCallback); // Subscribe to trust events
   }
 
   unsubscribeAll() {
@@ -332,26 +297,18 @@ class GraphNetwork {
     }
   }
 
-  async trustEvent(event: Event) {
-    let {pTags, eTags, val, authorPubkey, note, context, timestamp } = WOTPubSub.parseTrustEvent(event);
-
-      //console.info(`Trust Event (p): ${authorPubkey} -> ${pTags.map( v=> v).join(',')} = ${val} (${note})`);
-      //console.info(`Trust Event (e): ${authorPubkey} -> ${eTags.map( v=> v).join(',')} = ${val} (${note})`);
-
-      for(const p of pTags ) {
-        await graphNetwork.setTrustAndProcess(p, authorPubkey, EntityType.Key, val, note, context, timestamp);
-      }
-
-      for(const e of eTags ) {
-        await graphNetwork.setTrustAndProcess(e, authorPubkey, EntityType.Item, val, note, context, timestamp);
-      }
-  }
-
-  async setTrustAndProcess(to: string, from:string, entityType: EntityType, val: number, note: string, context: string, timestamp: number) {
-    if(!to || to.length < 2) return;
+  async setTrustAndProcess(
+    to: string,
+    from: string,
+    entityType: EntityType,
+    val: number,
+    note: string,
+    context: string | undefined,
+    timestamp: number,
+  ) {
+    if (!to || to.length < 2) return;
     //to = graphNetwork.getHexKey(to);
     to = Key.toNostrHexAddress(to) as string;
-
 
     // Add the Trust Event to the memory Graph and IndexedDB
     let { outV, inV, change } = await graphNetwork.setTrust(
@@ -363,35 +320,9 @@ class GraphNetwork {
       graphNetwork.addToProcessScoreQueue(outV, inV);
       graphNetwork.processScoreDebounce(); // Wait a little before processing the score, to allow for multiple updates to be made at once
     }
-
   }
 
-  findOption(vertice: Vertice, options: Array<any> | undefined): any {
-    if (!options || options.length === 0 || vertice.degree == 0) return undefined;
 
-    let score = vertice.score;
-    let { val, degree, count, hasScore } = score.resolve();
-    //let degree = vertice.degree; // The degree of the vertice should be the same as the score degree
-
-    if (!hasScore)
-      // No trust yet
-      return undefined;
-
-    
-    // If the score is directly trust by degree 0, return the first or last option or undefined
-    if (degree === 1) {
-      if (val > 0) return options[options.length - 1];
-      else if (val < 0) return options[0];
-      else return undefined;
-    }
-
-    let percent = ((val + count) * 100) / (count * 2);
-    let index = Math.ceil(percent / (100.0 / options.length));
-
-    index = index === 0 ? 1 : index > options.length ? options.length : index; // Ajust lower and upper out of bounce values.
-
-    return options[index - 1];
-  }
 
   getTrustList(inV: Vertice, val: number): Array<any> {
     if (!inV) return [];

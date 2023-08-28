@@ -12,6 +12,8 @@ import { Vertice } from '../model/Graph';
 import { debounce } from 'lodash';
 import ItemName from '../components/ItemName';
 import { useKey } from '../hooks/useKey';
+import Mutes from './Mutes';
+import { UID } from '@/utils/UniqueIds';
 
 type GraphViewProps = {
   npub?: string;
@@ -26,6 +28,8 @@ type GraphViewProps = {
 export type ViewComponentProps = {
   props: {
     npub: string;
+    uid: UID;
+    isMe: boolean;
     hexKey: string;
     entitytype: string;
     trusttype: string;
@@ -142,6 +146,8 @@ const GraphView = (props: GraphViewProps) => {
   const renderView = () => {
     let props = {
       npub : bech32Key,
+      uid,
+      isMe,
       hexKey,
       entitytype,
       trusttype,
@@ -153,7 +159,10 @@ const GraphView = (props: GraphViewProps) => {
     };
     if (view == 'path') return <VisPath props={props} />;
     if (view == 'list') return <TrustList props={props} />;
+    if (view.startsWith('mutes')) return <Mutes props={props} />;
+    
     //if (view == 'diagnostics') return renderDiagnostics();
+    
     return <VisGraph props={props} />;
   };
 

@@ -5,7 +5,7 @@ import EventDB from '@/nostr/EventDB';
 
 import Events from '../../nostr/Events';
 import Key from '../../nostr/Key';
-import localState from '../../state/LocalState.ts';
+//import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import Helpers from '../../utils/Helpers';
 import Block from '../buttons/Block';
@@ -15,6 +15,7 @@ import Dropdown from '../Dropdown';
 import Modal from '../modal/Modal';
 
 import EventRelaysList from './EventRelaysList';
+import eventManager from '@/dwotr/EventManager.ts';
 
 interface EventDropdownProps {
   event?: Event;
@@ -51,7 +52,10 @@ const EventDropdown = (props: EventDropdownProps) => {
 
   const onMute = (e) => {
     e.preventDefault();
-    localState.get('mutedNotes').get(props.id).put(!muted);
+    //localState.get('mutedNotes').get(props.id).put(!muted);
+    if(!props.event) return;
+    eventManager.onMute(props.event.pubkey);
+    // TODO: Popup box to confirm mute
   };
 
   const report = (e) => {

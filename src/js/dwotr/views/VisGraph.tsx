@@ -214,7 +214,7 @@ const VisGraph = ({ props }: ViewComponentProps) => {
         distinctV[edge.out.id] = edge.out;
 
         let color = RenderTrust1Color(edge.val);
-        let dashes = edge.out.degree > MAX_DEGREE; // Dash the edge line if the out vertice has no degree or above max degree
+        let dashes = edge.out.score.atDegree > MAX_DEGREE+1; // Dash the edge line if the out vertice has no degree or above max degree
 
         edges.get(edge.key) ||
           edges.add({ id: edge.key, from: edge.out.id, to: sourceId, color, dashes });

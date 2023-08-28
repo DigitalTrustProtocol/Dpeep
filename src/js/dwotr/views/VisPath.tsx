@@ -229,45 +229,6 @@ const VisPath = ({ props }: ViewComponentProps) => {
     filterNodes(rawNodes, displayNodes, props.filter, includes);
   }
 
-
-
-  // function addItemNode(vertice: Vertice, event: any) {
-
-  //   let node = rawNodes.get(vertice.id);
-  //   if (node && !event) return;
-
-  //   // let eventOwnerPub = event.pubkey;
-  //   // let noteId = Key.toNostrBech32Address(event.id, 'note');
-  //   // const emojiOnly = event.content?.length === 2 && Helpers.isEmoji(event.content);
-  //   // let text = event.content || '';
-  //   // let created_at = event.created_at || 0;
-  //   // let authorKey = event.pubkey;
-  //   let profile = profileManager.getDefaultProfile(vertice.id);
-
-  //   if(node) {
-  //     // Update the node if event has changed
-
-  //     //if (node.label != profile.name)
-
-  //     return;
-  //   }
-  //   //{ id: 2, label: "Single Value\n(25)", margin: 20, x: 0, y: 0 },
-
-  //   rawNodes.add({
-  //     id: vertice.id,
-  //     label:  `Item`,
-  //     margin: {top:20, right: 0, left: 0, bottom: 0},
-  //   });
-  // }
-
-  // function handleItemEvent(event: any) {
-  //   if (!event?.id) return;
-  //   let vId = ID(event.id);
-  //   let vertice = graphNetwork.g.vertices[vId];
-
-  //   addItemNode(vertice, event);
-  // }
-
   // Implement filter on rawList using the filter property
   useEffect(() => {
     if (rawNodes.length == 0 && displayNodes.length == 0) return;
@@ -288,19 +249,22 @@ const VisPath = ({ props }: ViewComponentProps) => {
 
   const renderScoreResultText = (score: TrustScore) => {
     if (!score) return null;
-    let result = score?.resolve();
-    if (!result) return null;
 
-    let { val, degree, count, hasScore } = score.resolve();
+    //let result = score?.resolve();
+    //if (!result) return null;
 
-    let percent = Math.round(((val + count) * 100) / (count * 2));
+    //let { val, degree, count, hasScore } = score.resolve();
+    let count = score.total;
+    let hasScore = score.total > 0;
+    let percent = Math.round(((score.result + count) * 100) / (count * 2));
+    let degree = score.atDegree - 1;
 
     // Render out the value, degree, and count and if no score is present, render out a message
     return (
       <>
         {hasScore ? (
           <>
-            <span>Trust score is {val}</span>
+            <span>Trust score is {score.result}</span>
             <span> from {count == 1 ? `${count} claim` : `a total of ${count} claims`}</span>
             <span> at degree {degree}</span>
             <span> resulting in {percent}% trust</span>

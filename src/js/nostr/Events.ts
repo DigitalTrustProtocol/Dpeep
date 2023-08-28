@@ -27,15 +27,14 @@ import { DecryptedEvent } from '../views/chat/ChatMessages';
 import { addGroup, setGroupNameByInvite } from '../views/chat/NewChat';
 
 import EventMetaStore from './EventsMeta';
-import FuzzySearch from './FuzzySearch';
 import IndexedDB from './IndexedDB';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
 import Relays from './Relays';
-import Session from './Session';
 import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
 import profileManager from '../dwotr/ProfileManager';
+import eventManager from '@/dwotr/EventManager.ts';
 
 const startTime = Date.now() / 1000;
 
@@ -584,21 +583,23 @@ const Events = {
     );
   },
   isMuted(event: Event) {
-    let muted = false;
-    if (mutedNotes) {
-      muted = mutedNotes[event.id];
-      if (!muted) {
-        for (const tag of event.tags) {
-          if (tag[0] === 'e' && mutedNotes[tag[1]]) {
-            muted = mutedNotes[tag[1]];
-            if (muted) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return muted;
+    return eventManager.isMuted(event.pubkey);
+
+    // let muted = false;
+    // if (mutedNotes) {
+    //   muted = mutedNotes[event.id];
+    //   if (!muted) {
+    //     for (const tag of event.tags) {
+    //       if (tag[0] === 'e' && mutedNotes[tag[1]]) {
+    //         muted = mutedNotes[tag[1]];
+    //         if (muted) {
+    //           return true;
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+    // return muted;
   },
   maybeAddNotification(event: Event) {
     // if we're mentioned in tags, add to notifications

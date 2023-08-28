@@ -1,4 +1,4 @@
-import { ID } from "@/utils/UniqueIds";
+import { ID, UID } from "@/utils/UniqueIds";
 import { sha256 } from "../Utils";
 import TrustScore, { MAX_DEGREE } from "./TrustScore";
 
@@ -23,11 +23,12 @@ export class Vertice {
     timestamp = 0; // Timestamp of lasest update, used to limit subscription at the relays to only new events.
     subscribed = 0; // True if subscribed to updates from relays
     score: TrustScore = new TrustScore(); // The score of the vertice, calculated from the trust edges, used to subscribe to updates from relays when the score is positive.
+    oldScore: TrustScore | undefined;
     profile: any = undefined; // The profile of the vertice, used to display the name and avatar of the vertice.
 
     constructor(id: number, degree: number = UNDEFINED_DEGREE) {
         this.id = id;
-        this.degree = degree;
+        this.score.atDegree = degree;
     }
 }
 
@@ -155,17 +156,17 @@ export default class Graph {
     }
 
     // Make sure all relevant vertices have score and degree set
-    calculateScore(sourceId: number, maxDegree: number) {
+    calculateScore(sourceId: number, maxDegree: number) : Array<Vertice> {
 
         let queue = [] as Array<Vertice>;
         let nextQueue = Object.create(null); // Use null to avoid prototype pollution
 
         let startV = this.vertices[sourceId] as Vertice;
-        if(!startV) return; // Source vertice not found
+        if(!startV) return []; // Source vertice not found
 
         this.resetScore(); // Reset all scores in the graph
 
-        let degree = startV.degree = 0;
+        let degree = startV.score.atDegree = 0;
 
         queue.push(startV); // Add the source vertice id to the queue as starting point
 
@@ -184,14 +185,14 @@ export default class Graph {
                     const edge = outV.out[inId]; // Get the edge object
                     if(!edge || edge.val === 0) continue; // Skip if the edge has no value / neutral
 
-                    inV.score.addValue(edge.val, degree); // Add the edge value to the score
+                    inV.score.addValue(edge.val, nextDegree); // Add the edge value to the score
 
-                    if(degree >= inV.degree) continue; // Skip if degree is already set by a shorter path
-
-                    inV.degree = nextDegree; // Set the degree to next level
+                    if(degree >= inV.score.atDegree) continue; // Skip if degree is already set by a shorter path
 
                     // TODO: This should be set by majority of edges with best trust
-                    inV.entityType = edge.entityType; 
+                    // --------------------------------
+                    if(nextDegree <= inV.score.atDegree) // Lowest degree so far decides the entityType
+                        inV.entityType = edge.entityType; 
                     // --------------------------------
 
                     if(degree < maxDegree 
@@ -205,14 +206,25 @@ export default class Graph {
             nextQueue = Object.create(null); // Clear the next queue
             degree++;
         }
+
+        // Find all vertices that have changed score
+        let changed = [] as Array<Vertice>;
+        for(let key in this.vertices) {
+            const v = this.vertices[key] as Vertice;
+            if(v.score.hasChanged(v.oldScore))
+                changed.push(v);
+        }
+        return changed;
     }
+
 
 
     // Calculate the score of a single item, used when a value is added to an item
     // Theres no need to calculate the score of all vertices as the score of the item cannot affect the score of other items.
-    calculateItemScore(id: number) {
+    calculateItemScore(id: number) : boolean {
         let vertice = this.vertices[id] as Vertice;
     
+        vertice.oldScore = vertice.score;
         vertice.score = new TrustScore();
 
         let lowestDegree = UNDEFINED_DEGREE;
@@ -223,65 +235,65 @@ export default class Graph {
             const edge = vertice.in[outId];
             if(!edge || edge.val == 0) continue; // Skip if the edge has no value / neutral
 
-            if(outV.degree < lowestDegree) lowestDegree = outV.degree;
+            if(outV.score.atDegree < lowestDegree) lowestDegree = outV.score.atDegree;
 
-            vertice.score.addValue(edge.val, outV.degree);
+            vertice.score.addValue(edge.val, outV.score.atDegree);
         }
 
-        vertice.degree = lowestDegree + 1;
+        return vertice.score.hasChanged(vertice.oldScore);
     }
 
     resetScore() {
         for(let key in this.vertices) {
-            const v = this.vertices[key];
+            const v = this.vertices[key] as Vertice;
+            v.oldScore = v.score; // Save the old score
             v.score = new TrustScore();
-            v.degree = UNDEFINED_DEGREE;
         }
     }
 
 
-    wotNetwork(entityType?:EntityType, maxDegree:number = MAX_DEGREE+1) : Array<Vertice> {
-        let result = [] as Array<Vertice>;
+    // wotNetwork(entityType?:EntityType, maxDegree:number = MAX_DEGREE+1) : Array<Vertice> {
+    //     let result = [] as Array<Vertice>;
 
-        for(const key in this.vertices) {
-            const v = this.vertices[key] as Vertice;
+    //     for(const key in this.vertices) {
+    //         const v = this.vertices[key] as Vertice;
 
-            if(v.degree <= maxDegree                                // Only add vertices with a degree less than maxDegree
-                && v.degree > 0                                     // Skip the source vertice
-                && (!entityType || v.entityType === entityType)) {  // Only add vertices of the specified type
-                result.push(v);
-            }
-        }   
-        return result;
-    }
+    //         if(v.degree <= maxDegree                                // Only add vertices with a degree less than maxDegree
+    //             && v.degree > 0                                     // Skip the source vertice
+    //             && (!entityType || v.entityType === entityType)) {  // Only add vertices of the specified type
+    //             result.push(v);
+    //         }
+    //     }   
+    //     return result;
+    // }
 
 
   
-    inOutTrustById(sourceId: number, entityType?:EntityType, trust1?:number) : Array<Vertice> {
-        const sourceV = this.vertices[sourceId] as Vertice;
-        if(!sourceV) return [];
+    // inOutTrustById(sourceId: number, entityType?:EntityType, trust1?:number) : Array<Vertice> {
+    //     const sourceV = this.vertices[sourceId] as Vertice;
+    //     if(!sourceV) return [];
 
-        let obj = Object.create(null) as {[key: string]: Vertice};
+    //     let obj = Object.create(null) as {[key: string]: Vertice};
 
-        for(const key in sourceV.in) {
-            const outV = this.vertices[key] as Vertice;
-            if(!outV || outV.degree > MAX_DEGREE) continue; // Skip if the in vertice has no degree or above max degree
+    //     for(const key in sourceV.in) {
+    //         const outV = this.vertices[key] as Vertice;
+    //         if(!outV || outV.degree > MAX_DEGREE) continue; // Skip if the in vertice has no degree or above max degree
 
-            const edge = sourceV.in[key];
-            if(!edge || edge.val == 0 || (trust1 && edge.val != trust1)) continue; // Skip if the edge has no value / neutral
+    //         const edge = sourceV.in[key];
+    //         if(!edge || edge.val == 0 || (trust1 && edge.val != trust1)) continue; // Skip if the edge has no value / neutral
             
-            obj[key] = outV;
-        }
-        for(const key in sourceV.out) {
-            const edge = sourceV.out[key];
-            if(!edge || edge.val == 0 || (trust1 && edge.val != trust1)) continue; // Skip if the edge has no value / neutral
+    //         obj[key] = outV;
+    //     }
+    //     for(const key in sourceV.out) {
+    //         const edge = sourceV.out[key];
+    //         if(!edge || edge.val == 0 || (trust1 && edge.val != trust1)) continue; // Skip if the edge has no value / neutral
 
-            const inV = this.vertices[key] as Vertice;
-            if(!entityType || inV.entityType === entityType)
-                obj[key] = inV;
-        }
-        return Object.values(obj);
-    }
+    //         const inV = this.vertices[key] as Vertice;
+    //         if(!entityType || inV.entityType === entityType)
+    //             obj[key] = inV;
+    //     }
+    //     return Object.values(obj);
+    // }
 
     // getEdges(sourceId: number, entityType?:EntityType, trust1?:number) : any {
     //     let edges = Object.create(null) as {[key: string]: Edge};
@@ -321,13 +333,13 @@ export default class Graph {
         return result;
     }
 
-    trustedBy(sourceId: number, entityType?:EntityType, trust1?:number, maxDegree:number = MAX_DEGREE) : Array<Vertice> {
+    trustedBy(sourceId: number, entityType?:EntityType, trust1?:number, maxDegree:number = MAX_DEGREE+1) : Array<Vertice> {
         let result = [] as Array<Vertice>;
         const sourceV = this.vertices[sourceId] as Vertice;
 
         for(const key in sourceV.in) {
             const outV = this.vertices[key] as Vertice;
-            if(!outV || outV.degree > maxDegree) continue; // Skip if the in vertice has no degree or above max degree
+            if(!outV || outV.score.atDegree > maxDegree) continue; // Skip if the in vertice has no degree or above max degree
 
             const edge = sourceV.in[key];
             if(!edge || edge.val == 0 || (trust1 && edge.val != trust1)) continue; // Skip if the edge has no value / neutral
@@ -354,7 +366,7 @@ export default class Graph {
 
             for(let inV of queue) {
                 
-                if(inV.degree == 0) continue; // Skip the source vertice, as we are done
+                if(inV.score.atDegree == 0) continue; // Skip the source vertice, as we are done
 
                 for(const inId in inV.in) {
 
@@ -362,7 +374,7 @@ export default class Graph {
                     if(!edge || edge.val === 0) continue; // Skip if the edge has no value / neutral
 
                     const outV = edge.out as Vertice;
-                    if(!outV || outV.degree >= inV.degree) continue; // Skip if degree is higher or equal to the current degree as we are looking for the shortest path
+                    if(!outV || outV.score.atDegree >= inV.score.atDegree) continue; // Skip if degree is higher or equal to the current degree as we are looking for the shortest path
 
                     result.push(edge); // Add the edge to the result
                     nextQueue.push(outV); // Add the out vertice to the next queue
@@ -382,11 +394,10 @@ export default class Graph {
         for(const key in this.vertices) {
             const v = this.vertices[key] as Vertice;
             
-            if(v.degree <= maxDegree                                                // Is within degree 
-                && v.subscribed == 0                                                // Is not subscribed
+            if(v.subscribed == 0 
                 && v.entityType == EntityType.Key
-                && (v.degree == 0 || v.score.isTrusted(v.degree - 1)))
-                vertices.push(v);
+                && v.score.trusted())
+               vertices.push(v); 
         }
         return vertices;
     }

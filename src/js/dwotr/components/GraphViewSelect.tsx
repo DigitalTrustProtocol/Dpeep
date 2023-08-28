@@ -35,6 +35,12 @@ const GraphViewSelect = ({ view, me, setSearch }: GraphViewSelectProps) => {
       >
         {t('List')}
       </Link>
+      <Link
+        href={setSearch({ view: 'mutes' })}
+        className={view.startsWith('mutes') ? selected : unselected}
+      >
+        {t('Mutes')}
+      </Link>
 
     </div>
   );

@@ -4,10 +4,12 @@ import Relays from '../../nostr/Relays';
 import { EdgeRecord, EntityType } from '../model/Graph';
 import Key from '../../nostr/Key';
 import getRelayPool from '@/nostr/relayPool';
+import eventManager from '../EventManager';
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
 
 export const Trust1Kind: number = 32010;
+export const MuteKind: number = 10000;
 
 export interface EntityItem {
   pubkey: string;
@@ -22,7 +24,7 @@ class WOTPubSub {
     let relays = Relays.enabledRelays();
 
     let filter = {
-      kinds: [Trust1Kind],
+      kinds: [Trust1Kind, MuteKind],
       authors,
       since,
     };
@@ -48,69 +50,6 @@ class WOTPubSub {
     return unsub;
   }
 
-  createTrustEventFromEdge(edge: EdgeRecord) {
-    // pubkey should be in hex format
-    let event = this.createTrustEvent(edge.to, edge.type, edge.note, edge.context, edge.entityType);
-    return event;
-  }
-
-  createMultiEvent(
-    entities: EntityItem[],
-    groupKey: string,
-    val: number,
-    content: string = '',
-    context: string = 'nostr',
-    timestamp?: number,
-  ) {
-    // d = groupkey|v|context
-    // groupkey is the usually the pubkey of the subject of the trust, but can be any string
-    const d = `${groupKey}|${val.toString()}|${context}`; // Specify target. [target | value of the trust | context]
-
-    const peTags = entities.map((e) => [e.entityType == EntityType.Key ? 'p' : 'e', e.pubkey]);
-
-    const event = {
-      kind: Trust1Kind, // trust event kind id
-      content: content || '', // The reason for the trust
-      created_at: timestamp || this.getTimestamp(), // Optional, but recommended
-      tags: [
-        ...peTags,
-        ['d', d], // NIP-33 Parameterized Replaceable Events
-        ['c', context], // context = nostr
-        ['v', val.toString()], // 1, 0, -1
-      ],
-    };
-    return event;
-  }
-
-  createTrustEvent(
-    entityPubkey: string,
-    val: number,
-    content: string = '',
-    context: string = 'nostr',
-    entityType: EntityType = 1,
-    timestamp?: number,
-  ) {
-    // pubkey should be in hex format
-
-    // d = target[hex-address|'multi']|v|context
-    const d = `${entityPubkey}|${val.toString()}|${context}`; // Specify target. [target | context]
-
-    const subjectTag = entityType == EntityType.Key ? 'p' : 'e';
-
-    const event = {
-      kind: Trust1Kind, // trust event kind id
-      content: content || '', // The reason for the trust
-      created_at: timestamp || this.getTimestamp(), // Optional, but recommended
-      tags: [
-        [subjectTag, entityPubkey], // Subject
-        ['d', d], // NIP-33 Parameterized Replaceable Events
-        ['c', context], // context = nostr
-        ['v', val.toString()], // 1, 0, -1
-        //['t', entityType.toString()], // replaced by p and e tags
-      ],
-    };
-    return event;
-  }
 
   publishTrust(
     entityPubkey: string,
@@ -120,7 +59,7 @@ class WOTPubSub {
     entityType: EntityType,
     timestamp?: number,
   ) {
-    let event = this.createTrustEvent(entityPubkey, val, content, context, entityType, timestamp) as Event;
+    let event = eventManager.createTrustEvent(entityPubkey, val, content, context, entityType, timestamp) as Event;
 
     this.sign(event);
 
@@ -129,42 +68,24 @@ class WOTPubSub {
     PubSub.publish(event);
   }
 
-  parseTrustEvent(event: Event) {
-    let pTags: Array<string> = [];
-    let eTags: Array<string> = [];
-    let d: string = '';
-    let context, v, note: string;
-    let authorPubkey = event.pubkey;
-    let timestamp = event.created_at; 
 
-    if (event.tags) {
-      for (const tag of event.tags) {
-        switch (tag[0]) {
-          case 'p': // Subject is a pubkey (Key) Optional, Multiple
-            pTags.push(tag[1]);
-            break;
-          case 'e': // Subject is an entity (Item) Optional, Multiple
-            eTags.push(tag[1]);
-            break;
-          case 'c': // Context
-            context = tag[1];
-            break;
-          case 'd': // The unique identifier of the claim, d = target[hex-address|v|context
-            d = tag[1];
-            break;
-          case 'v': // The value of the claim
-            v = tag[1];
-            break;
-        }
-      }
-    }
-    note = event.content;
 
-    let val = parseInt(v);
-    if (isNaN(val) || val < -1 || val > 1) val = 0; // Invalid value, the default to 0
+  // Publish a mute list (kind 10000)
+  // NIP-51
+  mute(mutes: string[]) {
 
-    return { pTags, eTags, context, d, v, val, note, authorPubkey, timestamp };
+    let event = {
+      kind: 10000, // Mute list
+      tags: mutes.map((m) => ['p', m]),
+    };
+
+    this.sign(event);
+
+    console.log("Publishing mute event", event);
+
+    this.publish(event);
   }
+
 
   sign(event: Partial<Event>) {
     if (!event.sig) {
@@ -183,9 +104,10 @@ class WOTPubSub {
     }
   }
 
-  getTimestamp(date: number = Date.now()): number {
-    return Math.floor(date / 1000);
+  publish(event: Event | Partial<Event>) {
+    getRelayPool().publish(event, Array.from(Relays.enabledRelays()));
   }
+
 
   // // Load up profiles form the IndexedDB and subscribe to new ones
   // // Makes sure we have all the known profiles in memory

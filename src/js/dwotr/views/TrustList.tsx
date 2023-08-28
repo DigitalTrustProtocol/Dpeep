@@ -41,10 +41,10 @@ export function filterByName(list: Vertice[], filter: string) {
 }
 
 function compareDegree(a: Vertice, b: Vertice) {
-  if (a.degree < b.degree) {
+  if (a.score.atDegree < b.score.atDegree) {
     return -1;
   }
-  if (a.degree > b.degree) {
+  if (a.score.atDegree > b.score.atDegree) {
     return 1;
   }
   return 0;
@@ -121,8 +121,9 @@ const TrustList = ({ props }: ViewComponentProps) => {
 
   const renderEntityKey = (v: Vertice, id: number) => {
     const itemKey = STR(v.id);
-    const degree = v.degree;
     const score = v.score;
+    const degree = score?.atDegree - 1 || 0;
+
     const itemNpub = Key.toNostrBech32Address(itemKey as string, 'npub') as string;
 
     let arrowClass = '';
