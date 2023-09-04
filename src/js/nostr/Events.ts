@@ -583,7 +583,7 @@ const Events = {
     );
   },
   isMuted(event: Event) {
-    return eventManager.isMuted(event.pubkey);
+    return eventManager.isMuted(ID(event.pubkey));
 
     // let muted = false;
     // if (mutedNotes) {

@@ -13,6 +13,7 @@ import MyAvatar from '@/components/user/Avatar';
 import Name from '@/components/user/Name';
 import Key from '@/nostr/Key';
 import { ID } from '@/utils/UniqueIds';
+import eventManager from '../EventManager';
 
 type TestDataProps = {
   path?: string;
@@ -40,7 +41,7 @@ const View32010 = (props: TestDataProps) => {
       let unsub = WOTPubSub.subscribeTrust(undefined, 0, (event: Event): void => {
         if (!isMounted()) return;
 
-        let edge = WOTPubSub.parseTrustEvent(event);
+        let edge = eventManager.parseTrustEvent(event);
 
         if (!profiles.current[edge.authorPubkey])
           profiles.current[edge.authorPubkey] = {

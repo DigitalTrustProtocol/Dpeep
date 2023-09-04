@@ -31,7 +31,7 @@ import Subscribe from './views/Subscribe';
 import '@fontsource/lato/400.css';
 import '@fontsource/lato/700.css';
 import '../css/cropper.min.css';
-import "./dwotr/views/style.css";
+import './dwotr/views/style.css';
 import DWoTRSetup from './dwotr/components/DWoTRSetup';
 import GraphView from './dwotr/views/GraphView';
 import Demo from './dwotr/views/Demo';
@@ -120,15 +120,14 @@ const Main = () => {
             <Follows path="/follows/:id" />
             <Follows followers={true} path="/followers/:id" />
 
-              <GraphView path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?" />
-              <View32010 path="/32010/" />
-              <Demo path="/demo/:id?" />
-              <Mutes path="/mutes" />
+            <GraphView path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?" />
+            <View32010 path="/32010/" />
+            <Demo path="/demo/:id?" />
 
             <NoteOrProfile path="/:id" />
           </Router>
         </div>
-          {loggedIn ? <DWoTRSetup /> : null}
+        {loggedIn ? <DWoTRSetup /> : null}
         <Footer />
       </section>
 

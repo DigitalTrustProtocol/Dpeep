@@ -5,12 +5,13 @@ class TrustScore {
   atDegree: number = 99;
   total: number = 0;
 
-  trusts = Array(MAX_DEGREE + 1).fill(0) as number[];
-  distrusts = Array(MAX_DEGREE + 1).fill(0) as number[];
+  trusts = [0,0,0] as number[];
+  distrusts = [0,0,0] as number[];
 
   addValue(value: number, degree: number) {
-    if (value > 0) this.trusts[degree-1]++;
-    if (value < 0) this.distrusts[degree-1]++;
+    let indexDegree = degree-1;
+    if (value > 0) this.trusts[indexDegree]++;
+    if (value < 0) this.distrusts[indexDegree]++;
 
     if (degree > this.atDegree) return; // ignore higher degree scores
     if (degree < this.atDegree) {
@@ -19,86 +20,55 @@ class TrustScore {
       this.atDegree = degree;
       this.total = 0;
     }
-    this.result += value; // add to result
-    this.total++; // increment total
+    this.result = this.getValue(indexDegree); // add to result
+    this.total = this.getCount(indexDegree); // increment total
   }
 
-  count(degree: number) {
+  getCount(degree: number) {
     return this.trusts[degree] + this.distrusts[degree];
   }
 
-  value(degree: number) {
+  getValue(degree: number) {
     return this.trusts[degree] - this.distrusts[degree];
   }
 
   values(): Array<number> {
     let result = Array(MAX_DEGREE + 1).fill(0) as number[];
     for (let i = 0; i <= MAX_DEGREE; i++) {
-      result[i] = this.value(i);
+      result[i] = this.getValue(i);
     }
     return result;
   }
 
+  // Returns true if the score is trusted by the observer
   isDirectTrusted() {
-    return this.isTrusted(0);
-  }
-
-//   isTrusted() : boolean {
-//     return (this.result > 0 && this.atDegree <= MAX_DEGREE+1);
-//   }
-
-  trusted() {
-    return (this.result > 0 && this.atDegree <= MAX_DEGREE+1);
-  }
-
-  isTrusted(degree: number) {
-    if (this.value(degree) > 0) return true;
-
-    return false;
+    return this.atDegree == 1 && this.result > 0;
   }
 
   isDirectDistrusted() {
-    return this.isDistrusted(0);
+    return this.atDegree == 1 && this.result < 0;
   }
 
-  isDistrusted(degree: number) {
-    if (this.value(degree) < 0) return true;
-
-    return false;
+  // Returns true if the score is trusted at the given degree
+  // The result must be greater than 0 and the degree must be less than or equal to MAX_DEGREE
+  // If the degree is 0, then it is trusted regardless of the result as its the observer themselves
+  trusted() {
+    return (this.result > 0 && this.atDegree <= MAX_DEGREE + 1) || this.atDegree == 0;
   }
 
-//   //Resolve trust score to a single value
-//   resolve(): { val: number; degree: number; count: number; hasScore: boolean } {
-//     let result = { val: 0, degree: 0, count: 0, hasScore: false };
-//     let i = 0;
-//     for (; i <= MAX_DEGREE; i++) {
-//       if (this.trusts[i] == 0 && this.distrusts[i] == 0) continue; // no score at this degree
 
-//       result.hasScore = true; // there is a score
-//       //if(this.value(i) != 0) {
-
-//       result.val = this.value(i);
-//       result.count = this.count(i);
-//       result.degree = i;
-
-//       break; // found a score
-//       //}
-//     }
-
-//     return result;
-//   }
 
 
   // Compare to old score and return true if changed
   // Only looks at the result, atDegree, and total not all the degrees
   hasChanged(oldScore: TrustScore | undefined): boolean {
-    if(!oldScore) return (this.total > 0);
+    if (!oldScore) return this.total > 0;
 
     return (
       this.result != oldScore.result ||
       this.atDegree != oldScore.atDegree ||
       this.total != oldScore.total
-    )
+    );
   }
 
   clone() {
@@ -110,9 +80,9 @@ class TrustScore {
   }
 
   equals(other: TrustScore) {
-    if(!other) return (this.total > 0);
+    if (!other) return this.total > 0;
 
-    if(this.hasChanged(other)) return false;
+    if (this.hasChanged(other)) return false;
 
     for (let i = 0; i <= MAX_DEGREE; i++) {
       if (this.trusts[i] != other.trusts[i]) return false;
@@ -120,7 +90,6 @@ class TrustScore {
     }
     return true;
   }
-
 
   hasTrustScore() {
     return this.trusts.some((n: number) => n > 0);

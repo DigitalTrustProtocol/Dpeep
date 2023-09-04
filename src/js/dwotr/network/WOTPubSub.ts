@@ -20,11 +20,11 @@ class WOTPubSub {
   unsubs = new Map<string, Set<string>>();
 
 
-  subscribeTrust(authors: string[] | undefined, since: number | undefined, cb: OnEvent): Unsubscribe {
+  subscribeTrust(authors: string[] | undefined, since: number | undefined, cb: OnEvent, kinds = [Trust1Kind, MuteKind]): Unsubscribe {
     let relays = Relays.enabledRelays();
 
     let filter = {
-      kinds: [Trust1Kind, MuteKind],
+      kinds,
       authors,
       since,
     };

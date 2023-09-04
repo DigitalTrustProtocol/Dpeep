@@ -7,6 +7,7 @@ import Events from './Events';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
 import profileManager from '../dwotr/ProfileManager';
+import eventManager from '@/dwotr/EventManager.ts';
 
 export default {
   followDistanceByUser: new Map<UID, number>(),
@@ -144,6 +145,7 @@ export default {
     }
     if (this.followedByUser.get(myId)?.has(follower)) {
       if (!PubSub.subscribedAuthors.has(STR(followedUser))) {
+        eventManager.subscribedAuthors.add(STR(followedUser));
         setTimeout(() => {
           PubSub.subscribe({ authors: [STR(followedUser)] }, undefined, true);
         }, 0);

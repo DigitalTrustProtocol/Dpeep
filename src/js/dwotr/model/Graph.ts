@@ -174,7 +174,7 @@ export default class Graph {
 
             for(let outV of queue) {
 
-                if(degree > 0 && !outV.score.isTrusted(degree-1)) continue; // Skip if the vertice is distrusted or not trusted and is not the start vertice
+                if(degree > 0 && !outV.score.trusted()) continue; // Skip if the vertice is distrusted or not trusted and is not the start vertice
         
                 let nextDegree = degree + 1;
 

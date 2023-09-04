@@ -1,25 +1,25 @@
 import EventDB from '@/nostr/EventDB';
 import Events from '@/nostr/Events';
-import SocialNetwork from '@/nostr/SocialNetwork';
-import { ID, UID, UniqueIds } from '@/utils/UniqueIds';
+import { ID, UniqueIds } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import profileManager from './ProfileManager';
-import { EdgeRecord, EntityType } from './model/Graph';
+import { EdgeRecord, EntityType, Vertice } from './model/Graph';
 import graphNetwork from './GraphNetwork';
 import { EntityItem, MuteKind, Trust1Kind } from './network/WOTPubSub';
-import { ProfileMemory } from './model/ProfileRecord';
 import muteManager from './MuteManager';
 class EventManager {
+
+  subscribedAuthors = new Set<string>();
+
+
   constructor() {}
 
   // Mute the public key (hex string) using the logged in user as the muter
   onMute(pubkey: string) {}
 
   // Is the public key muted?
-  isMuted(hexKey: string): boolean {
-    //return EventDB.isMuted(id);
-
-    return false;
+  isMuted(id: number): boolean {
+    return muteManager.mutes.has(id);
   }
 
   createTrustEvent(
@@ -206,30 +206,30 @@ class EventManager {
   muteEvent(event: Event) {
     // Replace the current mutes with the new mutes on profile
     let pubId = ID(event.pubkey); // The pubkey ID of the muter
-    let profile = SocialNetwork.profiles.get(pubId);
-    if (!profile) return; // No profile found, (should't happen)
+    let profile = profileManager.getMemoryProfile(pubId);
+    if (!profile) return undefined; // No profile found, (should't happen)
 
     if (profile?.lastMuteEvent && profile?.lastMuteEvent > event.created_at) return; // Event is older than the current data, ignore it
     profile.lastMuteEvent = event.created_at; // Update the lastMuteEvent timestamp
 
     muteManager.remove(profile.mutes); // Remove the old mutes from the aggregate mutes
 
-    //let { val, hasScore } = graphNetwork.g.resolve(profile.id);
-    let vertice = graphNetwork.g.vertices[profile.id];
+    let { pTags } = eventManager.parseTags(event);
+    profile.mutes = [...pTags];
+
+    let vertice = graphNetwork.g.vertices[profile.id] as Vertice | undefined;
     if (vertice) {
       if (vertice.score.trusted()) {
-        let { pTags } = eventManager.parseTags(event);
-        profile.mutes = pTags;
-
         // Add the mutes to the aggregated mutes
         muteManager.add(profile.mutes);
       } else {
-        profile.mutes = undefined; // No trust score, so no mutes
+        //profile.mutes = undefined; // No trust score, so no mutes
       }
     }
 
     // Update the profile in IndexedDB
     profileManager.saveProfile(profile);
+    return profile;
   }
 
   getTimestamp(date: number = Date.now()): number {
