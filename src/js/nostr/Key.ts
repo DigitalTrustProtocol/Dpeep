@@ -1,4 +1,4 @@
-import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
+import { bech32 } from 'bech32';
 import {
   Event,
   generatePrivateKey,
@@ -7,9 +7,8 @@ import {
   signEvent,
   UnsignedEvent,
 } from 'nostr-tools';
-import { route } from 'preact-router';
 
-import { PublicKey } from '@/utils/Hex/Hex.ts';
+import { Hex, PublicKey } from '@/utils/Hex/Hex.ts';
 
 import localState from '../state/LocalState.ts';
 import Helpers from '../utils/Helpers';
@@ -32,10 +31,10 @@ export default {
   windowNostrQueue: [] as any[],
   isProcessingQueue: false,
   getPublicKey, // TODO confusing similarity to getPubKey
-  loginAsNewUser(redirect = false) {
-    this.login(this.generateKey(), redirect);
+  loginAsNewUser() {
+    this.login(this.generateKey());
   },
-  login(key: any, redirect = false) {
+  login(key: any) {
     const shouldRefresh = !!this.key;
     this.key = key;
     localStorage.setItem('iris.myKey', JSON.stringify(key));
@@ -43,11 +42,6 @@ export default {
       location.reload();
     }
     localState.get('loggedIn').put(true);
-    if (redirect) {
-      setTimeout(() => {
-        route('/following');
-      });
-    }
     localState.get('showLoginModal').put(false);
   },
   generateKey(): Key {
@@ -241,27 +235,31 @@ export default {
       if (prefix !== decoded.prefix) {
         return null;
       }
-      return bech32.encode(prefix, decoded.data);
+      return address;
     } catch (e) {
       // not a bech32 address
     }
 
-    const matchResult = address.match(/^[0-9a-fA-F]{64}$/);
-    if (matchResult !== null) {
-      const wordsArray = matchResult[0].match(/.{1,2}/g);
-      if (wordsArray !== null) {
-        const words = new Uint8Array(wordsArray.map((byte) => parseInt(byte, 16)));
-        return bech32.encode(prefix, words);
-      }
+    try {
+      const hex = new Hex(address);
+      return hex.toBech32(prefix);
+    } catch (e) {
+      // not a valid hex
+      console.error(address, e);
     }
     return null;
   },
   toNostrHexAddress(str: string): string | null {
+    if (!str) {
+      console.error('toNostrHexAddress: no input');
+      return null;
+    }
     if (str.match(/^[0-9a-fA-F]{64}$/)) {
       return str;
     }
     try {
-      const { data } = bech32.decode(str);
+      const { words } = bech32.decode(str);
+      const data = new Uint8Array(bech32.fromWords(words));
       const addr = Helpers.arrayToHex(data);
       return addr;
     } catch (e) {

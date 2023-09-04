@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
+import AsyncRoute from 'preact-async-route';
 import { Router, RouterOnChangeArgs } from 'preact-router';
 
 import useLocalState from '@/state/useLocalState.ts';
@@ -12,7 +13,6 @@ import localState from './state/LocalState.ts';
 import { translationLoaded } from './translations/Translation.mjs';
 import Helpers from './utils/Helpers';
 import About from './views/About';
-import Chat from './views/chat/Chat';
 import Global from './views/feeds/Global';
 import Home from './views/feeds/Home';
 import Notifications from './views/feeds/Notifications';
@@ -25,7 +25,6 @@ import Follows from './views/profile/Follows.tsx';
 import Profile from './views/profile/Profile.tsx';
 import Search from './views/Search';
 import LogoutConfirmation from './views/settings/LogoutConfirmation.tsx';
-import Settings from './views/settings/Settings';
 import Subscribe from './views/Subscribe';
 
 import '@fontsource/lato/400.css';
@@ -42,10 +41,7 @@ const Main = () => {
   const [loggedIn] = useLocalState('loggedIn', false);
   const [unseenMsgsTotal] = useLocalState('unseenMsgsTotal', 0);
   const [activeRoute, setActiveRoute] = useLocalState('activeRoute', '');
-  const [translationsLoadedState, setTranslationsLoadedState] = useLocalState(
-    'translationsLoaded',
-    false,
-  );
+  const [translationsLoadedState, setTranslationsLoadedState] = useState(false);
   const [showLoginModal] = useLocalState('showLoginModal', false);
 
   useEffect(() => {
@@ -107,10 +103,18 @@ const Main = () => {
             <SearchFeed path="/search/:query" />
             <Login path="/login" fullScreen={true} />
             <Notifications path="/notifications" />
-            <Chat path="/chat/:id?" />
+            <AsyncRoute
+              path="/chat/:id?"
+              getComponent={() => import('./views/chat/Chat').then((module) => module.default)}
+            />
             <Note path="/post/:id+" />
             <About path="/about" />
-            <Settings path="/settings/:page?" />
+            <AsyncRoute
+              path="/settings/:page?"
+              getComponent={() =>
+                import('./views/settings/Settings').then((module) => module.default)
+              }
+            />
             <LogoutConfirmation path="/logout" />
             <EditProfile path="/profile/edit" />
             <Subscribe path="/subscribe" />
@@ -124,6 +128,12 @@ const Main = () => {
             <View32010 path="/32010/" />
             <Demo path="/demo/:id?" />
 
+            <AsyncRoute
+              path="/explorer/:p?"
+              getComponent={() =>
+                import('./views/explorer/Explorer').then((module) => module.default)
+              }
+            />
             <NoteOrProfile path="/:id" />
           </Router>
         </div>
