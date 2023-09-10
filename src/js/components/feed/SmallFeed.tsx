@@ -6,6 +6,8 @@ import { Link } from 'preact-router';
 import RelativeTime from '../RelativeTime';
 import Avatar from '../user/Avatar';
 import Name from '../user/Name';
+import muteManager from '@/dwotr/MuteManager';
+import { ID } from '@/utils/UniqueIds';
 
 const SmallEvent = memo(({ event }: { event: Event }) => (
   <div key={event.id} className="flex gap-4 w-full break-words">
@@ -29,7 +31,6 @@ const SmallEvent = memo(({ event }: { event: Event }) => (
 ));
 
 const SmallFeed = ({ events }: { events: Event[] }) => {
-  const mutedUsers = [];
   return (
     <div className="card-body p-2">
       <h2 className="card-title">
@@ -41,7 +42,7 @@ const SmallFeed = ({ events }: { events: Event[] }) => {
 
       <div className="flex flex-wrap gap-6 text-xs overflow-x-hidden">
         {events
-          .filter((event) => !mutedUsers[event.pubkey])
+          .filter((event) => !muteManager.isProfileMuted(ID(event.pubkey)))
           .map((event) => (
             <SmallEvent event={event} />
           ))}

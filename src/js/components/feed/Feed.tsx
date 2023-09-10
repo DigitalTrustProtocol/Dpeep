@@ -13,10 +13,11 @@ import useSubscribe from '@/nostr/hooks/useSubscribe';
 import Key from '@/nostr/Key';
 import { isRepost } from '@/nostr/utils.ts';
 import useHistoryState from '@/state/useHistoryState.ts';
-import useLocalState from '@/state/useLocalState.ts';
 import Helpers from '@/utils/Helpers';
 
 import { translate as t } from '../../translations/Translation.mjs';
+import muteManager from '@/dwotr/MuteManager';
+import { ID } from '@/utils/UniqueIds';
 
 const Feed = (props: FeedProps) => {
   const fetchEvents = props.fetchEvents || useSubscribe;
@@ -28,7 +29,6 @@ const Feed = (props: FeedProps) => {
   const displayAsParam = Helpers.getUrlParameter('display') === 'grid' ? 'grid' : 'feed';
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
-  const [mutedUsers] = useLocalState('muted', {});
   const [showUntil, setShowUntil] = useHistoryState(Math.floor(Date.now() / 1000), 'showUntil');
   const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
 
@@ -40,7 +40,7 @@ const Feed = (props: FeedProps) => {
 
   const filterFn = useCallback(
     (event) => {
-      if (mutedUsers[event.pubkey]) {
+      if (muteManager.isProfileMuted(ID(event.pubkey))) {
         return false;
       }
 
@@ -49,7 +49,7 @@ const Feed = (props: FeedProps) => {
       }
       return true;
     },
-    [mutedUsers, filterOption],
+    [filterOption],
   );
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render

@@ -54,7 +54,7 @@ const EventDropdown = (props: EventDropdownProps) => {
     e.preventDefault();
     //localState.get('mutedNotes').get(props.id).put(!muted);
     if(!props.event) return;
-    muteManager.onNoteMute(props.event.id);
+    muteManager.onNoteMute(props.event.id, !muted);
     setMuted(!muted)
     // TODO: Popup box to confirm mute
   };

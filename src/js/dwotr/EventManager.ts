@@ -4,10 +4,11 @@ import { ID, UniqueIds } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
 import graphNetwork from './GraphNetwork';
-import { EntityItem, MuteKind, Trust1Kind } from './network/WOTPubSub';
+import { BlockKind, EntityItem, MuteKind, Trust1Kind } from './network/WOTPubSub';
 import muteManager from './MuteManager';
 import { EventParser } from './Utils/EventParser';
 import { getNostrTime } from './Utils';
+import blockManager from './BlockManager';
 class EventManager {
   subscribedAuthors = new Set<string>();
 
@@ -128,9 +129,12 @@ class EventManager {
         await eventManager.trustEvent(event);
         break;
       case MuteKind:
-        muteManager.handle(event);
-        muteManager.saveEvent(event);
+        await muteManager.handle(event);
         break;
+      case BlockKind:
+        await blockManager.handle(event);
+        break;
+
     }
   }
 

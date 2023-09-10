@@ -78,7 +78,7 @@ const Events = {
   futureEventIds: new SortedLimitedEventSet(100, false),
   futureEventTimeout: null as any,
   notificationsSeenTime: 0,
-  myBlockEvent: null as Event | null,
+  //myBlockEvent: null as Event | null,
   myFlagEvent: null as Event | null,
   handleNote(event: Event) {
     const has = EventDB.get(event.id);
@@ -188,23 +188,23 @@ const Events = {
       }
     }
   },
-  async handleBlockList(event: Event) {
-    if ((this.myBlockEvent?.created_at || -Infinity) > event.created_at) {
-      return;
-    }
-    this.myBlockEvent = event;
-    const myPub = Key.getPubKey();
-    if (event.pubkey === myPub) {
-      let content;
-      try {
-        content = await Key.decrypt(event.content);
-        const blockList = JSON.parse(content).map(ID);
-        SocialNetwork.blockedUsers = new Set(blockList);
-      } catch (e) {
-        console.log('failed to parse your block list', content, event);
-      }
-    }
-  },
+  // async handleBlockList(event: Event) {
+  //   if ((this.myBlockEvent?.created_at || -Infinity) > event.created_at) {
+  //     return;
+  //   }
+  //   this.myBlockEvent = event;
+  //   const myPub = Key.getPubKey();
+  //   if (event.pubkey === myPub) {
+  //     let content;
+  //     try {
+  //       content = await Key.decrypt(event.content);
+  //       const blockList = JSON.parse(content).map(ID);
+  //       SocialNetwork.blockedUsers = new Set(blockList);
+  //     } catch (e) {
+  //       console.log('failed to parse your block list', content, event);
+  //     }
+  //   }
+  // },
   handleFlagList(event: Event) {
     if ((this.myFlagEvent?.created_at || 0) > event.created_at) {
       return;

@@ -6,11 +6,8 @@ import { translate as t } from '../../translations/Translation.mjs';
 import { ID, UID } from '@/utils/UniqueIds';
 import ScrollView from '@/components/ScrollView';
 import Show from '@/components/helpers/Show';
-import wotPubSub, { MuteKind } from '../network/WOTPubSub';
-import eventManager from '../EventManager';
 import muteManager from '../MuteManager';
 import { throttle } from 'lodash';
-import { MuteContainer } from '../model/ProfileRecord';
 
 // Render all mutes from MutesManager
 // Render mutes per user in the WoT of the user.
@@ -84,7 +81,7 @@ function useLoadMutes(hexKey: string | undefined, view: string | undefined) {
     if (view == 'mutesaggr') {
 
       const setMutesThottled = throttle(() => {
-        let list = [...muteManager.aggregatedMutes.p]
+        let list = [...muteManager.aggregatedProfileIDs, ...muteManager.aggregatedEventIDs]
         setMutes(list);
       }, 1000);
 

@@ -38,11 +38,9 @@ class BlockManager {
     let meta = this.getProfile(myId);
 
     if (isBlocked) {
-
       this.aggregatedProfileIDs.add(id);
       if (isPrivate) meta.privateProfileIds?.add(id);
       else meta.profileIds.add(id);
-
     } else {
       this.aggregatedProfileIDs.delete(id);
       meta.privateProfileIds?.delete(id);
@@ -156,16 +154,23 @@ class BlockManager {
 
     blockManager.removeAggregatedFrom(profileId); // then remove the old Blocks from the aggregate Blocks
 
-    if (graphNetwork.isTrusted(profileId)) {
-      let { p } = EventParser.parseTags(event); // Parse the tags from the event and get the Blocks in p and e, ignore other tags
+    let { p } = EventParser.parseTags(event); // Parse the tags from the event and get the Blocks in p and e, ignore other tags
+
+    let privateP = [];
+    if (event.pubkey === Key.getPubKey()) {
       let { content, success } = await EventParser.descrypt(event.content || '');
-      let privateP = [];
       if (success) {
         privateP = JSON.parse(content) || [];
       }
-      blockManager.addProfile(profileId, p, privateP, event.created_at);
+    }
+
+    blockManager.addProfile(profileId, p, privateP, event.created_at);
+
+    if (graphNetwork.isTrusted(profileId)) {
       blockManager.addAggregatedFrom(profileId);
     }
+
+    this.saveEvent(event);
   }
 
   saveEvent(event: Event | Partial<Event>) {

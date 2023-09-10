@@ -99,7 +99,7 @@ class MuteManager {
   addProfile(
     profileId: UID,
     profileKeys: string[] | Set<string> | undefined,
-    eventKeys: string[] | Set<string> | undefined,
+    noteKeys: string[] | Set<string> | undefined,
     timestamp: number,
   ): void {
     // Load the mutes from the profiles
@@ -108,7 +108,7 @@ class MuteManager {
     meta.added = true;
     meta.timestamp = timestamp;
     meta.profileIds = new Set<number>([...(profileKeys || [])].map(ID));
-    meta.eventIds = new Set<number>([...(eventKeys || [])].map(ID));
+    meta.eventIds = new Set<number>([...(noteKeys || [])].map(ID));
   }
 
   addAggregatedFrom(profileId: UID) {
@@ -177,18 +177,31 @@ class MuteManager {
       });
   }
 
-  handle(event: Event) {
+  async handle(event: Event) {
     let profileId = ID(event.pubkey);
     let meta = this.getProfile(profileId);
     if (meta?.timestamp && meta.timestamp > event.created_at) return; // Event is older than the current data, ignore it
 
     muteManager.removeAggregatedFrom(profileId); // then remove the old mutes from the aggregate mutes
 
+    let { p, e } = EventParser.parseTags(event); // Parse the tags from the event and get the mutes in p and e, ignore other tags
+
+    let privateP = [];
+    if(event.pubkey === Key.getPubKey()) {
+      let { content, success } = await EventParser.descrypt(event.content || '');
+      if (success) {
+        privateP = JSON.parse(content) || [];
+        // TODO: add private mutes to the profile
+      }
+    }
+
+    muteManager.addProfile(profileId, p, e, event.created_at);
+
     if (graphNetwork.isTrusted(profileId)) {
-      let { p, e } = EventParser.parseTags(event); // Parse the tags from the event and get the mutes in p and e, ignore other tags
-      muteManager.addProfile(profileId, p, e, event.created_at);
       muteManager.addAggregatedFrom(profileId);
     }
+    
+    this.saveEvent(event);
   }
 
   saveEvent(event: Event | Partial<Event>) {

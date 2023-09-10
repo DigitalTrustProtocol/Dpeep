@@ -7,7 +7,6 @@ import StatusIcon, { Status } from '../components/StatusIcon';
 import profileManager from '../ProfileManager';
 import muteManager from '../MuteManager';
 import blockManager from '../BlockManager';
-import { set } from 'lodash';
 
 type InitializeWoTProps = {
   path?: string;

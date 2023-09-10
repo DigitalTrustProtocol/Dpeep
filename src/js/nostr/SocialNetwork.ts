@@ -16,7 +16,7 @@ export default {
   profiles: new Map<UID, any>(), // JSON.parsed event.content of profile events
   followedByUser: new Map<UID, Set<UID>>(),
   followersByUser: new Map<UID, Set<UID>>(),
-  blockedUsers: new Set<UID>(),
+  //blockedUsers: new Set<UID>(),
   flaggedUsers: new Set<UID>(),
   followListTimestamps: new Map<UID, number>(), // timestamp of last follow list update
 
@@ -27,8 +27,8 @@ export default {
   },
 
   isBlocked: function (blockedUser: string): boolean {
-    const blockedUserId = ID(blockedUser);
-    return this.blockedUsers.has(blockedUserId);
+    return blockManager.isBlocked(ID(blockedUser));
+    //return this.blockedUsers.has(blockedUserId);
   },
 
   getFollowDistance: function (user: string): number {
@@ -77,13 +77,15 @@ export default {
     const blockedUserId = ID(blockedUser);
     const myId = ID(Key.getPubKey());
 
-    if (block) {
-      this.blockedUsers.add(blockedUserId);
+    blockManager.onProfileBlock(blockedUserId, block);
+
+    if (block) 
       this.removeFollower(blockedUserId, myId);
-      // TODO delete dms by user
-    } else {
-      this.blockedUsers.delete(blockedUserId);
-    }
+      //   this.blockedUsers.add(blockedUserId);
+      //   // TODO delete dms by user
+      // } else {
+      //   this.blockedUsers.delete(blockedUserId);
+      // }
   },
 
   addUserByFollowDistance(distance: number, user: UID) {
@@ -176,7 +178,8 @@ export default {
       this.followDistanceByUser.set(unfollowedUser, smallest);
     }
 
-    const blocked = this.blockedUsers.has(unfollowedUser);
+    const blocked = blockManager.isBlocked(unfollowedUser);
+    //const blocked = this.blockedUsers.has(unfollowedUser);
     // TODO delete EventDB entries for this user
 
     if (blocked || this.followersByUser.get(unfollowedUser)?.size === 0) {
