@@ -1,14 +1,15 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
-import WOTPubSub, { MuteKind, Trust1Kind } from './network/WOTPubSub';
+import WOTPubSub from './network/WOTPubSub';
 import { MAX_DEGREE } from './model/TrustScore';
 import dwotrDB from './network/DWoTRDexie';
 import { debounce } from 'lodash';
 import Key from '@/nostr/Key';
-import { ID, STR, UID, UniqueIds } from '@/utils/UniqueIds';
+import { ID, STR } from '@/utils/UniqueIds';
 import eventManager from './EventManager';
 import muteManager from './MuteManager';
 import verticeMonitor from './VerticeMonitor';
+import { getNostrTime } from './Utils';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -101,7 +102,7 @@ class GraphNetwork {
     context: string = 'nostr',
   ): Promise<void> {
     // Add the trust to the local graph, and update the score
-    const timestamp = eventManager.getTimestamp();
+    const timestamp = getNostrTime();
     const props = { from: this.sourceKey, to, val, entityType, context, note: comment, timestamp };
 
     const { outV, inV, preVal, change } = await this.setTrust(props, false);
@@ -186,7 +187,7 @@ class GraphNetwork {
     // TODO: The changedItems list is not of deep changes detection.
     verticeMonitor.dispatchAll(); // Dispatch all the vertices that have changed
 
-    muteManager.processChange(changedItems); // Process the aggregated mutes based on the vertices changed.
+    muteManager.updateBy(changedItems); // Process the aggregated mutes based on the vertices changed.
 
     if (this.processGraph) {
       // TODO: Make this async as it is slow
@@ -339,6 +340,12 @@ class GraphNetwork {
       }
     }
     return result;
+  }
+
+  isTrusted(id: number) : boolean {
+    let vertice = this.g.vertices[id];
+    if(!vertice) return false;
+    return vertice.score.trusted();
   }
 
   // Should be a little faster than Key.toNostrHexAddress, but less secure

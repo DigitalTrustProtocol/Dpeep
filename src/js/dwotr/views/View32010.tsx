@@ -59,10 +59,10 @@ const View32010 = (props: TestDataProps) => {
         //   user.profile = profileManager.getDefaultProfile(ID(edge.authorPubkey));
         // }
 
-        for (const p of edge.pTags) {
+        for (const p of edge.p) {
           user.p[p] = edge;
         }
-        for (const e of edge.eTags) {
+        for (const e of edge.e) {
           user.e[e] = edge;
         }
         //profiles.current[edge.authorPubkey].time = edge.time;

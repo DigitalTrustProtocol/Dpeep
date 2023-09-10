@@ -4,7 +4,7 @@ import Key from '../../nostr/Key';
 import graphNetwork from '../GraphNetwork';
 import Header from '../../components/header/Header';
 import profileManager from '../ProfileManager';
-import { toTimestamp } from '../Utils';
+import { getNostrTime } from '../Utils';
 import Name from '../../components/user/Name';
 import InfoList from '../components/Display/InfoList';
 import { ProfileMemory } from '../model/ProfileRecord';
@@ -109,7 +109,7 @@ function addEdge(props: any) {
 }
 
 function trust(from: string, to: string, val: number) {
-  return { from, to, val, entityType: 1, context: 'nostr', note: '', timestamp: toTimestamp() };
+  return { from, to, val, entityType: 1, context: 'nostr', note: '', timestamp: getNostrTime() };
 }
 
 function loadGraphData(data: Array<EdgeItem>) {

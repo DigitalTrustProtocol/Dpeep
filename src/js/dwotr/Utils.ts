@@ -9,7 +9,7 @@ export function sha256(data: string): string {
     return bytesToHex(eventHash);
   }
 
-export function toTimestamp(date: number = Date.now()) : number {
+export function getNostrTime(date: number = Date.now()) : number {
     return Math.floor(date / 1000);
 }
 

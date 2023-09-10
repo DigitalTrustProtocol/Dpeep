@@ -1,87 +1,32 @@
-import { useEffect, useState, useRef } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import profileManager from '../ProfileManager';
 import { ViewComponentProps } from './GraphView';
 import MuteViewSelect from '../components/MuteViewSelect';
 import { translate as t } from '../../translations/Translation.mjs';
-import Name from '@/components/user/Name';
 import { ID, UID } from '@/utils/UniqueIds';
 import ScrollView from '@/components/ScrollView';
-//import muteManager from '../MuteManager';
 import Show from '@/components/helpers/Show';
-import graphNetwork from '../GraphNetwork';
-import { EntityType, Vertice } from '../model/Graph';
 import wotPubSub, { MuteKind } from '../network/WOTPubSub';
 import eventManager from '../EventManager';
 import muteManager from '../MuteManager';
 import { throttle } from 'lodash';
+import { MuteContainer } from '../model/ProfileRecord';
 
 // Render all mutes from MutesManager
 // Render mutes per user in the WoT of the user.
 const Mutes = ({ props }: ViewComponentProps) => {
 
-  //const muteSet = useRef(new Set<UID>());
-  const [mutes, setMutes] = useState<UID[]>([]);
-  //const [count, setCount] = useState(0);
+  const mutes = useLoadMutes(props.hexKey, props.view);
 
-  useEffect(() => {
-    if (props.view == 'mutesaggr') {
-
-      const setMutesThottled = throttle(() => {
-        let list = [...muteManager.mutes]
-        setMutes(list);
-      }, 1000);
-
-      const cb = (event: any) => {
-        let profile = eventManager.muteEvent(event);
-        if(!profile) return;
-
-        muteManager.add(profile.mutes);
-
-        setMutesThottled();
-        //let pm = profile?.mutes?.map((v) => ID(v)) || [];
-        //setMutes((mutes) => [...mutes, ...pm]);
-        //let list = [...muteManager.mutes]
-        //setCount(list.length);
-        //setMutes(list);
-      }
-
-      let unsub = wotPubSub?.subscribeTrust(undefined, 0, cb, [MuteKind]);
-
-      // let list: Array<string> = [];
-      // for(const v in graphNetwork.g.vertices)  {
-      //   let vertice = graphNetwork.g.vertices[v] as Vertice;
-      //   if(vertice.entityType != EntityType.Key) continue;
-      //   let profile = profileManager.getMemoryProfile(vertice.id);
-      //   if(!profile) continue;
-      //   if(!profile.mutes) continue;
-
-      //   list = list.concat(profile.mutes || []);
-      // }
-
-      //setMutes(list.map((v) => ID(v)));
-
-      return () => {
-        unsub?.();
-      };
-
-      //setMutes([...muteManager.mutes]);
-    } else {
-      if (!props.hexKey) return;
-
-      let profile = profileManager.getMemoryProfile(props.uid);
-      if (!profile) return;
-
-      setMutes(profile.mutes?.map((v) => ID(v)) || []);
-    }
-  }, [props.hexKey, props.view]); // Change on hexKey or view
+  if (!mutes) return null;
 
   const renderMutes = () => {
     if (!mutes || mutes?.length == 0) return <div className="text-center">{t('No mutes')}</div>;
 
-    return <>{mutes.map((id) => renderEntity(id))}</>;
+    return <>{mutes.map((id) => renderProfile(id))}</>;
   };
 
-  const renderEntity = (id: UID) => {
+  const renderProfile = (id: UID) => {
     let profile = profileManager.getMemoryProfile(id);
     if (!profile) return null;
 
@@ -94,8 +39,6 @@ const Mutes = ({ props }: ViewComponentProps) => {
       </div>
     );
   };
-
-  if (!mutes) return null;
 
   //const viewName = props.view == 'mutes' ? 'mutes' : 'Aggregated mutes';
   let description = '';
@@ -131,3 +74,63 @@ const Mutes = ({ props }: ViewComponentProps) => {
 };
 
 export default Mutes;
+
+
+function useLoadMutes(hexKey: string | undefined, view: string | undefined) {
+  const [mutes, setMutes] = useState<UID[]>([]);
+
+  useEffect(() => {
+
+    if (view == 'mutesaggr') {
+
+      const setMutesThottled = throttle(() => {
+        let list = [...muteManager.aggregatedMutes.p]
+        setMutes(list);
+      }, 1000);
+
+      // const cb = (event: any) => {
+      //   let profile = eventManager.muteEvent(event);
+      //   if(!profile) return;
+
+      //   muteManager.add(profile.mute?.p);
+
+      //   setMutesThottled();
+      //   //let pm = profile?.mutes?.map((v) => ID(v)) || [];
+      //   //setMutes((mutes) => [...mutes, ...pm]);
+      //   //let list = [...muteManager.mutes]
+      //   //setCount(list.length);
+      //   //setMutes(list);
+      // }
+
+      // let unsub = wotPubSub?.subscribeTrust(undefined, 0, cb, [MuteKind]);
+
+      // let list: Array<string> = [];
+      // for(const v in graphNetwork.g.vertices)  {
+      //   let vertice = graphNetwork.g.vertices[v] as Vertice;
+      //   if(vertice.entityType != EntityType.Key) continue;
+      //   let profile = profileManager.getMemoryProfile(vertice.id);
+      //   if(!profile) continue;
+      //   if(!profile.mutes) continue;
+
+      //   list = list.concat(profile.mutes || []);
+      // }
+
+      //setMutes(list.map((v) => ID(v)));
+
+      return () => {
+//        unsub?.();
+      }
+
+      //setMutes([...muteManager.mutes]);
+    } else {
+      if (!hexKey) return;
+
+      let profile = profileManager.getMemoryProfile(ID(hexKey));
+      if (!profile) return;
+
+      //setMutes(profile.mute?.p?.map((v) => ID(v)) || []);
+    }
+  }, [hexKey, view]); // Change on hexKey or view
+
+  return mutes;
+}

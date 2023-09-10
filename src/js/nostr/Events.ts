@@ -34,17 +34,17 @@ import Relays from './Relays';
 import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
 import profileManager from '../dwotr/ProfileManager';
-import eventManager from '@/dwotr/EventManager.ts';
+import muteManager from '@/dwotr/MuteManager.ts';
 
 const startTime = Date.now() / 1000;
 
 const MAX_LATEST_MSGS = 500;
 const MAX_ZAPS_BY_NOTE = 1000;
 
-let mutedNotes;
-localState.get('mutedNotes').on((v) => {
-  mutedNotes = v;
-});
+// let mutedNotes;
+// localState.get('mutedNotes').on((v) => {
+//   mutedNotes = v;
+// });
 
 const DEFAULT_GLOBAL_FILTER = {
   maxFollowDistance: 3,
@@ -583,7 +583,7 @@ const Events = {
     );
   },
   isMuted(event: Event) {
-    return eventManager.isMuted(ID(event.pubkey));
+    return muteManager.isMuted(ID(event.pubkey));
 
     // let muted = false;
     // if (mutedNotes) {

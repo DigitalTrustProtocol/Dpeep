@@ -15,7 +15,7 @@ import Dropdown from '../Dropdown';
 import Modal from '../modal/Modal';
 
 import EventRelaysList from './EventRelaysList';
-import eventManager from '@/dwotr/EventManager.ts';
+import muteManager from '@/dwotr/MuteManager';
 
 interface EventDropdownProps {
   event?: Event;
@@ -26,7 +26,7 @@ interface EventDropdownProps {
 const EventDropdown = (props: EventDropdownProps) => {
   const { event, id } = props;
 
-  const [muted] = useState<boolean>(false); // TODO setMuted
+  const [muted, setMuted] = useState<boolean>(false); // TODO setMuted
   const [showingDetails, setShowingDetails] = useState(false);
 
   const closeModal = () => setShowingDetails(false);
@@ -54,7 +54,8 @@ const EventDropdown = (props: EventDropdownProps) => {
     e.preventDefault();
     //localState.get('mutedNotes').get(props.id).put(!muted);
     if(!props.event) return;
-    eventManager.onMute(props.event.pubkey);
+    muteManager.onNoteMute(props.event.id);
+    setMuted(!muted)
     // TODO: Popup box to confirm mute
   };
 

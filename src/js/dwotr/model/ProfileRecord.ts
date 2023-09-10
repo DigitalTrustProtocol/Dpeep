@@ -22,8 +22,6 @@ export class ProfileMemory extends ProfileRecord {
     location: string | undefined;
     website: string | undefined;
     email: string | undefined;
-    mutes: string[] | undefined;
-    lastMuteEvent: number | undefined;
 
     lud16: string | undefined;
     lud06: string | undefined;

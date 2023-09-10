@@ -17,7 +17,7 @@ import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 
 class ProfileManager {
   loaded: boolean = false;
-  #saveQueue: ProfileRecord[] = [];
+  #saveQueue = new Map<number, ProfileRecord>();
   #saving: boolean = false;
   history: { [key: string]: any } = {};
 
@@ -32,8 +32,8 @@ class ProfileManager {
 
     this.#saving = true;
 
-    const queue = this.#saveQueue;
-    this.#saveQueue = [];
+    const queue = [...this.#saveQueue.values()];
+    this.#saveQueue = new Map<number, ProfileRecord>();
         
     storage.profiles.bulkPut(queue).finally(() => {
       this.#saving = false;
@@ -206,10 +206,10 @@ class ProfileManager {
     return profiles;
   }
 
-  saveProfile(profile: ProfileMemory) {
+  save(profile: ProfileMemory) {
     if (profile?.isDefault || profile?.isDefault == undefined) return; // don't save default profiles
-    this.#saveQueue.push(profile);
-    this.saveBulk();
+    this.#saveQueue.set(profile.id, profile);
+    this.saveBulk(); // Save to IndexedDB in bulk by throttling
   }
 
   async loadAllProfiles() {
@@ -330,7 +330,7 @@ class ProfileManager {
       let profile = this.sanitizeProfile(raw, event.pubkey);
 
       //Always save the profile to DWoTRDB
-      this.saveProfile(profile); // Save to DWoTRDB
+      this.save(profile); // Save to DWoTRDB
 
       return this.addProfileToMemory(profile); // Save to memory
     } catch (e) {
