@@ -1,7 +1,7 @@
 import { Event, getEventHash, getSignature } from 'nostr-tools';
 import PubSub, { Unsubscribe } from '../../nostr/PubSub';
 import Relays from '../../nostr/Relays';
-import { EdgeRecord, EntityType } from '../model/Graph';
+import { EntityType } from '../model/Graph';
 import Key from '../../nostr/Key';
 import getRelayPool from '@/nostr/relayPool';
 import eventManager from '../EventManager';
@@ -10,6 +10,9 @@ export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined
 
 export const Trust1Kind: number = 32010;
 export const MuteKind: number = 10000;
+export const BlockKind: number = 16462;
+export const FlagKind: number = 16463; 
+
 
 export interface EntityItem {
   pubkey: string;
@@ -20,7 +23,7 @@ class WOTPubSub {
   unsubs = new Map<string, Set<string>>();
 
 
-  subscribeTrust(authors: string[] | undefined, since: number | undefined, cb: OnEvent, kinds = [Trust1Kind, MuteKind]): Unsubscribe {
+  subscribeTrust(authors: string[] | undefined, since: number | undefined, cb: OnEvent, kinds = [Trust1Kind, MuteKind, BlockKind]): Unsubscribe {
     let relays = Relays.enabledRelays();
 
     let filter = {

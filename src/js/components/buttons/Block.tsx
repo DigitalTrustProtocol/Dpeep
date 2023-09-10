@@ -4,6 +4,8 @@ import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import { translate as t } from '../../translations/Translation.mjs';
 import Name from '../user/Name';
+import blockManager from '@/dwotr/BlockManager';
+import { ID } from '@/utils/UniqueIds';
 
 type Props = {
   id: string;
@@ -17,10 +19,12 @@ const Block = ({ id, showName = false, className, onClick }: Props) => {
   const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
-    SocialNetwork.getBlockedUsers((blocks) => {
-      const blocked = blocks?.has(Key.toNostrHexAddress(id) as string);
-      setIsBlocked(!!blocked);
-    });
+    // SocialNetwork.getBlockedUsers((blocks) => {
+    //   const blocked = blocks?.has(Key.toNostrHexAddress(id) as string);
+    //   setIsBlocked(!!blocked);
+    // });
+
+    setIsBlocked(blockManager.isBlocked(ID(id)));
   }, [id]);
 
   const onButtonClick = (e) => {

@@ -7,6 +7,8 @@ import Key from '../../nostr/Key';
 import SocialNetwork from '../../nostr/SocialNetwork';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
+import blockManager from '@/dwotr/BlockManager.ts';
+import { STR } from '@/utils/UniqueIds.ts';
 
 const SocialNetworkSettings = () => {
   const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
@@ -25,7 +27,9 @@ const SocialNetworkSettings = () => {
   };
 
   useEffect(() => {
-    SocialNetwork.getBlockedUsers((set) => setBlockedUsers(Array.from(set)));
+    //SocialNetwork.getBlockedUsers((set) => setBlockedUsers(Array.from(set)));
+    setBlockedUsers(Array.from(blockManager.aggregatedProfileIDs).map(STR));
+
     localState.get('globalFilter').on(setGlobalFilter);
     refreshInterval = setInterval(() => {
       // We might need some actual updating logic here

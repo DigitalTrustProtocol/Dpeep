@@ -14,6 +14,7 @@ import FuzzySearch from '@/nostr/FuzzySearch';
 import { ID, STR } from '@/utils/UniqueIds';
 import Subscriptions from './model/Subscriptions';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
+import { as } from 'vitest/dist/reporters-2ff87305.js';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -213,16 +214,20 @@ class ProfileManager {
   }
 
   async loadAllProfiles() {
-    console.time('Loading profiles from DWoTRDB');
-    const list = await storage.profiles.toArray() as ProfileMemory[];
-    if (!list) return undefined;
-    for (const p of list) {
-      this.addProfileToMemory(p);
-    }
+    //console.time('Loading profiles from DWoTRDB');
+    //const list = await storage.profiles.toArray() as ProfileMemory[];
+
+    await storage.profiles.each((profile) => {
+      this.addProfileToMemory(profile as ProfileMemory);
+    });
+    // if (!list) return undefined;
+    // for (const p of list) {
+    //   this.addProfileToMemory(p);
+    // }
 
     //this.profilesLoaded = true;
-    console.timeEnd('Loading profiles from DWoTRDB');
-    console.log('Loaded profiles from DWoTRDB - ' + list.length + ' profiles');
+    //console.timeEnd('Loading profiles from DWoTRDB');
+    //console.log('Loaded profiles from DWoTRDB - ' + list.length + ' profiles');
   }
 
   sanitizeProfile(p: any, hexPub: string): ProfileMemory {

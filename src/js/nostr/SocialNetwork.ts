@@ -8,6 +8,7 @@ import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
 import profileManager from '../dwotr/ProfileManager';
 import eventManager from '@/dwotr/EventManager.ts';
+import blockManager from '@/dwotr/BlockManager.ts';
 
 export default {
   followDistanceByUser: new Map<UID, number>(),
@@ -204,19 +205,20 @@ export default {
     return count;
   },
   block: async function (address: string, isBlocked: boolean) {
-    if (isBlocked) {
-      this.blockedUsers.add(ID(address));
-    } else {
-      this.blockedUsers.delete(ID(address));
-    }
-    let content: any = JSON.stringify(Array.from(this.blockedUsers));
-    content = await Key.encrypt(content);
-    Events.publish({
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      kind: 16462,
-      content,
-    });
+    blockManager.onProfileBlock(ID(address), isBlocked);
+    // if (isBlocked) {
+    //   this.blockedUsers.add(ID(address));
+    // } else {
+    //   this.blockedUsers.delete(ID(address));
+    // }
+    // let content: any = JSON.stringify(Array.from(this.blockedUsers));
+    // content = await Key.encrypt(content);
+    // Events.publish({
+    //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //   // @ts-ignore
+    //   kind: 16462,
+    //   content,
+    // });
   },
   flag: function (address: string, isFlagged: boolean) {
     if (isFlagged) {
@@ -231,22 +233,22 @@ export default {
       content: JSON.stringify(Array.from(this.flaggedUsers)),
     });
   },
-  getBlockedUsers(cb?: (blocked: Set<string>) => void): Unsubscribe {
-    const callback = () => {
-      if (cb) {
-        const set = new Set<string>();
-        for (const id of this.blockedUsers) {
-          set.add(STR(id));
-        }
-        cb(set);
-      }
-    };
-    callback();
-    const myPub = Key.getPubKey();
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    return PubSub.subscribe({ kinds: [16462], authors: [myPub] }, callback);
-  },
+  // getBlockedUsers(cb?: (blocked: Set<string>) => void): Unsubscribe {
+  //   const callback = () => {
+  //     if (cb) {
+  //       const set = new Set<string>();
+  //       for (const id of this.blockedUsers) {
+  //         set.add(STR(id));
+  //       }
+  //       cb(set);
+  //     }
+  //   };
+  //   callback();
+  //   const myPub = Key.getPubKey();
+  //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //   // @ts-ignore
+  //   return PubSub.subscribe({ kinds: [16462], authors: [myPub] }, callback);
+  // },
   getFlaggedUsers(cb?: (flagged: Set<string>) => void): Unsubscribe {
     const callback = () => {
       if (cb) {

@@ -21,6 +21,7 @@ import Name from './Name';
 import ProfilePicture from './ProfilePicture';
 import TrustProfileButtons from '../../dwotr/components/TrustProfileButtons';
 import Stats from './Stats';
+import blockManager from '@/dwotr/BlockManager.ts';
 
 const ProfileCard = (props: { hexPub: string; npub: string }) => {
   const getWebsite = (websiteProfile: string) => {
@@ -138,12 +139,14 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
     const unsubLoggedIn = localState.get('loggedIn').on((loggedIn) => {
       setLoggedIn(loggedIn);
     });
-    const unsubBlocked = SocialNetwork.getBlockedUsers((blockedUsers) => {
-      setBlocked(blockedUsers.has(hexPub));
-    });
+
+    setBlocked(blockManager.isBlocked(ID(hexPub)));
+    // const unsubBlocked = SocialNetwork.getBlockedUsers((blockedUsers) => {
+    //   setBlocked(blockedUsers.has(hexPub));
+    // });
 
     return () => {
-      unsubBlocked();
+      //unsubBlocked();
       unsubLoggedIn();
     };
   }, [hexPub]);

@@ -31,11 +31,11 @@ import '@fontsource/lato/400.css';
 import '@fontsource/lato/700.css';
 import '../css/cropper.min.css';
 import './dwotr/views/style.css';
-import DWoTRSetup from './dwotr/components/DWoTRSetup';
-import GraphView from './dwotr/views/GraphView';
+
 import Demo from './dwotr/views/Demo';
 import View32010 from './dwotr/views/View32010.tsx';
-import Mutes from './dwotr/views/Mutes.tsx';
+import InitializeWoT from './dwotr/views/InitializeWoT.tsx';
+
 
 const Main = () => {
   const [loggedIn] = useLocalState('loggedIn', false);
@@ -43,6 +43,8 @@ const Main = () => {
   const [activeRoute, setActiveRoute] = useLocalState('activeRoute', '');
   const [translationsLoadedState, setTranslationsLoadedState] = useState(false);
   const [showLoginModal] = useLocalState('showLoginModal', false);
+
+  const [Initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     translationLoaded.then(() => {
@@ -69,6 +71,10 @@ const Main = () => {
 
   if (!loggedIn && window.location.pathname.length <= 1) {
     return <Login fullScreen={true} />;
+  }
+
+  if(loggedIn && !Initialized) {
+    return <InitializeWoT setInitialized={setInitialized} />;
   }
 
   const NoteOrProfile = (params: { id?: string; path: string }) => {
@@ -124,7 +130,14 @@ const Main = () => {
             <Follows path="/follows/:id" />
             <Follows followers={true} path="/followers/:id" />
 
-            <GraphView path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?" />
+            
+            <AsyncRoute
+              path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?"
+              getComponent={() =>
+                import('./dwotr/views/GraphView').then((module) => module.default)
+              }
+            />
+
             <View32010 path="/32010/" />
             <Demo path="/demo/:id?" />
 
@@ -137,7 +150,6 @@ const Main = () => {
             <NoteOrProfile path="/:id" />
           </Router>
         </div>
-        {loggedIn ? <DWoTRSetup /> : null}
         <Footer />
       </section>
 

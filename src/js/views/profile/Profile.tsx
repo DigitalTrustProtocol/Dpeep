@@ -17,6 +17,8 @@ import { translate as t } from '../../translations/Translation.mjs';
 import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
+import blockManager from '@/dwotr/BlockManager.ts';
+import { ID } from '@/utils/UniqueIds.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -58,9 +60,11 @@ function Profile(props) {
 
   useEffect(() => {
     setIsMyProfile(isMe);
-    SocialNetwork.getBlockedUsers((blockedUsers) => {
-      setBlocked(blockedUsers.has(hexPub));
-    });
+    setBlocked(blockManager.isBlocked(ID(hexPub)));
+
+    // SocialNetwork.getBlockedUsers((blockedUsers) => {
+    //   setBlocked(blockedUsers.has(hexPub));
+    // });
   }, [hexPub]);
 
   useEffect(() => {

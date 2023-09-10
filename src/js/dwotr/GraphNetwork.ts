@@ -74,7 +74,7 @@ class GraphNetwork {
     );
 
     this.processGraph = true; // Process the whole graph
-    this.processScore(); // Process score for all vertices within degree of maxDegree and subscribe to trust events
+    //this.processScore(); // Process score for all vertices within degree of maxDegree and subscribe to trust events
 
     this.localDataLoaded = true;
 

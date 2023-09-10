@@ -14,8 +14,8 @@ class ProfileMeta {
   profileIds: Set<number> = new Set<number>();
   eventIds: Set<number> = new Set<number>();
 
-  privateProfileIds?: Set<number>;
-  privateEventIds?: Set<number>;
+  privateProfileIds?: Set<number> = new Set<number>();
+  privateEventIds?: Set<number> = new Set<number>();
 }
 
 // Mutes that are aggregated from multiple profiles
@@ -41,46 +41,59 @@ class MuteManager {
   }
 
   // Mute the public key (hex string) using the logged in user as the muter
-  async onNoteMute(eventKey: string) {
+  async onNoteMute(eventKey: string, isMuted: boolean = true, isPrivate: boolean = false) {
     let id = ID(eventKey);
     if (this.isEventMuted(id)) return;
-    this.aggregatedEventIDs.add(id);
-
     let meta = this.getProfile(ID(Key.getPubKey()));
-
     meta.added = true;
     meta.timestamp = getNostrTime();
-    meta.eventIds.add(id);
+
+    if (isMuted) {
+      this.aggregatedEventIDs.add(id);
+      if (isPrivate) meta.privateEventIds?.add(id);
+      else meta.eventIds.add(id);
+    } else {
+      this.aggregatedEventIDs.delete(id);
+      meta.eventIds.delete(id);
+      meta.privateEventIds?.delete(id);
+    }
 
     let event = await muteManager.createEvent(meta);
     this.saveEvent(event);
     wotPubSub.publish(event);
   }
 
-  async onProfileMute(key: string) {
+  async onProfileMute(key: string, isMuted: boolean = true, isPrivate: boolean = false) {
     let id = ID(key);
     if (this.isProfileMuted(id)) return;
-    this.aggregatedProfileIDs.add(id);
 
     let meta = this.getProfile(ID(Key.getPubKey()));
 
     meta.added = true;
     meta.timestamp = getNostrTime();
-    meta.profileIds.add(id);
+
+    if (isMuted) {
+      this.aggregatedProfileIDs.add(id);
+      if (isPrivate) meta.privateProfileIds?.add(id);
+      else meta.profileIds.add(id);
+    } else {
+      this.aggregatedProfileIDs.delete(id);
+      meta.profileIds.delete(id);
+      meta.privateProfileIds?.delete(id);
+    }
 
     let event = await muteManager.createEvent(meta);
     this.saveEvent(event);
     wotPubSub.publish(event);
   }
 
-
   getProfile(id: UID): ProfileMeta {
-     let meta = this.profiles.get(id);
-      if (!meta) {
-        meta = new ProfileMeta();
-        this.profiles.set(id, meta);
-      }
-      return meta;
+    let meta = this.profiles.get(id);
+    if (!meta) {
+      meta = new ProfileMeta();
+      this.profiles.set(id, meta);
+    }
+    return meta;
   }
 
   addProfile(
@@ -146,27 +159,23 @@ class MuteManager {
         // Exsample of outcome all resulting in no change:
         // if (v.oldScore.trusted() && v.score.trusted()) continue;// If old true and new true then no change
         // if (!v.oldScore.trusted() && !v.score.trusted()) continue;// If old false and new false then no change
-      }
-      else {
-
+      } else {
         if (v.score.trusted()) this.addAggregatedFrom(v.id); // If old undefined and new true then add
 
         // Exsample of outcome all resulting in no change:
         //if (!v.score.trusted()) continue;// If old undefined and new false then no change
-
       }
-
     }
   }
 
-    //async loadFromIndexedDB(profiles: any[]) {
-    // Load the mutes from IndexedDB
-    // profileManager.loadAll().then((profiles) => {
-    //   for (const profile of profiles) {
-    //     if (profile.mutes) this.add(profile.id, profile.mutes);
-    //   }
-    // });
-  //}
+  async loadFromIndexedDB() {
+    await IndexedDB.db.events
+      .where('kind')
+      .equals(MuteKind)
+      .each((event) => {
+        this.handle(event);
+      });
+  }
 
   handle(event: Event) {
     let profileId = ID(event.pubkey);
@@ -186,17 +195,19 @@ class MuteManager {
     IndexedDB.saveEvent(event as Event & { id: string });
   }
 
-  async createEvent(
-    meta: ProfileMeta
-  ) : Promise<Partial<Event>> {
+  async createEvent(meta: ProfileMeta): Promise<Partial<Event>> {
     let pTags = Array.from(meta.profileIds).map((id) => ['p', STR(id)]);
     let eTags = Array.from(meta.eventIds).map((id) => ['e', STR(id)]);
 
-    let content = "";
+    let content = '';
 
-    if(meta.privateProfileIds || meta.privateEventIds ) {
-      let privatePTags = meta.privateProfileIds ?  Array.from(meta.privateProfileIds).map((id) => ['p', STR(id)]) : [];
-      let privateETags = meta.privateEventIds ? Array.from(meta.privateEventIds).map((id) => ['e', STR(id)]) : [];
+    if (meta.privateProfileIds || meta.privateEventIds) {
+      let privatePTags = meta.privateProfileIds
+        ? Array.from(meta.privateProfileIds).map((id) => ['p', STR(id)])
+        : [];
+      let privateETags = meta.privateEventIds
+        ? Array.from(meta.privateEventIds).map((id) => ['e', STR(id)])
+        : [];
       content = JSON.stringify({ p: privatePTags, e: privateETags });
       content = await Key.encrypt(content);
     }
@@ -205,10 +216,7 @@ class MuteManager {
       kind: MuteKind, // trust event kind id
       content: content, // The reason for the trust
       created_at: getNostrTime(), // Optional, but recommended
-      tags: [
-        ...pTags,
-        ...eTags,
-      ],
+      tags: [...pTags, ...eTags],
     };
     return event;
   }

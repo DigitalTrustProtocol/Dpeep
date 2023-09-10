@@ -132,11 +132,7 @@ const Events = {
     EventDB.insert(event);
   },
   handleFollowList(event: Event) {
-    const existing = SocialNetwork.followListTimestamps.get(ID(event.pubkey));
-    if (existing && existing >= event.created_at) {
-      return;
-    }
-    SocialNetwork.followListTimestamps.set(ID(event.pubkey), event.created_at);
+
     // no need to store follow events in memory because they're already in SocialNetwork.
     // when we start doing p2p, we can perhaps keep them in memory or just ask from dexie
     //EventDB.insert(event);
@@ -495,10 +491,16 @@ const Events = {
         this.handleDelete(event);
         break;
       case 3: {
-        const foundEvent = EventDB.findOne({ kinds: [3], authors: [event.pubkey] });
-        if (foundEvent && foundEvent.created_at >= event.created_at) {
+        // const foundEvent = EventDB.findOne({ kinds: [3], authors: [event.pubkey] });
+        // if (foundEvent && foundEvent.created_at >= event.created_at) {
+        //   return false;
+        // }
+        const existing = SocialNetwork.followListTimestamps.get(ID(event.pubkey));
+        if (existing && existing >= event.created_at) {
           return false;
         }
+        SocialNetwork.followListTimestamps.set(ID(event.pubkey), event.created_at);
+
         this.maybeAddNotification(event);
         this.handleFollowList(event);
         break;
@@ -517,10 +519,10 @@ const Events = {
         break;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      case 16462:
-        // TODO return if already have
-        this.handleBlockList(event);
-        break;
+      // case 16462:
+      //   // TODO return if already have
+      //   this.handleBlockList(event);
+      //   break;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       case 16463:
