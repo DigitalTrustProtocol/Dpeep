@@ -42,7 +42,7 @@ const SmallFeed = ({ events }: { events: Event[] }) => {
 
       <div className="flex flex-wrap gap-6 text-xs overflow-x-hidden">
         {events
-          .filter((event) => !muteManager.isProfileMuted(ID(event.pubkey)))
+          .filter((event) => !muteManager.isMuted(ID(event.pubkey)))
           .map((event) => (
             <SmallEvent event={event} />
           ))}

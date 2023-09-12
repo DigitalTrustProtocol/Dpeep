@@ -66,6 +66,9 @@ export class EventParser {
         return { p, e, c, d, v };
       }
 
+
+      // static async deserialize(content: string): Promise<{ content: string, success: boolean, error: any}> {
+
       
       static async descrypt(content: string): Promise<{ content: string, success: boolean, error: any}> {
         let success = true;

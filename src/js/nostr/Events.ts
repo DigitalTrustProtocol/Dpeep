@@ -42,11 +42,6 @@ const startTime = Date.now() / 1000;
 const MAX_LATEST_MSGS = 500;
 const MAX_ZAPS_BY_NOTE = 1000;
 
-// let mutedNotes;
-// localState.get('mutedNotes').on((v) => {
-//   mutedNotes = v;
-// });
-
 const DEFAULT_GLOBAL_FILTER = {
   maxFollowDistance: 3,
   minFollowersAtMaxDistance: 5,
@@ -586,22 +581,6 @@ const Events = {
   },
   isMuted(event: Event) {
     return muteManager.isMuted(ID(event.pubkey));
-
-    // let muted = false;
-    // if (mutedNotes) {
-    //   muted = mutedNotes[event.id];
-    //   if (!muted) {
-    //     for (const tag of event.tags) {
-    //       if (tag[0] === 'e' && mutedNotes[tag[1]]) {
-    //         muted = mutedNotes[tag[1]];
-    //         if (muted) {
-    //           return true;
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
-    // return muted;
   },
   maybeAddNotification(event: Event) {
     // if we're mentioned in tags, add to notifications

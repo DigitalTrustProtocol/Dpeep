@@ -88,24 +88,6 @@ class WOTPubSub {
   }
 
 
-
-  // Publish a mute list (kind 10000)
-  // NIP-51
-  mute(mutes: string[]) {
-
-    let event = {
-      kind: 10000, // Mute list
-      tags: mutes.map((m) => ['p', m]),
-    };
-
-    this.sign(event);
-
-    console.log("Publishing mute event", event);
-
-    this.publish(event);
-  }
-
-
   sign(event: Partial<Event>) {
     if (!event.sig) {
         if (!event.tags) {

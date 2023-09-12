@@ -54,6 +54,7 @@ const ProfileDropdown = ({ hexPub, npub, rawDataJson, isMyProfile }) => {
         </Show>
         <Show when={!isMyProfile}>
           <>
+            
             <Block className="btn btn-sm" id={hexPub} />
             <Trust className="btn btn-sm" id={hexPub} />
             <Distrust className="btn btn-sm" id={hexPub} />

@@ -5,9 +5,6 @@ import Subscriptions from './model/Subscriptions';
 class VerticeMonitor {
   subscriptions = new Subscriptions();
 
-  // Process the aggregated mutes based on the vertices changed.
-  // The add or remove mutes based on Profile.mutes
-  // This is a state change function, it will change the state of the mutes
   processChange(vertices: Array<Vertice>) {
     if (!vertices || vertices.length == 0) return;
 

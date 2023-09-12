@@ -40,7 +40,7 @@ const Feed = (props: FeedProps) => {
 
   const filterFn = useCallback(
     (event) => {
-      if (muteManager.isProfileMuted(ID(event.pubkey))) {
+      if (muteManager.isMuted(ID(event.pubkey))) {
         return false;
       }
 

@@ -35,15 +35,12 @@ const InitializeWoT = (props: InitializeWoTProps) => {
       profileManager.loadAllProfiles().then(() => {
         setTimeout(() => {
           setProfileStatus('done');
-          setMuteStatus('loading');
-          muteManager.loadFromIndexedDB().then(() => {
-            setTimeout(() => {
-              setMuteStatus('done');
-            }, 0);
-          });
+
+          muteManager.load();
+          setMuteStatus('done');
 
           setBlockStatus('loading');
-          blockManager.loadFromIndexedDB().then(() => {
+          blockManager.load().then(() => {
             setTimeout(() => {
               setBlockStatus('done');
             }, 0);

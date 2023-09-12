@@ -10,6 +10,7 @@ import eventManager from './EventManager';
 import muteManager from './MuteManager';
 import verticeMonitor from './VerticeMonitor';
 import { getNostrTime } from './Utils';
+import blockManager from './BlockManager';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -185,7 +186,7 @@ class GraphNetwork {
     // TODO: The changedItems list is not of deep changes detection.
     verticeMonitor.dispatchAll(); // Dispatch all the vertices that have changed
 
-    //muteManager.updateBy(changedItems); // Process the aggregated mutes based on the vertices changed.
+    blockManager.dispatchAll(); // Dispatch to all subscribers possible changes to the block list
 
     if (this.processGraph) {
       // TODO: Make this async as it is slow

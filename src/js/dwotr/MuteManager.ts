@@ -1,238 +1,129 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import { EventParser } from './Utils/EventParser';
-import graphNetwork from './GraphNetwork';
-import { Vertice } from './model/Graph';
-import IndexedDB from '@/nostr/IndexedDB';
 import Key from '@/nostr/Key';
 import wotPubSub, { MuteKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
+import localState from '@/state/LocalState';
+import Subscriptions from './model/Subscriptions';
+import graphNetwork from './GraphNetwork';
 
-class ProfileMeta {
-  timestamp: number = 0;
-  added: boolean = false;
-  profileIds: Set<number> = new Set<number>();
-  eventIds: Set<number> = new Set<number>();
+const MUTE_STORE_KEY = 'Mutes';
 
-  privateProfileIds?: Set<number> = new Set<number>();
-  privateEventIds?: Set<number> = new Set<number>();
-}
-
-// Mutes that are aggregated from multiple profiles
+// Mutes that are only from the logged in user
 class MuteManager {
-  // Don't store the mutes from each batch, just the id of the batch
-  // The mutes are already stored in the profiles
-  profiles = new Map<UID, ProfileMeta>(); // Mutes that are aggregated from multiple profiles
+  profileMutes = new Set<UID>();
+  noteMutes = new Set<UID>();
+  privateMutes = new Set<UID>(); // Covers both profile and note mutes, as it dosn't matter if the key is a profile or note
 
-  aggregatedProfileIDs = new Set<number>(); // Mutes that are aggregated from multiple profiles
-  aggregatedEventIDs = new Set<number>(); // Mutes that are aggregated from multiple profiles
+  timestamp = 0;
 
-  // Is the public key muted?
-  isMuted(id: number): boolean {
-    return this.isProfileMuted(id) || this.isEventMuted(id);
-  }
+  subscriptions = new Subscriptions(); // Callbacks to call when the mutes change
 
-  isProfileMuted(id: number): boolean {
-    return this.aggregatedProfileIDs.has(id);
-  }
-
-  isEventMuted(id: number): boolean {
-    return this.aggregatedEventIDs.has(id);
+  // Is the key muted?
+  isMuted(id: UID): boolean {
+    return this.profileMutes.has(id) || this.privateMutes.has(id) || this.noteMutes.has(id);
   }
 
   // Mute the public key (hex string) using the logged in user as the muter
-  async onNoteMute(eventKey: string, isMuted: boolean = true, isPrivate: boolean = false) {
-    let id = ID(eventKey);
-    if (this.isEventMuted(id)) return;
-    let meta = this.getProfile(ID(Key.getPubKey()));
-    meta.added = true;
-    meta.timestamp = getNostrTime();
-
+  async onMute(
+    id: UID,
+    isMuted: boolean = true,
+    isPrivate: boolean = false,
+    isNote: boolean = false,
+  ) {
     if (isMuted) {
-      this.aggregatedEventIDs.add(id);
-      if (isPrivate) meta.privateEventIds?.add(id);
-      else meta.eventIds.add(id);
+      if (isPrivate) this.privateMutes.add(id);
+      else if (isNote) this.noteMutes.add(id);
+      else this.profileMutes.add(id);
     } else {
-      this.aggregatedEventIDs.delete(id);
-      meta.eventIds.delete(id);
-      meta.privateEventIds?.delete(id);
+      this.profileMutes.delete(id);
+      this.privateMutes.delete(id);
+      this.noteMutes.delete(id);
     }
 
-    let event = await muteManager.createEvent(meta);
-    this.saveEvent(event);
+    this.subscriptions.dispatch(id, isMuted);
+
+    let event = await muteManager.createEvent();
+    this.save(event);
     wotPubSub.publish(event);
   }
 
-  async onProfileMute(key: string, isMuted: boolean = true, isPrivate: boolean = false) {
-    let id = ID(key);
-    if (this.isProfileMuted(id)) return;
+  async addMutes(event: Event) {
+    let { p, e } = EventParser.parseTags(event); // Parse the tags from the event and get the mutes in p and e, ignore other tags
 
-    let meta = this.getProfile(ID(Key.getPubKey()));
+    this.profileMutes = new Set([...p].map(ID));
+    this.noteMutes = new Set([...e].map(ID));
 
-    meta.added = true;
-    meta.timestamp = getNostrTime();
-
-    if (isMuted) {
-      this.aggregatedProfileIDs.add(id);
-      if (isPrivate) meta.privateProfileIds?.add(id);
-      else meta.profileIds.add(id);
-    } else {
-      this.aggregatedProfileIDs.delete(id);
-      meta.profileIds.delete(id);
-      meta.privateProfileIds?.delete(id);
-    }
-
-    let event = await muteManager.createEvent(meta);
-    this.saveEvent(event);
-    wotPubSub.publish(event);
-  }
-
-  getProfile(id: UID): ProfileMeta {
-    let meta = this.profiles.get(id);
-    if (!meta) {
-      meta = new ProfileMeta();
-      this.profiles.set(id, meta);
-    }
-    return meta;
-  }
-
-  addProfile(
-    profileId: UID,
-    profileKeys: string[] | Set<string> | undefined,
-    noteKeys: string[] | Set<string> | undefined,
-    timestamp: number,
-  ): void {
-    // Load the mutes from the profiles
-    let meta = this.getProfile(profileId);
-
-    meta.added = true;
-    meta.timestamp = timestamp;
-    meta.profileIds = new Set<number>([...(profileKeys || [])].map(ID));
-    meta.eventIds = new Set<number>([...(noteKeys || [])].map(ID));
-  }
-
-  addAggregatedFrom(profileId: UID) {
-    // Add the mutes from the profile
-    let meta = this.profiles.get(profileId);
-    if (!meta) return;
-
-    for (const p of meta.profileIds || []) {
-      this.aggregatedProfileIDs.add(p);
-    }
-    for (const e of meta.eventIds || []) {
-      this.aggregatedEventIDs.add(e);
-    }
-
-    meta.added = true;
-  }
-
-  removeAggregatedFrom(profileId: UID): boolean {
-    // remove the mutes from the profile
-    let meta = this.profiles.get(profileId);
-    if (!meta || !meta.added) return false;
-
-    for (const p of meta.profileIds || []) {
-      this.aggregatedProfileIDs.delete(p);
-    }
-    for (const e of meta.eventIds || []) {
-      this.aggregatedEventIDs.delete(e);
-    }
-
-    meta.added = false;
-
-    return true;
-  }
-
-  // Process the aggregated mutes based on the vertices changed.
-  // The add or remove mutes based on Profile.mutes
-  // This is a state change function, it will change the state of the mutes from the perspective of the user.
-  updateBy(vertices: Array<Vertice>) {
-    if (!vertices || vertices.length == 0) return;
-
-    for (const v of vertices) {
-      if (v.entityType != 1) continue; // Only process profiles
-
-      if (v.oldScore) {
-        if (v.oldScore.trusted() && !v.score.trusted()) this.removeAggregatedFrom(v.id); // If old true and new false then remove
-        if (!v.oldScore.trusted() && v.score.trusted()) this.addAggregatedFrom(v.id); // If old false and new true then add
-
-        // Exsample of outcome all resulting in no change:
-        // if (v.oldScore.trusted() && v.score.trusted()) continue;// If old true and new true then no change
-        // if (!v.oldScore.trusted() && !v.score.trusted()) continue;// If old false and new false then no change
-      } else {
-        if (v.score.trusted()) this.addAggregatedFrom(v.id); // If old undefined and new true then add
-
-        // Exsample of outcome all resulting in no change:
-        //if (!v.score.trusted()) continue;// If old undefined and new false then no change
+    let privateList = [];
+    if (event.pubkey === Key.getPubKey()) {
+      let { content, success } = await EventParser.descrypt(event.content || '');
+      if (success) {
+        privateList = JSON.parse(content) || [];
       }
     }
-  }
 
-  async loadFromIndexedDB() {
-    await IndexedDB.db.events
-      .where('kind')
-      .equals(MuteKind)
-      .each((event) => {
-        this.handle(event);
-      });
+    this.privateMutes = new Set(privateList.map(ID));
+
+    this.dispatchAll();
   }
 
   async handle(event: Event) {
-    let profileId = ID(event.pubkey);
-    let meta = this.getProfile(profileId);
-    if (meta?.timestamp && meta.timestamp > event.created_at) return; // Event is older than the current data, ignore it
+    if (Key.getPubKey() !== event.pubkey) return; // Only handle events from the logged in user
 
-    muteManager.removeAggregatedFrom(profileId); // then remove the old mutes from the aggregate mutes
+    if (event.created_at <= this.timestamp) return; // Ignore old events
 
-    let { p, e } = EventParser.parseTags(event); // Parse the tags from the event and get the mutes in p and e, ignore other tags
+    this.timestamp = event.created_at;
 
-    let privateP = [];
-    if(event.pubkey === Key.getPubKey()) {
-      let { content, success } = await EventParser.descrypt(event.content || '');
-      if (success) {
-        privateP = JSON.parse(content) || [];
-        // TODO: add private mutes to the profile
+    await this.addMutes(event);
+
+    this.save(event);
+  }
+
+  save(event: Event | Partial<Event>) {
+    localState.get(MUTE_STORE_KEY).put(JSON.stringify(event));
+  }
+
+  load() {
+    localState.get(MUTE_STORE_KEY).once((muteEvent) => {
+      if (!muteEvent) return;
+
+      try {
+        const event = JSON.parse(muteEvent);
+        this.handle(event);
+      } catch (e) {
+        // ignore
       }
-    }
-
-    muteManager.addProfile(profileId, p, e, event.created_at);
-
-    if (graphNetwork.isTrusted(profileId)) {
-      muteManager.addAggregatedFrom(profileId);
-    }
-    
-    this.saveEvent(event);
+    });
   }
 
-  saveEvent(event: Event | Partial<Event>) {
-    IndexedDB.saveEvent(event as Event & { id: string });
-  }
+  async createEvent(): Promise<Partial<Event>> {
+    let deltaPublicKeys = [...this.profileMutes].filter(
+      (id) => !this.privateMutes.has(id) && !this.noteMutes.has(id),
+    );
 
-  async createEvent(meta: ProfileMeta): Promise<Partial<Event>> {
-    let pTags = Array.from(meta.profileIds).map((id) => ['p', STR(id)]);
-    let eTags = Array.from(meta.eventIds).map((id) => ['e', STR(id)]);
+    let pTags = deltaPublicKeys.map((id) => ['p', STR(id)]);
+    let eTags = [...this.noteMutes].map((id) => ['e', STR(id)]);
 
-    let content = '';
+    let privateList = [...this.privateMutes].map(STR);
 
-    if (meta.privateProfileIds || meta.privateEventIds) {
-      let privatePTags = meta.privateProfileIds
-        ? Array.from(meta.privateProfileIds).map((id) => ['p', STR(id)])
-        : [];
-      let privateETags = meta.privateEventIds
-        ? Array.from(meta.privateEventIds).map((id) => ['e', STR(id)])
-        : [];
-      content = JSON.stringify({ p: privatePTags, e: privateETags });
-      content = await Key.encrypt(content);
-    }
+    let content = privateList.length > 0 ? await Key.encrypt(JSON.stringify(privateList)) : '';
 
     const event = {
-      kind: MuteKind, // trust event kind id
-      content: content, // The reason for the trust
-      created_at: getNostrTime(), // Optional, but recommended
+      kind: MuteKind,
+      content: content,
+      created_at: getNostrTime(),
       tags: [...pTags, ...eTags],
     };
     return event;
   }
+
+  dispatchAll() {
+    for (const id of this.subscriptions.keys()) {
+      this.subscriptions.dispatch(id, this.isMuted(id));
+    }
+  }
+
 }
 
 const muteManager = new MuteManager();

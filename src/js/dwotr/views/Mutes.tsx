@@ -81,7 +81,7 @@ function useLoadMutes(hexKey: string | undefined, view: string | undefined) {
     if (view == 'mutesaggr') {
 
       const setMutesThottled = throttle(() => {
-        let list = [...muteManager.aggregatedProfileIDs, ...muteManager.aggregatedEventIDs]
+        let list = [...muteManager.profileMutes, ...muteManager.privateMutes]
         setMutes(list);
       }, 1000);
 

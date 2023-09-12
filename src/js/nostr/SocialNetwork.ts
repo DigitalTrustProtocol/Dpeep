@@ -201,8 +201,7 @@ export default {
     }
     return count;
   },
-  block: async function (address: string, isBlocked: boolean) {
-    blockManager.onProfileBlock(ID(address), isBlocked);
+  //block: async function (address: string, isBlocked: boolean) {
     // if (isBlocked) {
     //   this.blockedUsers.add(ID(address));
     // } else {
@@ -216,7 +215,7 @@ export default {
     //   kind: 16462,
     //   content,
     // });
-  },
+  //},
   // flag: function (address: string, isFlagged: boolean) {
   //   if (isFlagged) {
   //     this.flaggedUsers.add(ID(address));

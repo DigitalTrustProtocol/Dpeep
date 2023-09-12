@@ -7,31 +7,31 @@ import IndexedDB from '@/nostr/IndexedDB';
 import Key from '@/nostr/Key';
 import wotPubSub, { BlockKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
-
+import Subscriptions from './model/Subscriptions';
 
 class BlockVertice extends Vertice {
   blocks?: Set<UID>;
-  blockedBy?: { [key: UID]: Vertice }; 
+  blockedBy?: { [key: UID]: Vertice };
   blockTime?: number;
 }
 
 // Blocks that are aggregated from multiple profiles
 class BlockManager {
+  subscriptions = new Subscriptions(); // Callbacks to call when the mutes change
 
   isBlocked(id: number): boolean {
     let targetV = graphNetwork.g.vertices[id] as BlockVertice;
-    if(!targetV) return false;
+    if (!targetV) return false;
     return this.isVerticeBlocked(targetV);
   }
 
   isVerticeBlocked(targetV: BlockVertice): boolean {
-
-    for(const key in targetV.blockedBy) {
+    for (const key in targetV.blockedBy) {
       let sourceV = targetV.blockedBy[key] as BlockVertice;
-      
+
       // If the source is trusted then the target is blocked
-      if(sourceV.score.trusted()) return true;
-    } 
+      if (sourceV.score.trusted()) return true;
+    }
     return false;
   }
 
@@ -41,7 +41,7 @@ class BlockManager {
   }
 
   // Block the public key using the logged in user as the Blocker
-  async onProfileBlock(id: UID, isBlocked: boolean = true, isPrivate: boolean = false) {
+  async onProfileBlock(id: UID, isBlocked: boolean = true) {
     let myId = ID(Key.getPubKey());
 
     if (id == myId) return; // Can't Block yourself
@@ -51,87 +51,53 @@ class BlockManager {
     let sourceBlocks = sourceV.blocks || (sourceV.blocks = new Set<UID>());
 
     let targetV = graphNetwork.g.addVertice(id) as BlockVertice;
-    let targetBlockedBy = targetV.blockedBy || (targetV.blockedBy = {});
 
-
-    if(isBlocked) {
-      if(sourceBlocks.has(id)) return; // Already blocked
+    if (isBlocked) {
+      if (sourceBlocks.has(id)) return; // Already blocked
       sourceBlocks.add(id);
+      let targetBlockedBy = targetV.blockedBy || (targetV.blockedBy = {});
       targetBlockedBy[myId] = sourceV;
-    }
-    else {
-      if(!sourceBlocks.has(id)) return; // Already not blocked
+    } else {
+      if (!sourceBlocks.has(id)) return; // Already not blocked
       sourceBlocks.delete(id);
-      delete targetBlockedBy[myId];
+      if (targetV.blockedBy) delete targetV.blockedBy[myId];
     }
+
+    this.subscriptions.dispatch(id, isBlocked); // Notify subscribers, UI Components
 
     let event = await blockManager.createEvent(sourceV);
-    this.saveEvent(event);
+    this.save(event);
     wotPubSub.publish(event);
   }
 
-
-  addBlocks(
-    profileV: BlockVertice,
-    blockIDs: Set<UID>,
-  ): void {
-
+  addBlocks(profileV: BlockVertice, blockIDs: Set<UID>): void {
     let oldblocks = profileV.blocks || (profileV.blocks = new Set<UID>());
 
-    let deltaDelete = [...oldblocks].filter(x => !blockIDs.has(x));
-    let deltaAdd = [...blockIDs].filter(x => !oldblocks.has(x));
+    let deltaAdd = [...blockIDs].filter((x) => !oldblocks.has(x));
+    let deltaDelete = [...oldblocks].filter((x) => !blockIDs.has(x));
 
     // Add the new Blocks
-    for(const id of deltaAdd) {
+    for (const id of deltaAdd) {
       let targetV = graphNetwork.g.addVertice(id) as BlockVertice;
       let targetBlockedBy = targetV.blockedBy || (targetV.blockedBy = {});
       targetBlockedBy[profileV.id] = profileV;
     }
 
     // Remove the old Blocks
-    for(const id of deltaDelete) {
+    for (const id of deltaDelete) {
       let targetV = graphNetwork.g.addVertice(id) as BlockVertice;
-      let targetBlockedBy = targetV.blockedBy || (targetV.blockedBy = {});
-      delete targetBlockedBy[profileV.id];
+      if (targetV.blockedBy) delete targetV.blockedBy[profileV.id];
     }
 
     // Set the new Blocks to the profile vertice
     profileV.blocks = blockIDs;
   }
 
-
-  // Can be used to callbacks like MonitorItems
-  //updateBy(vertices: Array<Vertice>) {
-    // if (!vertices || vertices.length == 0) return;
-
-    // for (const v of vertices) {
-    //   if (v.entityType != 1) continue; // Only process profiles
-
-    //   if (v.oldScore) {
-    //     //if (v.oldScore.trusted() && !v.score.trusted()) this.removeAggregatedFrom(v.id); // If old true and new false then remove
-    //     //if (!v.oldScore.trusted() && v.score.trusted()) this.addAggregatedFrom(v.id); // If old false and new true then add
-
-    //     // Exsample of outcome all resulting in no change:
-    //     // if (v.oldScore.trusted() && v.score.trusted()) continue;// If old true and new true then no change
-    //     // if (!v.oldScore.trusted() && !v.score.trusted()) continue;// If old false and new false then no change
-    //   } else {
-    //     //if (v.score.trusted()) this.addAggregatedFrom(v.id); // If old undefined and new true then add
-
-    //     // Exsample of outcome all resulting in no change:
-    //     //if (!v.score.trusted()) continue;// If old undefined and new false then no change
-    //   }
-    // }
-  //}
-
-  async loadFromIndexedDB() {
-    await IndexedDB.db.events
-      .where('kind')
-      .equals(BlockKind)
-      .each((event) => {
-        this.handle(event);
-      });
+  dispatchAll() {
+    for (const id of this.subscriptions.keys()) {
+      this.subscriptions.dispatch(id, this.isBlocked(id));
+    }
   }
-
 
 
   async handle(event: Event) {
@@ -140,15 +106,14 @@ class BlockManager {
     let sourceV = graphNetwork.g.addVertice(profileId) as BlockVertice;
 
     // Ignore events that are older than the last time we updated the data
-    if(sourceV.blockTime && sourceV.blockTime >= event.created_at) return; // Event is older than the current data, ignore it
-    
+    if (sourceV.blockTime && sourceV.blockTime >= event.created_at) return; // Event is older than the current data, ignore it
+
     // Update the time of the last event
     sourceV.blockTime = event.created_at;
 
-
     let { p } = EventParser.parseTagsArrays(event); // Parse the tags from the event and get the Blocks in p and e, ignore other tags
 
-    // Add the Blocks from the private section 
+    // Add the Blocks from the private section
     if (event.pubkey === Key.getPubKey()) {
       let { content, success } = await EventParser.descrypt(event.content || '');
       if (success) {
@@ -161,10 +126,19 @@ class BlockManager {
 
     blockManager.addBlocks(sourceV, blockIDs);
 
-    this.saveEvent(event);
+    this.save(event);
   }
 
-  saveEvent(event: Event | Partial<Event>) {
+  async load() {
+    await IndexedDB.db.events
+      .where('kind')
+      .equals(BlockKind)
+      .each((event) => {
+        this.handle(event);
+      });
+  }
+
+  save(event: Event | Partial<Event>) {
     IndexedDB.saveEvent(event as Event & { id: string });
   }
 

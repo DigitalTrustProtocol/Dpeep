@@ -16,6 +16,7 @@ import Modal from '../modal/Modal';
 
 import EventRelaysList from './EventRelaysList';
 import muteManager from '@/dwotr/MuteManager';
+import { ID } from '@/utils/UniqueIds';
 
 interface EventDropdownProps {
   event?: Event;
@@ -52,9 +53,10 @@ const EventDropdown = (props: EventDropdownProps) => {
 
   const onMute = (e) => {
     e.preventDefault();
-    //localState.get('mutedNotes').get(props.id).put(!muted);
+
     if(!props.event) return;
-    muteManager.onNoteMute(props.event.id, !muted);
+    let id = ID(props.event.id);
+    muteManager.onMute(id, !muted, false, true);
     setMuted(!muted)
     // TODO: Popup box to confirm mute
   };

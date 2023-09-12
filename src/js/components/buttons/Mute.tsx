@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { translate as t } from '../../translations/Translation.mjs';
 import Name from '../user/Name';
-import blockManager from '@/dwotr/BlockManager';
+import muteManager from '@/dwotr/MuteManager';
 import { useKey } from '@/dwotr/hooks/useKey';
 
 type Props = {
@@ -12,32 +12,31 @@ type Props = {
   onClick?: (e) => void;
 };
 
-const Block = ({ id, showName = false, className, onClick }: Props) => {
+const Mute = ({ id, showName = false, className, onClick }: Props) => {
   const { uid } = useKey(id);
-
   const [hover, setHover] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-    setIsBlocked(blockManager.isBlocked(uid));
+    setIsMuted(muteManager.isMuted(uid));
   }, [id]);
 
   const onButtonClick = (e) => {
     e.preventDefault();
-    const newValue = !isBlocked;
+    const newValue = !isMuted;
 
-    blockManager.onProfileBlock(uid, newValue);
+    muteManager.onMute(uid, newValue, false, false);
 
-    setIsBlocked(newValue);
+    setIsMuted(newValue);
 
     onClick?.(e);
   };
 
-  const buttonText = isBlocked ? (hover ? t('unblock') : t('blocked')) : t('block');
+  const buttonText = isMuted ? (hover ? t('unmute') : t('muted')) : t('mute');
 
   return (
     <button
-      className={`block-btn ${isBlocked ? 'blocked' : ''} ${className || ''}`}
+      className={`mute-btn ${isMuted ? 'muted' : ''} ${className || ''}`}
       onClick={onButtonClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -49,4 +48,4 @@ const Block = ({ id, showName = false, className, onClick }: Props) => {
   );
 };
 
-export default Block;
+export default Mute;
