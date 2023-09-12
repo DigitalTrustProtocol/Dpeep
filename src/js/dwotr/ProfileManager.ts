@@ -14,7 +14,6 @@ import FuzzySearch from '@/nostr/FuzzySearch';
 import { ID, STR } from '@/utils/UniqueIds';
 import Subscriptions from './model/Subscriptions';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
-import { as } from 'vitest/dist/reporters-2ff87305.js';
 
 class ProfileManager {
   loaded: boolean = false;

@@ -7,7 +7,6 @@ import { debounce } from 'lodash';
 import Key from '@/nostr/Key';
 import { ID, STR } from '@/utils/UniqueIds';
 import eventManager from './EventManager';
-import muteManager from './MuteManager';
 import verticeMonitor from './VerticeMonitor';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';

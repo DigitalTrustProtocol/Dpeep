@@ -6,7 +6,6 @@ import wotPubSub, { MuteKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
 import Subscriptions from './model/Subscriptions';
-import graphNetwork from './GraphNetwork';
 
 const MUTE_STORE_KEY = 'Mutes';
 
