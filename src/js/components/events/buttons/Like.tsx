@@ -1,12 +1,13 @@
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconFull } from '@heroicons/react/24/solid';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 
 import Events from '../../../nostr/Events';
 import Key from '../../../nostr/Key';
+import useStateThrottle from '@/dwotr/hooks/useStateThrottle';
 
 const Like = ({ event }) => {
-  const [state, setState] = useState({
+  const [state, setState] = useStateThrottle({
     likes: Events.likesByMessageId.get(event.id)?.size || 0,
     liked: false,
     likedBy: new Set<string>(),

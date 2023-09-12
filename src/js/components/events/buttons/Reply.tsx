@@ -1,12 +1,14 @@
 import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
 
 import Events from '../../../nostr/Events';
 import Key from '../../../nostr/Key';
+import useStateThrottle from '@/dwotr/hooks/useStateThrottle';
 
 const Reply = (props) => {
-  const [replyCount, setReplyCount] = useState(
+  // useStateThrottle: Make sure only to update UI once per second
+  const [replyCount, setReplyCount] = useStateThrottle(
     Events.threadRepliesByMessageId.get(props.event.id)?.size || 0,
   );
 

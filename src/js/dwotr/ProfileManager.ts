@@ -214,23 +214,19 @@ class ProfileManager {
   }
 
   async loadAllProfiles() {
-    //console.time('Loading profiles from DWoTRDB');
-    //const list = await storage.profiles.toArray() as ProfileMemory[];
 
-    await storage.profiles.each((profile) => {
-      this.addProfileToMemory(profile as ProfileMemory);
-    });
-    // if (!list) return undefined;
-    // for (const p of list) {
-    //   this.addProfileToMemory(p);
-    // }
+    //console.time('Loading profiles - list');
+    const list = await storage.profiles.toArray() as ProfileMemory[];
 
-    //this.profilesLoaded = true;
-    //console.timeEnd('Loading profiles from DWoTRDB');
-    //console.log('Loaded profiles from DWoTRDB - ' + list.length + ' profiles');
+    for (const p of list) {
+      this.addProfileToMemory(p);
+    }
+
+    //console.timeEnd('Loading profiles - list');
+    //console.log('Loaded profiles from IndexedDB - ' + list.length + ' profiles');
   }
 
-  sanitizeProfile(p: any, hexPub: string): ProfileMemory {
+  sanitizeProfile(p: any, hexPub: string, isBlocked = false): ProfileMemory {
     if (!p) return this.createDefaultProfile(hexPub);
 
     // Make sure we have a name
@@ -243,6 +239,7 @@ class ProfileManager {
 
     // Make sure that we don't store large values
     display_name = p.display_name?.trim().slice(0, 200);
+
     let about = p.about?.trim().slice(0, 10000);
     let picture = p.picture?.trim().slice(0, 4096);
     let banner = p.banner?.trim().slice(0, 4096);
@@ -265,6 +262,13 @@ class ProfileManager {
       lud16,
       isDefault: false,
     } as ProfileMemory;
+
+    if(isBlocked) { // If blocked, then remove all personal info
+      profile = new ProfileMemory(ID(hexPub));
+      profile.key = hexPub;
+      profile.name = name;
+      profile.display_name = display_name;
+    } 
 
     return profile;
   }
@@ -323,7 +327,7 @@ class ProfileManager {
     return profile;
   }
 
-  addProfileEvent(event: Event) {
+  addProfileEvent(event: Event, isBlocked = false) {
     if (!event || !event.pubkey || !event.content) return undefined;
 
     try {
@@ -332,7 +336,7 @@ class ProfileManager {
 
       raw.created_at = event.created_at; // Add the event timestamp to the profile
 
-      let profile = this.sanitizeProfile(raw, event.pubkey);
+      let profile = this.sanitizeProfile(raw, event.pubkey, isBlocked);
 
       //Always save the profile to DWoTRDB
       this.save(profile); // Save to DWoTRDB

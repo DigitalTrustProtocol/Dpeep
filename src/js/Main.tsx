@@ -34,6 +34,7 @@ import './dwotr/views/style.css';
 
 import Demo from './dwotr/views/Demo';
 import View32010 from './dwotr/views/View32010.tsx';
+import View16463 from './dwotr/views/View16463.tsx';
 import InitializeWoT from './dwotr/views/InitializeWoT.tsx';
 
 
@@ -138,7 +139,8 @@ const Main = () => {
               }
             />
 
-            <View32010 path="/32010/" />
+            <View32010 path="/trusts/" />
+            <View16463 path="/flags/" />
             <Demo path="/demo/:id?" />
 
             <AsyncRoute

@@ -54,15 +54,13 @@ class GraphNetwork {
     this.sourceId = ID(this.sourceKey);
     this.g.addVertice(this.sourceId); // Add the source vertice to the graph
 
-    let count = 0;
-
-    await this.db.edges.each((record) => {
-      // Load one record at a time, to avoid memory issues (check that this is indeed the case with each())
+    // Load all vertices from the DB into the graph
+    let list = await this.db.edges.toArray();
+    for (let record of list) {
       this.g.addEdge(record, false); // Load all edges from the DB into the graph with partial data
-      count++;
-    });
+    }
 
-    console.log('Loaded ' + count + ' edges from the DB');
+    console.log('Loaded ' + list.length + ' edges from the DB');
 
     console.info(
       'Graph: ' +
@@ -187,7 +185,7 @@ class GraphNetwork {
     // TODO: The changedItems list is not of deep changes detection.
     verticeMonitor.dispatchAll(); // Dispatch all the vertices that have changed
 
-    muteManager.updateBy(changedItems); // Process the aggregated mutes based on the vertices changed.
+    //muteManager.updateBy(changedItems); // Process the aggregated mutes based on the vertices changed.
 
     if (this.processGraph) {
       // TODO: Make this async as it is slow
@@ -346,6 +344,12 @@ class GraphNetwork {
     let vertice = this.g.vertices[id];
     if(!vertice) return false;
     return vertice.score.trusted();
+  }
+
+  isDistrusted(id: number) : boolean {
+    let vertice = this.g.vertices[id];
+    if(!vertice) return false;
+    return vertice.score.distrusted();
   }
 
   // Should be a little faster than Key.toNostrHexAddress, but less secure

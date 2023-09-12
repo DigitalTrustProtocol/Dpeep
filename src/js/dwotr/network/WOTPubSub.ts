@@ -13,11 +13,27 @@ export const MuteKind: number = 10000;
 export const BlockKind: number = 16462;
 export const FlagKind: number = 16463; 
 
-
 export interface EntityItem {
   pubkey: string;
   entityType: EntityType;
 }
+
+
+// Subscribe to trust events, mutes, blocks, etc
+
+// Subscribe to trusted entities = every kind
+// Subscribe to followed entities = every kind
+
+// Temporarily subscribe to
+// 3rd Profiles : 
+// - Followers / following = kind 3 
+// - Ignore kind: Trust1, mutes, blocks, flags, etc
+
+// Notes: 
+// - likes, comments, zaps.
+
+
+
 
 class WOTPubSub {
   unsubs = new Map<string, Set<string>>();
@@ -110,25 +126,6 @@ class WOTPubSub {
   publish(event: Event | Partial<Event>) {
     getRelayPool().publish(event, Array.from(Relays.enabledRelays()));
   }
-
-
-  // // Load up profiles form the IndexedDB and subscribe to new ones
-  // // Makes sure we have all the known profiles in memory
-  // loadProfiles(addresses: string[]): Unsubscribe {
-  //   let missingAddresses = addresses.filter((a) => !SocialNetwork.profiles.has(ID(a)));
-
-  //   let callback = (event: Event) => {
-  //     if (!event.content) return; // no content
-  //     let existing = SocialNetwork.profiles.get(ID(event.pubkey));
-  //     if (existing) return; // already have it
-
-  //     let profile = JSON.parse(event.content) as any;
-
-  //     profileManager.addProfileToMemory(profile);
-  //   };
-
-  //   return PubSub.subscribe({ kinds: [0], authors: missingAddresses }, callback, false);
-  // }
 }
 
 const wotPubSub = new WOTPubSub();

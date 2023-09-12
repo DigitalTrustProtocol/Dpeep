@@ -7,7 +7,6 @@ import Events from './Events';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
 import profileManager from '../dwotr/ProfileManager';
-import eventManager from '@/dwotr/EventManager.ts';
 import blockManager from '@/dwotr/BlockManager.ts';
 
 export default {
@@ -17,7 +16,7 @@ export default {
   followedByUser: new Map<UID, Set<UID>>(),
   followersByUser: new Map<UID, Set<UID>>(),
   //blockedUsers: new Set<UID>(),
-  flaggedUsers: new Set<UID>(),
+  //flaggedUsers: new Set<UID>(),
   followListTimestamps: new Map<UID, number>(), // timestamp of last follow list update
 
   isFollowing: function (follower: string, followedUser: string): boolean {
@@ -81,11 +80,6 @@ export default {
 
     if (block) 
       this.removeFollower(blockedUserId, myId);
-      //   this.blockedUsers.add(blockedUserId);
-      //   // TODO delete dms by user
-      // } else {
-      //   this.blockedUsers.delete(blockedUserId);
-      // }
   },
 
   addUserByFollowDistance(distance: number, user: UID) {
@@ -148,7 +142,7 @@ export default {
     }
     if (this.followedByUser.get(myId)?.has(follower)) {
       if (!PubSub.subscribedAuthors.has(STR(followedUser))) {
-        eventManager.subscribedAuthors.add(STR(followedUser));
+        //eventManager.subscribedAuthors.add(STR(followedUser));
         setTimeout(() => {
           PubSub.subscribe({ authors: [STR(followedUser)] }, undefined, true);
         }, 0);
@@ -223,19 +217,19 @@ export default {
     //   content,
     // });
   },
-  flag: function (address: string, isFlagged: boolean) {
-    if (isFlagged) {
-      this.flaggedUsers.add(ID(address));
-    } else {
-      this.flaggedUsers.delete(ID(address));
-    }
-    Events.publish({
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      kind: 16463,
-      content: JSON.stringify(Array.from(this.flaggedUsers)),
-    });
-  },
+  // flag: function (address: string, isFlagged: boolean) {
+  //   if (isFlagged) {
+  //     this.flaggedUsers.add(ID(address));
+  //   } else {
+  //     this.flaggedUsers.delete(ID(address));
+  //   }
+  //   Events.publish({
+  //     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //     // @ts-ignore
+  //     kind: 16463,
+  //     content: JSON.stringify(Array.from(this.flaggedUsers)),
+  //   });
+  // },
   // getBlockedUsers(cb?: (blocked: Set<string>) => void): Unsubscribe {
   //   const callback = () => {
   //     if (cb) {
@@ -252,22 +246,22 @@ export default {
   //   // @ts-ignore
   //   return PubSub.subscribe({ kinds: [16462], authors: [myPub] }, callback);
   // },
-  getFlaggedUsers(cb?: (flagged: Set<string>) => void): Unsubscribe {
-    const callback = () => {
-      if (cb) {
-        const set = new Set<string>();
-        for (const id of this.flaggedUsers) {
-          set.add(STR(id));
-        }
-        cb(set);
-      }
-    };
-    callback();
-    const myPub = Key.getPubKey();
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    return PubSub.subscribe({ kinds: [16463], authors: [myPub] }, callback);
-  },
+  // getFlaggedUsers(cb?: (flagged: Set<string>) => void): Unsubscribe {
+  //   const callback = () => {
+  //     if (cb) {
+  //       const set = new Set<string>();
+  //       for (const id of this.flaggedUsers) {
+  //         set.add(STR(id));
+  //       }
+  //       cb(set);
+  //     }
+  //   };
+  //   callback();
+  //   const myPub = Key.getPubKey();
+  //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //   // @ts-ignore
+  //   return PubSub.subscribe({ kinds: [16463], authors: [myPub] }, callback);
+  // },
   getFollowedByUser: function (
     user: string,
     cb?: (followedUsers: Set<string>) => void,

@@ -35,6 +35,7 @@ import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
 import profileManager from '../dwotr/ProfileManager';
 import muteManager from '@/dwotr/MuteManager.ts';
+import blockManager from '@/dwotr/BlockManager.ts';
 
 const startTime = Date.now() / 1000;
 
@@ -205,20 +206,20 @@ const Events = {
   //     }
   //   }
   // },
-  handleFlagList(event: Event) {
-    if ((this.myFlagEvent?.created_at || 0) > event.created_at) {
-      return;
-    }
-    const myPub = Key.getPubKey();
-    if (event.pubkey === myPub) {
-      try {
-        const flaggedUsers = JSON.parse(event.content).map(ID);
-        SocialNetwork.flaggedUsers = new Set(flaggedUsers);
-      } catch (e) {
-        console.log('failed to parse your flagged users list', event);
-      }
-    }
-  },
+  // handleFlagList(event: Event) {
+  //   if ((this.myFlagEvent?.created_at || 0) > event.created_at) {
+  //     return;
+  //   }
+  //   const myPub = Key.getPubKey();
+  //   if (event.pubkey === myPub) {
+  //     try {
+  //       const flaggedUsers = JSON.parse(event.content).map(ID);
+  //       SocialNetwork.flaggedUsers = new Set(flaggedUsers);
+  //     } catch (e) {
+  //       console.log('failed to parse your flagged users list', event);
+  //     }
+  //   }
+  // },
   handleMetadata(event: Event) {
     if (!event.content?.length) {
       return false;
@@ -226,7 +227,8 @@ const Events = {
     
     try {
       // TODO: CK - Look at this.
-      let profile = profileManager.addProfileEvent(event); 
+      let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
+      let profile = profileManager.addProfileEvent(event, isBlocked); 
       if(profile) return true; 
        
       // const profile = JSON.parse(event.content);
@@ -372,82 +374,84 @@ const Events = {
       this.keyValueEvents.set(key, event);
     }
   },
-  acceptEvent(event: Event) {
-    // quick fix: disable follow distance filter when not logged in
-    const myPub = Key.getPubKey();
-    if (myPub === event.pubkey) {
-      return true;
-    }
-    if (globalFilter.maxFollowDistance && !!myPub) {
-      // let dms through in case it's an anonymous chat invite. otherwise discard in handleDirectMessage.
-      if (event.kind === 4) {
-        return true;
-      }
-      if (!PubSub.subscribedAuthors.has(event.pubkey) && !PubSub.subscribedEventIds.has(event.id)) {
-        // unless we specifically subscribed to the user or post, ignore long follow distance users
-        if (!event.pubkey) {
-          console.log('what', event);
-          return false;
-        }
-        if (UniqueIds.has(event.pubkey) && SocialNetwork.getFollowDistance(event.pubkey) < 1000) {
-          const distance = SocialNetwork.getFollowDistance(event.pubkey);
-          if (distance > globalFilter.maxFollowDistance) {
-            // follow distance too high, reject
-            return false;
-          }
-          if (distance === globalFilter.maxFollowDistance) {
-            // require at least 5 followers
-            // TODO followers should be follow distance 2
-            const followerCount = SocialNetwork.followersByUser.get(ID(event.pubkey))?.size || 0;
-            if (
-              followerCount <
-              (globalFilter.minFollowersAtMaxDistance ||
-                DEFAULT_GLOBAL_FILTER.minFollowersAtMaxDistance)
-            ) {
-              // console.log('rejected because not enough followers', SocialNetwork.followersByUser.get(event.pubkey)?.size, '<', globalFilter.minFollowersAtMaxDistance);
-              return false;
-            } else {
-              // console.log('accepted because enough followers', SocialNetwork.followersByUser.get(event.pubkey)?.size, '>=', globalFilter.minFollowersAtMaxDistance);
-            }
-          }
-        } else {
-          const likes = Events.likesByMessageId.get(event.id)?.size || 0;
-          const reposts = Events.repostsByMessageId.get(event.id)?.size || 0;
-          if (event.kind === 1 && (likes > 0 || reposts > 0)) {
-            // allow messages that have been liked by at least 1 user
-          } else {
-            // unconnected user, reject
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  },
+  // acceptEvent(event: Event) {
+  //   // quick fix: disable follow distance filter when not logged in
+  //   const myPub = Key.getPubKey();
+  //   if (myPub === event.pubkey) {
+  //     return true;
+  //   }
+  //   if (globalFilter.maxFollowDistance && !!myPub) {
+  //     // let dms through in case it's an anonymous chat invite. otherwise discard in handleDirectMessage.
+  //     if (event.kind === 4) {
+  //       return true;
+  //     }
+  //     if (!PubSub.subscribedAuthors.has(event.pubkey) && !PubSub.subscribedEventIds.has(event.id)) {
+  //       // unless we specifically subscribed to the user or post, ignore long follow distance users
+  //       if (!event.pubkey) {
+  //         console.log('what', event);
+  //         return false;
+  //       }
+  //       if (UniqueIds.has(event.pubkey) && SocialNetwork.getFollowDistance(event.pubkey) < 1000) {
+  //         const distance = SocialNetwork.getFollowDistance(event.pubkey);
+  //         if (distance > globalFilter.maxFollowDistance) {
+  //           // follow distance too high, reject
+  //           return false;
+  //         }
+  //         if (distance === globalFilter.maxFollowDistance) {
+  //           // require at least 5 followers
+  //           // TODO followers should be follow distance 2
+  //           const followerCount = SocialNetwork.followersByUser.get(ID(event.pubkey))?.size || 0;
+  //           if (
+  //             followerCount <
+  //             (globalFilter.minFollowersAtMaxDistance ||
+  //               DEFAULT_GLOBAL_FILTER.minFollowersAtMaxDistance)
+  //           ) {
+  //             // console.log('rejected because not enough followers', SocialNetwork.followersByUser.get(event.pubkey)?.size, '<', globalFilter.minFollowersAtMaxDistance);
+  //             return false;
+  //           } else {
+  //             // console.log('accepted because enough followers', SocialNetwork.followersByUser.get(event.pubkey)?.size, '>=', globalFilter.minFollowersAtMaxDistance);
+  //           }
+  //         }
+  //       } else {
+  //         const likes = Events.likesByMessageId.get(event.id)?.size || 0;
+  //         const reposts = Events.repostsByMessageId.get(event.id)?.size || 0;
+  //         if (event.kind === 1 && (likes > 0 || reposts > 0)) {
+  //           // allow messages that have been liked by at least 1 user
+  //         } else {
+  //           // unconnected user, reject
+  //           return false;
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return true;
+  // },
   handle(event: Event & { id: string }, force = false, saveToIdb = true, retries = 2): boolean {
     if (!event?.id) return false;
     if (!force && UniqueIds.has(event.id)) {
-      return false;
+      return false; // already handled
     }
     ID(event.id); // add to UniqueIds
-    if (!force && !this.acceptEvent(event)) {
-      if (retries) {
-        // should we retry only if iris has been opened within the last few seconds or the social graph changed?
-        setTimeout(() => {
-          this.handle(event, force, saveToIdb, retries - 1);
-        }, 3000);
-      }
-      return false;
-    }
-    if (retries === 1) {
-      //console.log('accepted event on 1st retry', event);
-    }
-    if (!retries) {
-      // we get some of these
-      //console.log('accepted event on 2nd retry', event);
-    }
+    // if (!force && !this.acceptEvent(event)) {
+    //   if (retries) {
+    //     // should we retry only if iris has been opened within the last few seconds or the social graph changed?
+    //     setTimeout(() => {
+    //       this.handle(event, force, saveToIdb, retries - 1);
+    //     }, 3000);
+    //   }
+    //   return false;
+    // }
+    // if (retries === 1) {
+    //   //console.log('accepted event on 1st retry', event);
+    // }
+    // if (!retries) {
+    //   // we get some of these
+    //   //console.log('accepted event on 2nd retry', event);
+    // }
     // Accepting metadata so we still get their name. But should we instead save the name on our own list?
     // They might spam with 1 MB events and keep changing their name or something.
+    // CK: if event.kind === 0 but is blocked, then we only get the name and ignore the rest. This enables us to show the name of the blocked user in the Graph.
+    // CK: if event.kind one could check for size of content, maybe only let the first event in, and ignore all others.
     if (SocialNetwork.isBlocked(event.pubkey) && event.kind !== 0) {
       return false;
     }
@@ -478,11 +482,7 @@ const Events = {
         break;
       case 1:
         this.maybeAddNotification(event);
-        if (isRepost(event)) {
-          this.handleRepost(event);
-        } else {
-          this.handleNote(event);
-        }
+        this.handleNote(event);
         break;
       case 4:
         this.handleDirectMessage(event);
@@ -525,9 +525,9 @@ const Events = {
       //   break;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      case 16463:
-        this.handleFlagList(event);
-        break;
+      // case 16463:
+      //   this.handleFlagList(event);
+      //   break;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       case 30000:

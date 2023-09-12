@@ -5,12 +5,13 @@ import Key from '../../nostr/Key';
 import { translate as t } from '../../translations/Translation.mjs';
 import Block from '../buttons/Block';
 import Copy from '../buttons/Copy';
-import Report from '../buttons/Report';
 import Dropdown from '../Dropdown';
 import Show from '../helpers/Show';
 import QRModal from '../modal/QRModal';
 
 import Name from './Name';
+import Trust from '@/dwotr/components/buttons/Trust';
+import Distrust from '@/dwotr/components/buttons/Distrust';
 
 const ProfileDropdown = ({ hexPub, npub, rawDataJson, isMyProfile }) => {
   async function viewAs(event) {
@@ -54,7 +55,8 @@ const ProfileDropdown = ({ hexPub, npub, rawDataJson, isMyProfile }) => {
         <Show when={!isMyProfile}>
           <>
             <Block className="btn btn-sm" id={hexPub} />
-            <Report className="btn btn-sm" id={hexPub} />
+            <Trust className="btn btn-sm" id={hexPub} />
+            <Distrust className="btn btn-sm" id={hexPub} />
           </>
         </Show>
       </Dropdown>

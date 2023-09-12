@@ -56,6 +56,9 @@ class TrustScore {
     return (this.result > 0 && this.atDegree <= MAX_DEGREE + 1) || this.atDegree == 0;
   }
 
+  distrusted() {
+    return (this.result < 0 && this.atDegree <= MAX_DEGREE + 1) || this.atDegree == 0;
+  }
 
 
 

@@ -35,6 +35,37 @@ export class EventParser {
         return { p, e, c, d, v };
       }
 
+      static parseTagsArrays(event: Event) {
+        let p: Array<string> = [];
+        let e: Array<string> = [];
+        let c: string | undefined;
+        let d: string | undefined;
+        let v: string | undefined;
+    
+        if (event.tags) {
+          for (const tag of event.tags) {
+            switch (tag[0]) {
+              case 'p': // Subject is a pubkey (Key) Optional, Multiple
+                p.push(tag[1]);
+                break;
+              case 'e': // Subject is an entity (Entity) Optional, Multiple
+                e.push(tag[1]);
+                break;
+              case 'c': // Context
+                c = tag[1];
+                break;
+              case 'd': // The unique identifier of the claim, d = target[hex-address|v|context
+                d = tag[1];
+                break;
+              case 'v': // The value of the claim
+                v = tag[1];
+                break;
+            }
+          }
+        }
+        return { p, e, c, d, v };
+      }
+
       
       static async descrypt(content: string): Promise<{ content: string, success: boolean, error: any}> {
         let success = true;
