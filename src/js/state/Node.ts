@@ -12,6 +12,11 @@ type NodeProps = {
   parent?: Node | null;
 };
 
+type Subscription = {
+  callback: Callback;
+  recursion: number;
+};
+
 export const DIR_VALUE = '__DIR__';
 
 /**
@@ -23,8 +28,9 @@ export default class Node {
   id: string;
   parent: Node | null;
   children = new Map<string, Node>();
-  on_subscriptions = new Map<number, Callback>();
-  map_subscriptions = new Map<number, Callback>();
+  // should subscriptions also include the desired level of recursion?
+  on_subscriptions = new Map<number, Subscription>();
+  map_subscriptions = new Map<number, Subscription>();
   adapters: Adapter[];
   private counter = 0;
 
@@ -33,10 +39,6 @@ export default class Node {
     this.parent = parent;
     this.adapters = adapters ??
       parent?.adapters ?? [new MemoryAdapter(), new LocalStorageAdapter()];
-  }
-
-  isBranchNode() {
-    return this.children.size > 0;
   }
 
   /**
@@ -64,7 +66,7 @@ export default class Node {
       value,
     };
     const promises = this.adapters.map((adapter) => adapter.set(this.id, nodeValue));
-    this.on_subscriptions.forEach((callback) => {
+    this.on_subscriptions.forEach(({ callback }) => {
       callback(value, this.id, updatedAt, () => {});
     });
     await Promise.all(promises);
@@ -98,112 +100,154 @@ export default class Node {
       if (!this.parent.children.has(childName)) {
         this.parent.children.set(childName, this);
       }
-      for (const [id, callback] of this.parent.map_subscriptions) {
-        callback(value, this.id, updatedAt, () => {
-          this.parent?.map_subscriptions.delete(id);
-        });
+      for (const [id, { callback, recursion }] of this.parent.map_subscriptions) {
+        if (value !== DIR_VALUE || recursion === 0) {
+          callback(value, this.id, updatedAt, () => {
+            this.parent?.map_subscriptions.delete(id);
+          });
+        } else if (recursion > 0) {
+          // TODO fix
+          //this.open(callback, recursion - 1);
+        }
       }
     }
   }
 
-  doBranchNodeCallback(callback: Callback) {
+  /**
+   * Callback for all child nodes in the same object
+   * @param callback
+   * @param recursion
+   */
+  open(callback: Callback, recursion = 0): Unsubscribe {
     const aggregated: Record<string, any> = {};
-    const keys = Array.from(this.children.keys());
-    const total = keys.length;
-    let count = 0;
-
-    keys.forEach((key) => {
-      this.children.get(key)?.once((childValue) => {
-        aggregated[key] = childValue;
-        count++;
-
-        if (count === total) {
-          callback(aggregated, this.id, Date.now(), () => {});
-        }
-      });
-    });
+    let latestTime;
+    return this.map((childValue, path, updatedAt) => {
+      if (updatedAt && (!latestTime || latestTime < updatedAt)) {
+        latestTime = updatedAt;
+      }
+      const childName = path.split('/').pop()!;
+      aggregated[childName] = childValue;
+      callback(aggregated, this.id, latestTime, () => {});
+    }, recursion);
   }
 
-  // is it problematic that on behaves differently for leaf and branch nodes?
   /**
    * Subscribe to a value
    * @param callback
    */
-  on(callback: Callback, returnIfUndefined: boolean = false): Unsubscribe {
-    let latest: NodeValue | null = null; // replace with this.value?
-    const cb = (value, path, updatedAt, unsubscribe) => {
-      if (value === undefined) {
-        if (returnIfUndefined) {
-          callback(value, path, updatedAt, unsubscribe);
-        }
+  on(callback: Callback, returnIfUndefined: boolean = false, recursion = 1): Unsubscribe {
+    let latestValue: NodeValue | null = null;
+    let openUnsubscribe: Unsubscribe | undefined;
+    const uniqueId = this.counter++;
+
+    const localCallback = (value, path, updatedAt, unsubscribe) => {
+      const olderThanLatest = latestValue && latestValue.updatedAt >= updatedAt;
+      const noReturnUndefined = !returnIfUndefined && value === undefined;
+      if (olderThanLatest || noReturnUndefined) {
         return;
       }
-      if (value !== DIR_VALUE && (latest === null || latest.updatedAt < value.updatedAt)) {
-        latest = { value, updatedAt };
+
+      const returnUndefined = !latestValue && returnIfUndefined && value === undefined;
+      if (returnUndefined) {
         callback(value, path, updatedAt, unsubscribe);
-        // TODO send to other adapters? or PubSub which decides where to send?
+        return;
+      }
+
+      if (value !== undefined) {
+        latestValue = { value, updatedAt };
+      }
+
+      if (value === DIR_VALUE && recursion > 0 && !openUnsubscribe) {
+        openUnsubscribe = this.open(callback, recursion - 1);
+      }
+
+      if (value !== DIR_VALUE || recursion === 0) {
+        callback(value, path, updatedAt, unsubscribe);
       }
     };
-    const subId = this.counter++;
-    this.on_subscriptions.set(subId, cb);
 
-    // if it's not a dir, adapters will call the callback directly
-    const adapterSubs = this.adapters.map((adapter) => adapter.get(this.id, cb));
+    this.on_subscriptions.set(uniqueId, { callback: localCallback, recursion });
 
-    if (this.isBranchNode()) {
-      this.doBranchNodeCallback(callback);
-    }
+    const adapterUnsubscribes = this.adapters.map((adapter) => adapter.get(this.id, localCallback));
 
-    const unsubscribe = () => {
-      this.on_subscriptions.delete(subId);
-      adapterSubs.forEach((unsub) => unsub());
+    const unsubscribeAll = () => {
+      this.on_subscriptions.delete(uniqueId);
+      adapterUnsubscribes.forEach((unsub) => unsub());
+      openUnsubscribe?.();
     };
-    return unsubscribe;
+
+    return unsubscribeAll;
   }
 
   /**
    * Callback for each child node
    * @param callback
    */
-  map(callback: Callback): Unsubscribe {
+  map(callback: Callback, recursion = 0): Unsubscribe {
     const id = this.counter++;
-    this.map_subscriptions.set(id, callback);
-    const latestMap = new Map<string, NodeValue>(); // replace with this.value?
+    this.map_subscriptions.set(id, { callback, recursion });
+    const latestMap = new Map<string, NodeValue>();
 
-    const cb = (value, path, updatedAt) => {
-      const latest = latestMap.get(path);
-      if (latest && latest.updatedAt >= updatedAt) {
-        return;
-      }
-      latestMap.set(path, { value, updatedAt });
-      const childName = path.split('/').pop()!;
-      this.get(childName).put(value, updatedAt);
-    };
+    let adapterSubs: Unsubscribe[] = [];
+    const openUnsubs: Record<string, Unsubscribe> = {}; // Changed to a dictionary
 
-    const adapterSubs = this.adapters.map((adapter) => adapter.list(this.id, cb));
-    const unsubscribe = () => {
-      this.map_subscriptions.delete(id);
+    const unsubscribeFromAdapters = () => {
       adapterSubs.forEach((unsub) => unsub());
     };
+
+    const cb = (value: any, path: string, updatedAt: number | undefined) => {
+      const latest = latestMap.get(path);
+      if (updatedAt !== undefined && latest && latest.updatedAt >= updatedAt) {
+        return;
+      }
+
+      if (updatedAt !== undefined) {
+        latestMap.set(path, { value, updatedAt });
+      }
+
+      const childName = path.split('/').pop()!;
+      this.get(childName).put(value, updatedAt);
+
+      if (recursion > 0 && value === DIR_VALUE) {
+        if (!openUnsubs[childName]) {
+          // Check if an Unsubscribe exists for this child
+          openUnsubs[childName] = this.get(childName).open(callback, recursion - 1);
+        }
+      } else {
+        callback(value, path, updatedAt, () => {
+          this.map_subscriptions.delete(id);
+          unsubscribeFromAdapters();
+          Object.values(openUnsubs).forEach((unsub) => unsub()); // Unsubscribe all
+        });
+      }
+    };
+
+    adapterSubs = this.adapters.map((adapter) => adapter.list(this.id, cb));
+
+    const unsubscribe = () => {
+      this.map_subscriptions.delete(id);
+      unsubscribeFromAdapters();
+      Object.values(openUnsubs).forEach((unsub) => unsub()); // Unsubscribe all
+    };
+
     return unsubscribe;
   }
 
   /**
    * Same as on(), but will unsubscribe after the first callback
    * @param callback
-   * @param unsubscribe
    */
-  once(callback?: Callback, returnIfUndefined = false, unsubscribe?: Unsubscribe): Promise<any> {
+  once(callback?: Callback, returnIfUndefined = false, recursion = 1): Promise<any> {
     return new Promise((resolve) => {
+      let resolved = false;
       const cb = (value, updatedAt, path, unsub) => {
-        if (unsubscribe) {
-          unsubscribe();
-        }
+        if (resolved) return;
+        resolved = true;
         resolve(value);
         callback?.(value, updatedAt, path, () => {});
         unsub();
       };
-      this.on(cb, returnIfUndefined);
+      this.on(cb, returnIfUndefined, recursion);
     });
   }
 }
