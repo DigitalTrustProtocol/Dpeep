@@ -72,15 +72,15 @@ export default {
     Events.publish(event);
   },
 
-  setBlocked: function (blockedUser: string, block = true) {
-    const blockedUserId = ID(blockedUser);
-    const myId = ID(Key.getPubKey());
+  // setBlocked: function (blockedUser: string, block = true) {
+  //   const blockedUserId = ID(blockedUser);
+  //   const myId = ID(Key.getPubKey());
 
-    blockManager.onProfileBlock(blockedUserId, block);
+  //   blockManager.onBlock(myId, blockedUserId, block);
 
-    if (block) 
-      this.removeFollower(blockedUserId, myId);
-  },
+  //   if (block) 
+  //     this.removeFollower(blockedUserId, myId);
+  // },
 
   addUserByFollowDistance(distance: number, user: UID) {
     if (!this.usersByFollowDistance.has(distance)) {

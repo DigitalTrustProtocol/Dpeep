@@ -427,6 +427,7 @@ const Events = {
       return false; // already handled
     }
     ID(event.id); // add to UniqueIds
+    let publisherId = ID(event.pubkey);
     // if (!force && !this.acceptEvent(event)) {
     //   if (retries) {
     //     // should we retry only if iris has been opened within the last few seconds or the social graph changed?
@@ -447,7 +448,7 @@ const Events = {
     // They might spam with 1 MB events and keep changing their name or something.
     // CK: if event.kind === 0 but is blocked, then we only get the name and ignore the rest. This enables us to show the name of the blocked user in the Graph.
     // CK: if event.kind one could check for size of content, maybe only let the first event in, and ignore all others.
-    if (SocialNetwork.isBlocked(event.pubkey) && event.kind !== 0) {
+    if (blockManager.isBlocked(publisherId) && event.kind !== 0) {
       return false;
     }
     if (this.deletedEvents.has(event.id)) {
@@ -490,11 +491,11 @@ const Events = {
         // if (foundEvent && foundEvent.created_at >= event.created_at) {
         //   return false;
         // }
-        const existing = SocialNetwork.followListTimestamps.get(ID(event.pubkey));
+        const existing = SocialNetwork.followListTimestamps.get(publisherId);
         if (existing && existing >= event.created_at) {
           return false;
         }
-        SocialNetwork.followListTimestamps.set(ID(event.pubkey), event.created_at);
+        SocialNetwork.followListTimestamps.set(publisherId, event.created_at);
 
         this.maybeAddNotification(event);
         this.handleFollowList(event);

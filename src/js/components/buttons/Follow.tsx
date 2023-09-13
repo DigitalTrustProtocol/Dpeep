@@ -10,7 +10,6 @@ type Props = {
 };
 
 const Follow = ({ id, className }: Props) => {
-  const key = 'follow';
   const activeClass = 'following';
   const action = t('follow_btn');
   const actionDone = t('following_btn');
@@ -20,13 +19,11 @@ const Follow = ({ id, className }: Props) => {
   const [isFollowed, setIsFollowed] = useState(false);
 
   useEffect(() => {
-    if (key === 'follow') {
-      SocialNetwork.getFollowedByUser(Key.getPubKey(), (follows) => {
-        const hex = Key.toNostrHexAddress(id);
-        const follow = hex && follows?.has(hex);
-        setIsFollowed(!!follow);
-      });
-    }
+    SocialNetwork.getFollowedByUser(Key.getPubKey(), (follows) => {
+      const hex = Key.toNostrHexAddress(id);
+      const follow = hex && follows?.has(hex);
+      setIsFollowed(!!follow);
+    });
   }, [id]);
 
   const handleMouseEnter = () => {
@@ -42,15 +39,8 @@ const Follow = ({ id, className }: Props) => {
     const newValue = !isFollowed;
     const hex = Key.toNostrHexAddress(id);
     if (!hex) return;
-    if (key === 'follow') {
-      SocialNetwork.setFollowed(hex, newValue);
-      setIsFollowed(newValue);
-      return;
-    }
-    if (key === 'block') {
-      SocialNetwork.setBlocked(hex, newValue);
-      setIsFollowed(newValue);
-    }
+    SocialNetwork.setFollowed(hex, newValue);
+    setIsFollowed(newValue);
   };
 
   let buttonText;
@@ -64,7 +54,7 @@ const Follow = ({ id, className }: Props) => {
 
   return (
     <button
-      className={`btn ${className || key} ${isFollowed ? activeClass : ''}`}
+      className={`btn ${className} ${isFollowed ? activeClass : ''}`}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

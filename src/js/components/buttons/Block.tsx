@@ -4,6 +4,7 @@ import { translate as t } from '../../translations/Translation.mjs';
 import Name from '../user/Name';
 import blockManager from '@/dwotr/BlockManager';
 import { useKey } from '@/dwotr/hooks/useKey';
+import SocialNetwork from '@/nostr/SocialNetwork';
 
 type Props = {
   id: string;
@@ -13,20 +14,23 @@ type Props = {
 };
 
 const Block = ({ id, showName = false, className, onClick }: Props) => {
-  const { uid } = useKey(id);
+  const { uid: blockedUserId, myId } = useKey(id);
 
   const [hover, setHover] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
-    setIsBlocked(blockManager.isBlocked(uid));
+    setIsBlocked(blockManager.isBlocked(blockedUserId));
   }, [id]);
 
   const onButtonClick = (e) => {
     e.preventDefault();
     const newValue = !isBlocked;
 
-    blockManager.onProfileBlock(uid, newValue);
+    blockManager.onBlock(myId, blockedUserId, newValue);
+
+    if (newValue) 
+       SocialNetwork.removeFollower(blockedUserId, myId);
 
     setIsBlocked(newValue);
 

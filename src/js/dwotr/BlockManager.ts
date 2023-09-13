@@ -41,33 +41,32 @@ class BlockManager {
   }
 
   // Block the public key using the logged in user as the Blocker
-  async onProfileBlock(id: UID, isBlocked: boolean = true) {
-    let myId = ID(Key.getPubKey());
+  async onBlock(myId: UID, targetId: UID, isBlocked: boolean = true) {
 
-    if (id == myId) return; // Can't Block yourself
+    if (targetId == myId) return; // Can't Block yourself
 
-    let sourceV = graphNetwork.g.addVertice(myId) as BlockVertice;
+    let myV = graphNetwork.g.addVertice(myId) as BlockVertice;
 
-    let sourceBlocks = sourceV.blocks || (sourceV.blocks = new Set<UID>());
+    let myBlocks = myV.blocks || (myV.blocks = new Set<UID>());
 
-    let targetV = graphNetwork.g.addVertice(id) as BlockVertice;
+    let targetV = graphNetwork.g.addVertice(targetId) as BlockVertice;
 
     if (isBlocked) {
-      if (sourceBlocks.has(id)) return; // Already blocked
-      sourceBlocks.add(id);
+      if (myBlocks.has(targetId)) return; // Already blocked
+      myBlocks.add(targetId);
       let targetBlockedBy = targetV.blockedBy || (targetV.blockedBy = {});
-      targetBlockedBy[myId] = sourceV;
+      targetBlockedBy[myId] = myV;
     } else {
-      if (!sourceBlocks.has(id)) return; // Already not blocked
-      sourceBlocks.delete(id);
+      if (!myBlocks.has(targetId)) return; // Already not blocked
+      myBlocks.delete(targetId);
       if (targetV.blockedBy) delete targetV.blockedBy[myId];
     }
 
-    this.subscriptions.dispatch(id, isBlocked); // Notify subscribers, UI Components
+    this.subscriptions.dispatch(targetId, isBlocked); // Notify subscribers, UI Components
 
-    let event = await blockManager.createEvent(sourceV);
-    this.save(event);
-    wotPubSub.publish(event);
+    let event = await blockManager.createEvent(myV);
+    this.save(event); // Save the event to the local database
+    wotPubSub.publish(event); // Publish the event to the network
   }
 
   addBlocks(profileV: BlockVertice, blockIDs: Set<UID>): void {
