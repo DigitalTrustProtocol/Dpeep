@@ -63,8 +63,8 @@ const Main = () => {
   if (activeRoute && activeRoute.length > 1) {
     title = Helpers.capitalize(activeRoute.replace('/', '').split('?')[0]);
   }
-  const titleTemplate = unseenMsgsTotal ? `(${unseenMsgsTotal}) %s | iris` : '%s | iris';
-  const defaultTitle = unseenMsgsTotal ? `(${unseenMsgsTotal}) iris` : 'iris';
+  const titleTemplate = unseenMsgsTotal ? `(${unseenMsgsTotal}) %s | Dpeep` : '%s | Dpeep';
+  const defaultTitle = unseenMsgsTotal ? `(${unseenMsgsTotal}) Dpeep` : 'Dpeep';
 
   if (!translationsLoadedState) {
     return <div />;

@@ -14,7 +14,7 @@ type Props = {
 };
 
 const Block = ({ id, showName = false, className, onClick }: Props) => {
-  const { uid: blockedUserId, myId } = useKey(id);
+  const { uid: blockedUserId, myId } = useKey(id, false, 'npub');
 
   const [hover, setHover] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);

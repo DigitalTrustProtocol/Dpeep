@@ -1,6 +1,7 @@
 import Dexie, { Table } from 'dexie';
 import { EdgeRecord } from '../model/Graph';
 import ProfileRecord from '../model/ProfileRecord';
+import { Event } from 'nostr-tools';
 
 
 export const DB_NAME = 'DWoTR';
@@ -11,20 +12,15 @@ export class DWoTRDexie extends Dexie {
   //vertices!: Table<Vertice>; 
   edges!: Table<EdgeRecord>;
   profiles!: Table<ProfileRecord>; // ProfileRecord is defined with minimal properties, so all empty property names are not serialized into the database.
+  follows!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-
-    // this.version(1).stores({
-    //   vertices: '++id, key', // Primary key and indexed props
-    //   edges: '++id', // Primary key and indexed props
-    //   profiles: '++id, key'
-    // });
-
-    this.version(3).stores({
+    this.version(5).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
-      profiles: 'key, nip05'
+      profiles: 'key, nip05',
+      follows: 'id, pubkey',
     });
   }
 }

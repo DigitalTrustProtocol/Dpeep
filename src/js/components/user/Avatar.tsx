@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
-import SocialNetwork from '../../nostr/SocialNetwork';
 import Show from '../helpers/Show';
 import ProxyImg from '../ProxyImg.tsx';
 
 import profileManager from '../../dwotr/ProfileManager';
 import { useKey } from '@/dwotr/hooks/useKey';
 import { useProfile } from '@/dwotr/hooks/useProfile';
+import blockManager from '@/dwotr/BlockManager.ts';
+import { ID } from '@/utils/UniqueIds.ts';
 
 type Props = {
   str: string | undefined;
@@ -20,8 +21,9 @@ type Props = {
 // Create a profile state object from the profile data
 function getProfileState(profile: any, hasError: boolean, props: Props) {
   let hexKey = profile.key;
+  let isBlocked = blockManager.isBlocked(ID(hexKey));
   let hasPic =
-    profile?.picture && !hasError && !props?.hidePicture && !SocialNetwork.isBlocked(hexKey);
+    profile?.picture && !hasError && !props?.hidePicture && !isBlocked;
   let avatar = !hasPic ? profileManager.createImageUrl(hexKey, props.width) : '';
   let isActive = ['online', 'active'].includes(profile.activity || '');
 

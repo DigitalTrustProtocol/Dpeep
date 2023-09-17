@@ -110,7 +110,7 @@ class BlockManager {
     // Update the time of the last event
     sourceV.blockTime = event.created_at;
 
-    let { p } = EventParser.parseTagsArrays(event); // Parse the tags from the event and get the Blocks in p and e, ignore other tags
+    let p = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
 
     // Add the Blocks from the private section
     if (event.pubkey === Key.getPubKey()) {

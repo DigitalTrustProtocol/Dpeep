@@ -1,6 +1,6 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
-import WOTPubSub from './network/WOTPubSub';
+import WOTPubSub, { BlockKind, ContactsKind, EncryptedDirectMessageKind, EventDeletionKind, MetadataKind, ReactionKind, TextKind, Trust1Kind } from './network/WOTPubSub';
 import { MAX_DEGREE } from './model/TrustScore';
 import dwotrDB from './network/DWoTRDexie';
 import { debounce } from 'lodash';
@@ -287,7 +287,10 @@ class GraphNetwork {
 
     vertices.forEach((v) => (v.subscribed = id)); // Mark the vertices as subscribed with the current subscription counter
 
-    self.unsubs[id] = self.wotPubSub?.subscribeTrust(authors, since, eventManager.eventCallback); // Subscribe to trust events
+    // Load mostly everything
+    let kinds = [0, 1, 3, 4, 5, 6, 7, BlockKind, Trust1Kind];
+
+    self.unsubs[id] = self.wotPubSub?.subscribeTrust(authors, since, eventManager.eventCallback, kinds); // Subscribe to trust events
   }
 
   unsubscribeAll() {

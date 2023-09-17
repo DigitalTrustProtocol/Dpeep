@@ -13,6 +13,11 @@ class Storage {
     return this.db.edges;
   }
 
+  get follows() {
+    return this.db.follows;
+  }
+
+
   get db(): DWoTRDexie {
     if (!this.#db) {
       try {

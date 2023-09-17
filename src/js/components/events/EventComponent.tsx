@@ -6,7 +6,6 @@ import { isRepost } from '@/nostr/utils.ts';
 import { EventID } from '@/utils/Hex/Hex.ts';
 
 import Events from '../../nostr/Events';
-import SocialNetwork from '../../nostr/SocialNetwork';
 import { translate as t } from '../../translations/Translation.mjs';
 import Icons from '../../utils/Icons';
 
@@ -16,6 +15,8 @@ import Follow from './Follow';
 import Like from './Like';
 import Repost from './Repost';
 import Zap from './Zap';
+import blockManager from '@/dwotr/BlockManager';
+import { ID } from '@/utils/UniqueIds';
 
 declare global {
   interface Window {
@@ -51,17 +52,19 @@ const EventComponent = (props: EventComponentProps) => {
   const retrievingTimeout = useRef<any>();
   const unmounted = useRef<boolean>(false);
 
-  const handleEvent = (e: any) => {
-    if (e) {
-      clearTimeout(retrievingTimeout.current);
-      if (!unmounted.current) {
-        setRetrieving(false);
-        setEvent(e);
-      }
-    }
-  };
 
   useEffect(() => {
+    // Moved inside useEffect to avoid recreating the function on every render
+    const handleEvent = (e: any) => {
+      if (e) {
+        clearTimeout(retrievingTimeout.current);
+        if (!unmounted.current) {
+          setRetrieving(false);
+          setEvent(e);
+        }
+      }
+    };
+  
     //console.log('EventComponent init'); // this gets called more than displayCount - unnecessary?
     if (props.standalone && (event || retrievingTimeout.current)) {
       window.prerenderReady = true;
@@ -90,7 +93,7 @@ const EventComponent = (props: EventComponentProps) => {
     );
   }
 
-  if (SocialNetwork.isBlocked(event.pubkey)) {
+  if (blockManager.isBlocked(ID(event.pubkey))) {
     if (props.standalone || props.isQuote) {
       return (
         <div className="m-2 md:mx-4 flex items-center">

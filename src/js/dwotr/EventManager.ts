@@ -10,7 +10,6 @@ import { EventParser } from './Utils/EventParser';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
 class EventManager {
-  subscribedAuthors = new Set<string>();
 
   constructor() {}
 
@@ -88,7 +87,7 @@ class EventManager {
 
   parseTrustEvent(event: Event) {
     let note: string;
-    let authorPubkey = event.pubkey;
+    let pubKey = event.pubkey;
     let timestamp = event.created_at;
 
     let { p, e, d, v, c: context } = EventParser.parseTags(event);
@@ -98,7 +97,7 @@ class EventManager {
     if (isNaN(val) || val < -1 || val > 1) val = 0; // Invalid value, the default to 0
     context = context || 'nostr';
 
-    return { p, e, context, d, v, val, note, authorPubkey, timestamp };
+    return { p, e, context, d, v, val, note, pubKey, timestamp };
   }
 
   // TODO: return Unsubscribe
@@ -143,7 +142,7 @@ class EventManager {
       p: pTags,
       e: eTags,
       val,
-      authorPubkey,
+      pubKey,
       note,
       context,
       timestamp,
@@ -156,7 +155,7 @@ class EventManager {
     for (const p of pTags) {
       await graphNetwork.setTrustAndProcess(
         p,
-        authorPubkey,
+        pubKey,
         EntityType.Key,
         val,
         note,
@@ -168,7 +167,7 @@ class EventManager {
     for (const e of eTags) {
       await graphNetwork.setTrustAndProcess(
         e,
-        authorPubkey,
+        pubKey,
         EntityType.Item,
         val,
         note,

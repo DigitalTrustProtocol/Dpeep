@@ -25,10 +25,10 @@ export default {
     return !!this.followedByUser.get(followerId)?.has(followedUserId);
   },
 
-  isBlocked: function (blockedUser: string): boolean {
-    return blockManager.isBlocked(ID(blockedUser));
-    //return this.blockedUsers.has(blockedUserId);
-  },
+  // isBlocked: function (blockedUser: string): boolean {
+  //   return blockManager.isBlocked(ID(blockedUser));
+  //   //return this.blockedUsers.has(blockedUserId);
+  // },
 
   getFollowDistance: function (user: string): number {
     if (Key.isMine(user)) {

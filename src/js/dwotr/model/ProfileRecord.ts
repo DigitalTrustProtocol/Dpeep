@@ -14,6 +14,7 @@ export class ProfileMemory extends ProfileRecord {
     username: string = '';
     displayName: string | undefined;
     display_name: string | undefined;
+    petName: string | undefined;
     description: string | undefined;
     avatar: string | undefined;
     picture: string | undefined;
@@ -27,7 +28,10 @@ export class ProfileMemory extends ProfileRecord {
     lud06: string | undefined;
     about: string | undefined;
     created_at: number = 0;
+    
     isDefault: boolean = false;
+
+
 
     constructor(id: number) {
         super();

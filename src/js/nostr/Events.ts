@@ -82,7 +82,7 @@ const Events = {
       EventDB.insert(event);
     }
 
-    const eventIsRepost = isRepost(event);
+    const eventIsRepost = isRepost(event); 
     const replyingTo = !eventIsRepost && getNoteReplyingTo(event);
     const myPub = Key.getPubKey();
 

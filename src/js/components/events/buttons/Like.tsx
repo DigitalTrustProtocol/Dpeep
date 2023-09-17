@@ -7,6 +7,7 @@ import Key from '../../../nostr/Key';
 import useStateThrottle from '@/dwotr/hooks/useStateThrottle';
 
 const Like = ({ event }) => {
+
   const [state, setState] = useStateThrottle({
     likes: Events.likesByMessageId.get(event.id)?.size || 0,
     liked: false,
@@ -14,18 +15,20 @@ const Like = ({ event }) => {
   });
 
   useEffect(() => {
+    // Define handleLikes in useEffect to avoid recreating the function on every render
+    const handleLikes = (likedBy) => {
+      const myPub = Key.getPubKey();
+      setState((prevState) => ({
+        ...prevState,
+        likes: likedBy.size,
+        liked: likedBy.has(myPub),
+        likedBy,
+      }));
+    };
+
     return Events.getLikes(event.id, handleLikes);
   }, [event]);
 
-  const handleLikes = (likedBy) => {
-    const myPub = Key.getPubKey();
-    setState((prevState) => ({
-      ...prevState,
-      likes: likedBy.size,
-      liked: likedBy.has(myPub),
-      likedBy,
-    }));
-  };
 
   const likeBtnClicked = (e) => {
     e.preventDefault();

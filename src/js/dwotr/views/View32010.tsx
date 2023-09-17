@@ -20,7 +20,7 @@ type TestDataProps = {
 };
 
 const View32010 = (props: TestDataProps) => {
-  const profiles = useRef<any>(Object.create(null)); // Map of profiles
+  const items = useRef<any>(Object.create(null)); // Map of profiles
   const [unsubscribe] = useState<Array<() => void>>([]);
   const [state, setState] = useState<any>(null);
   const [list, setList] = useState<Array<any>>([]); // List of entities to display
@@ -33,7 +33,8 @@ const View32010 = (props: TestDataProps) => {
       // Make sure we have the profiles for the test users
 
       const updateList = throttle(() => {
-        let newList = Object.values(profiles.current);
+        let newList = Object.values(items.current);
+        newList.sort((a:any, b:any) => b.history.length - a.history.length);
         setList(newList);
       }, 1000);
 
@@ -41,35 +42,32 @@ const View32010 = (props: TestDataProps) => {
       let unsub = WOTPubSub.subscribeTrust(undefined, 0, (event: Event): void => {
         if (!isMounted()) return;
 
-        let edge = eventManager.parseTrustEvent(event);
+        let {  pubKey, p: pTags, e: eTags } = eventManager.parseTrustEvent(event);
 
-        if (!profiles.current[edge.authorPubkey])
-          profiles.current[edge.authorPubkey] = {
-            key: edge.authorPubkey,
-            npub: Key.toNostrBech32Address(edge.authorPubkey, 'npub') as string,
+        if (!items.current[pubKey])
+          items.current[pubKey] = {
+            key: pubKey,
+            npub: Key.toNostrBech32Address(pubKey, 'npub') as string,
             p: Object.create(null),
             e: Object.create(null),
             time: 0,
             history: [],
-            profile: profileManager.getMemoryProfile(ID(edge.authorPubkey)),
+            profile: profileManager.getMemoryProfile(ID(pubKey)),
           };
 
-        let user = profiles.current[edge.authorPubkey];
-        // if(user.profile.isDefault) {
-        //   user.profile = profileManager.getDefaultProfile(ID(edge.authorPubkey));
-        // }
+        let user = items.current[pubKey];
 
-        for (const p of edge.p) {
-          user.p[p] = edge;
+        for (const p of pTags) {
+          user.p[p] = true;
         }
-        for (const e of edge.e) {
-          user.e[e] = edge;
+        for (const e of eTags) {
+          user.e[e] = true;
         }
         //profiles.current[edge.authorPubkey].time = edge.time;
-        user.history.push(edge);
+        user.history.push(event);
 
         updateList();
-      });
+      }, [32010]);
       unsubscribe.push(unsub);
       setState({ message: 'Listening for events...' });
     });

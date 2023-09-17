@@ -451,6 +451,16 @@ class ProfileManager {
     this.subscriptions.dispatch(mem.id, event);
   }
 
+  // ---- Pet names ----
+  // TODO: sourceId is used for storing information about who set the pet name
+  setPetNames(sourceId, petNames: Array<{id:number, name:string}>) {
+
+    for(const item of petNames) {
+      let profile = this.getMemoryProfile(item.id);
+      profile.petName = item.name;
+    }
+  }
+
 
   async verifyNip05Profile(profile: ProfileMemory, pubkey: string) {
    if (!profile.nip05) return false;
