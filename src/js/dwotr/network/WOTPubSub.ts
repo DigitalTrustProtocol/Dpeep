@@ -1,12 +1,11 @@
-import { Event, getEventHash, getSignature } from 'nostr-tools';
+import { Event,Filter, getEventHash, getSignature } from 'nostr-tools';
 import PubSub, { Unsubscribe } from '../../nostr/PubSub';
 import Relays from '../../nostr/Relays';
 import { EntityType } from '../model/Graph';
 import Key from '../../nostr/Key';
 import getRelayPool from '@/nostr/relayPool';
 import eventManager from '../EventManager';
-import { UID } from '@/utils/UniqueIds';
-import { Trust } from '../components/Icons';
+import { STR, UID } from '@/utils/UniqueIds';
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
 
@@ -63,58 +62,101 @@ type NostrKind = number;
 // Notes:
 // - likes, comments, zaps.
 
-export const FlowKinds = [TextKind, RepostKind, ReactionKind, ReportKind, ZapKind, Trust1Kind,  EventDeletionKind];
-export const StaticKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind]
+export const FlowKinds = [TextKind, RepostKind, ReactionKind, ReportKind, ZapKind, EventDeletionKind];
+export const StaticKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind, Trust1Kind];
   
 
 class WOTPubSub {
+  // The idea is that we are only interested in events that are less than 2 weeks old, per default. 
+  // Fetching older events can be done by request etc.
+  // FlowSince applies primarily to FlowKinds. With StaticKinds we are interested in all events, as they are few.
   flowSince = (Date.now() / 1000) - (60 * 60 * 24 * 14); // 2 weeks ago, TODO: make this configurable
 
-  unsubs = new Map<string, Set<string>>();
+  subscriptionId = 0;
+  unsubs = new Map<number, any>();
 
-  subscribedAuthors = new Map<UID, Set<NostrKind>>();
+
+  subscribedAuthors = new Set<UID>();
+
+  metrics = {
+    Count: 0,
+    SubscribedAuthors: 0,
+    Subscriptions: 0,
+    Callbacks: 0,
+  };
 
   updateRelays(urls: Array<string> | undefined) {
     if (!urls) return;
   }
 
 
-
-  // Subscribe to all events multiple of the same kind, for example all notes, likes, comments, zaps, etc
-  // this class will handle all unsubscribes for this method call.
-  subscribeFlow(
-    authors: string[] | undefined,
-    kinds = FlowKinds, // Default to all flow kinds
+  // Do we need to break up hugh subscriptions into smaller ones? YES
+  subscribeAuthors(
+    authorIDs: Set<UID> | Array<UID>
   ) {
-    if (!authors) return;
-    this.subscribeTrust(authors, this.flowSince, (event, afterEose, url) => {
-      // TODO: handle unsubscribe
-    }, kinds);
+    let authors: Array<string> = [];
+
+    for(let id of authorIDs) {
+      if(this.subscribedAuthors.has(id)) continue;
+      this.subscribedAuthors.add(id);
+      authors.push(STR(id));
+    }
+
+    if(authors.length === 0) return;
+
+    // Batch authors into 1000 chunks, so subscribe can handle it
+    let batchs = this.batchArray(authors, 100);
+
+    for(let batch of batchs) {
+    
+      let filters = [{
+        batch,
+        kinds: FlowKinds,
+        since: this.flowSince,
+      },
+      {
+        batch,
+        kinds: StaticKinds,
+        since: 0,
+      }];
+  
+
+      let r = this.subscribeFilter(filters, eventManager.eventCallback);
+      this.subscriptionId ++;
+      this.unsubs.set(this.subscriptionId, r);
+    }
   }
 
-  unsubscribeFlow(authors: string[] | undefined, kinds = FlowKinds) {
-    if (!authors) return;
+
+  unsubscribeFlow(authorIDs: Set<UID> | Array<UID>) {
+    // TODO: unsubscribe authors, currently its unknown how to do this effectly without unsubscribing all authors
+    // workaround: unsubscribe all authors and subscribe again with the same authors
+    // Or subscribe each author individually and keep track of the subscriptions, but this is not optimal and the number of subscriptions can be huge
+
   }
 
-  subscribeTrust(
-    authors: string[] | undefined,
-    since: number | undefined,
+  batchArray(arr: Array<any>, batchSize: number = 1000) {
+    const batchedArr: Array<any> = [];
+    
+    for (let i = 0; i < arr.length; i += batchSize) {
+      batchedArr.push(arr.slice(i, i + batchSize));
+    }
+    
+    return batchedArr;
+  }
+
+  subscribeFilter(
+    filters: Array<any>,
     cb: OnEvent,
-    kinds = [Trust1Kind, MuteKind, BlockKind],
   ): Unsubscribe {
     let relays = Relays.enabledRelays();
 
-    let filter = {
-      kinds,
-      authors,
-      since,
-    };
-
     const unsub = getRelayPool().subscribe(
-      [filter],
+      filters,
       relays,
       (event: Event, afterEose: boolean, url: string | undefined) => {
         setTimeout(() => {
+          this.metrics.Callbacks++;
           cb(event, afterEose, url);
         }, 0);
       },
@@ -173,6 +215,14 @@ class WOTPubSub {
 
   publish(event: Event | Partial<Event>) {
     getRelayPool().publish(event, Array.from(Relays.enabledRelays()));
+  }
+
+  getMetrics() {
+    this.metrics.Count = Relays.enabledRelays().length;
+    this.metrics.SubscribedAuthors = this.subscribedAuthors.size;
+    this.metrics.Subscriptions = this.unsubs.size;
+
+    return this.metrics;
   }
 }
 

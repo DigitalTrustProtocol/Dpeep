@@ -21,6 +21,14 @@ class ProfileManager {
   #saving: boolean = false;
   history: { [key: string]: any } = {};
 
+  metrics = {
+    TableCount: 0,
+    TotalMemory: 0,
+    Loaded: 0,
+    Saved: 0,
+  }
+    
+
   //--------------------------------------------------------------------------------
   // Saves profile(s) to IndexedDB
   //--------------------------------------------------------------------------------
@@ -34,6 +42,8 @@ class ProfileManager {
 
     const queue = [...this.#saveQueue.values()];
     this.#saveQueue = new Map<number, ProfileRecord>();
+
+    this.metrics.Saved += queue.length;
         
     storage.profiles.bulkPut(queue).finally(() => {
       this.#saving = false;
@@ -217,6 +227,8 @@ class ProfileManager {
     //console.time('Loading profiles - list');
     const list = await storage.profiles.toArray() as ProfileMemory[];
 
+    this.metrics.Loaded += list.length;
+
     for (const p of list) {
       this.addProfileToMemory(p);
     }
@@ -383,6 +395,7 @@ class ProfileManager {
 
 
   subscribe(address: string, cb: (e: any) => void): Unsubscribe {
+    return () => {};
     const hexPub = Key.toNostrHexAddress(address) as string;
     const id = ID(hexPub);
 
@@ -470,6 +483,21 @@ class ProfileManager {
       //console.log('NIP05 address is valid?', isValid, profile.nip05, pubkey);
     profile["nip05valid"] = isValid;
     return isValid;
+  }
+
+  async tableCount() {
+    return await storage.profiles.count();
+  }
+
+
+  getMetrics() : any {
+
+    this.tableCount().then((count) => {
+      this.metrics.TableCount = count;
+    });
+    this.metrics.TotalMemory = SocialNetwork.profiles.size;
+
+    return this.metrics;
   }
 
 }

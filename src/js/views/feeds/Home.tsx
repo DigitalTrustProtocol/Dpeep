@@ -4,11 +4,11 @@ import CreateNoteForm from '@/components/create/CreateNoteForm';
 import FeedComponent from '@/components/feed/Feed';
 import Show from '@/components/helpers/Show';
 import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
-import { useFollows } from '@/nostr/hooks/useFollows.ts';
 import { getEventReplyingTo, isRepost } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
 import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
+import { useFollows } from '@/dwotr/hooks/useFollows';
 
 const Home: React.FC<RouteProps> = () => {
   const followedUsers = useFollows();

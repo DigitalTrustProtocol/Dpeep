@@ -9,6 +9,7 @@ import Network from './Network.js';
 import Payments from './Payments';
 import SocialNetwork from './SocialNetwork';
 import SettingsDWoTR from '@/dwotr/views/Settings.tsx';
+import MetricsView from '@/dwotr/views/Metrics.tsx';
 
 const SettingsContent = (props) => {
   const pages = {
@@ -23,6 +24,7 @@ const SettingsContent = (props) => {
     iris_account: IrisAccount,
     dev: Dev,
     dwotr: SettingsDWoTR,
+    metrics: MetricsView,
   };
 
   const SelectedContent = pages[props.id] || pages.account;

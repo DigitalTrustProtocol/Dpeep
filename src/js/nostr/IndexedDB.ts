@@ -120,13 +120,13 @@ const IndexedDB = {
       .anyOf(authors)
       .limit(limit || 1000)
       .each(handleEvent);
-  }, 1000),
+  }, 1000, { leading: true }),
 
   subscribeToEventIds: throttle(async function (this: typeof IndexedDB) {
     const ids = [...this.subscribedEventIds];
     this.subscribedEventIds.clear();
     await db.events.where('id').anyOf(ids).each(handleEvent);
-  }, 1000),
+  }, 1000, { leading: true }),
 
   subscribeToTags: throttle(async function (this: typeof IndexedDB) {
     const tagPairs = [...this.subscribedTags].map((tag) => tag.split('|'));
@@ -137,7 +137,7 @@ const IndexedDB = {
       .each((tag) => this.subscribedEventIds.add(tag.eventId));
 
     await this.subscribeToEventIds();
-  }, 1000),
+  }, 1000, { leading: true }),
 
   async countEvents() {
     return await db.events.count();

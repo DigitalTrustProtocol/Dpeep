@@ -36,6 +36,7 @@ import Demo from './dwotr/views/Demo';
 import View32010 from './dwotr/views/View32010.tsx';
 import View16463 from './dwotr/views/View16463.tsx';
 import InitializeWoT from './dwotr/views/InitializeWoT.tsx';
+import MetricsView from './dwotr/views/Metrics.tsx';
 
 
 const Main = () => {
@@ -141,6 +142,7 @@ const Main = () => {
 
             <View32010 path="/trusts/" />
             <View16463 path="/flags/" />
+            <MetricsView path="/metrics/" />
             <Demo path="/demo/:id?" />
 
             <AsyncRoute

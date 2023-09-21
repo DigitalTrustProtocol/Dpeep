@@ -89,6 +89,10 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
     );
   }
 
+  const loadAll = () => {
+    
+  };
+
   return (
     <div className={`flex-grow`}>
       <Author
@@ -128,7 +132,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
         </a>
       </Show>
       <Show when={!isPreview && !asInlineQuote && loadReactions}>
-        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} wot={wot} />
+        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} wot={wot} loadAll={loadAll} />
       </Show>
       <Show when={isQuote && !loadReactions}>
         <div style={{ marginBottom: '15px' }}></div>

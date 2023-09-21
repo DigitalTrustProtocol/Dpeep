@@ -1,25 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMemo } from 'preact/hooks';
 
+import { Event } from 'nostr-tools';
+
+
 import EventComponent from '@/components/events/EventComponent';
 import DisplaySelector from '@/components/feed/DisplaySelector';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
 import ImageGrid from '@/components/feed/ImageGrid';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import { FeedProps } from '@/components/feed/types';
-import InfiniteScroll from '@/components/helpers/InfiniteScroll';
+
 import Show from '@/components/helpers/Show';
-import useSubscribe from '@/nostr/hooks/useSubscribe';
-import Key from '@/nostr/Key';
 import { isRepost } from '@/nostr/utils.ts';
 import useHistoryState from '@/state/useHistoryState.ts';
 import Helpers from '@/utils/Helpers';
 
 import { translate as t } from '../../translations/Translation.mjs';
-import muteManager from '@/dwotr/MuteManager';
 import { ID } from '@/utils/UniqueIds';
+import blockManager from '@/dwotr/BlockManager';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import { FilterOption } from './types';
+import useSubscribe from '@/dwotr/hooks/useSubscribe';
+
+export type FeedProps = {
+  filterOptions: FilterOption[];
+  showDisplayAs?: boolean;
+  filterFn?: (event: any) => boolean;
+  emptyMessage?: string;
+  fetchEvents?: (opts: any) => {
+    events: Event[];
+    hasMore: boolean;
+    hasRefresh: boolean;
+    loadMore: () => void;
+    refresh: () => void;
+    loadAll: () => void;
+  };
+};
+
 
 const Feed = (props: FeedProps) => {
+  const timeoutRef = useRef<any>(undefined);
+
   const fetchEvents = props.fetchEvents || useSubscribe;
   const feedTopRef = useRef<HTMLDivElement>(null);
   const { showDisplayAs, filterOptions, emptyMessage } = props;
@@ -29,18 +50,19 @@ const Feed = (props: FeedProps) => {
   const displayAsParam = Helpers.getUrlParameter('display') === 'grid' ? 'grid' : 'feed';
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
-  const [showUntil, setShowUntil] = useHistoryState(Math.floor(Date.now() / 1000), 'showUntil');
+  //const [showUntil, setShowUntil] = useHistoryState(Math.floor(Date.now() / 1000), 'showUntil');
   const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
+  const [timesup, setTimesup] = useState<boolean>(false);
 
   const filterOption = filterOptions[filterOptionIndex];
 
-  useEffect(() => {
-    setShowUntil(Math.floor(Date.now() / 1000));
-  }, [filterOption, displayAs]);
+  // useEffect(() => {
+  //   setShowUntil(Math.floor(Date.now() / 1000));
+  // }, [filterOption, displayAs]);
 
   const filterFn = useCallback(
     (event) => {
-      if (muteManager.isMuted(ID(event.pubkey))) {
+      if (blockManager.isBlocked(ID(event.pubkey))) {
         return false;
       }
 
@@ -53,7 +75,7 @@ const Feed = (props: FeedProps) => {
   );
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
-  const { events, loadMore } = fetchEvents({
+  const { events, hasMore, hasRefresh, loadMore, refresh } = fetchEvents({
     filter: filterOption.filter,
     filterFn,
     sinceLastOpened: false,
@@ -84,21 +106,57 @@ const Feed = (props: FeedProps) => {
     return hiddenEvents;
   }, [events]);
 
+
+  useEffect(() => {
+    if(events.length === 0 && hasRefresh) {
+      refresh(); // Auto refresh to show new events
+      return;
+    }
+
+    // 10 should be enough to fill the screen
+    if(events.length < 10 && hasMore) {
+      loadMore(); // Auto load more to fill the screen
+      return;
+    }
+  }, [events, hasRefresh, hasMore]);
+
+  // useEffect(() => {
+    
+
+  //   timeoutRef.current = setTimeout(() => {
+  //       setTimesup(true);
+  //     }, 20000); // 20 seconds
+  //   return () => {
+  //     clearTimeout(timeoutRef.current);
+  //   }
+  // }, [setTimesup]);
+  
+
   // TODO [shownEvents, setShownEvents] = useHistoryState([], 'shownEvents'); which is only updated when user clicks
 
-  if (events.length && Key.isMine(events[0].pubkey) && events[0].created_at > showUntil) {
-    setShowUntil(Math.floor(Date.now() / 1000));
-  }
+  // if (events.length && Key.isMine(events[0].pubkey) && events[0].created_at > showUntil) {
+  //   setShowUntil(Math.floor(Date.now() / 1000));
+  // }
 
-  const hasNewEvents = events.length && events[0].created_at > showUntil;
+  //const hasNewEvents = events.length && events[0].created_at > showUntil;
 
-  const isEmpty = events.length === 0;
+  //const isEmpty = events.length === 0;
 
   const infiniteScrollKeyString = `${infiniteScrollKey}-${displayAs}-${filterOption.name}`;
 
+  //const showEmptyMessage = (timesup && isEmpty);
+
+
+  let items = events.filter((event) => !hiddenEvents.has(event.id));
+
+
+      // if (event.created_at > showUntil) {
+    //   return null;
+    // }
+
   return (
     <>
-      <Show when={hasNewEvents}>
+      <Show when={hasRefresh}>
         <ShowNewEvents
           onClick={() => {
             if (feedTopRef.current) {
@@ -111,7 +169,10 @@ const Feed = (props: FeedProps) => {
               }
             }
             setInfiniteScrollKey(infiniteScrollKey + 1);
-            setShowUntil(Math.floor(Date.now() / 1000));
+
+            refresh(); // Add new events
+
+            //setShowUntil(Math.floor(Date.now() / 1000));
           }}
         />
       </Show>
@@ -134,23 +195,36 @@ const Feed = (props: FeedProps) => {
           activeDisplay={displayAs}
         />
       </Show>
-      <Show when={isEmpty}>
+      {/* <Show when={showEmptyMessage}>
         <div className="m-2 md:mx-4">{emptyMessage || t('no_posts_yet')}</div>
-      </Show>
+      </Show> */}
       <Show when={displayAs === 'grid'}>
         <ImageGrid key={infiniteScrollKeyString} events={events} loadMore={loadMore} />
       </Show>
       <Show when={displayAs === 'feed'}>
-        <InfiniteScroll key={`${infiniteScrollKeyString}feed`} loadMore={loadMore}>
-          {events.map((event) => {
-            if (event.created_at > showUntil) {
-              return null;
-            }
+        <InfiniteScroll
+          dataLength={items.length} //This is important field to render the next data
+          next={loadMore}
+          hasMore={hasMore}
+          loader={<></>}
+          // endMessage={
+          //   // // "<p style={{ textAlign: 'center' }}>
+          //   // //   <b>No more notes</b>
+          //   // // </p>
+          // }
+          // below props only if you need pull down functionality
 
-            if (hiddenEvents.has(event.id)) {
-              return null;
-            }
-
+          refreshFunction={refresh}
+          pullDownToRefresh
+          pullDownToRefreshThreshold={50}
+          pullDownToRefreshContent={
+            <h3 style={{ textAlign: 'center' }}>&#8595; Pull down to refresh</h3>
+          }
+          releaseToRefreshContent={
+            <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
+          }
+        >
+          {items.map((event) => {
             return (
               <EventComponent key={`${event.id}EC`} id={event.id} {...filterOption.eventProps} />
             );

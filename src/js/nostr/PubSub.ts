@@ -45,7 +45,11 @@ const PubSub = {
     callback?: (event: Event) => void,
     sinceLastOpened = false,
     mergeSubscriptions = true,
+    force: number = 0
   ): Unsubscribe {
+    if(force == 0) // TODO: remove this, only for testing
+      return () => {};  
+
     let currentSubscriptionId;
     if (callback) {
       currentSubscriptionId = ++subscriptionId;
@@ -60,12 +64,12 @@ const PubSub = {
 
     callback && EventDB.find(filter, callback);
 
-    if (dev.indexedDbLoad !== false) {
-      setTimeout(() => {
-        // seems blocking. use web worker? bulk get?
-        IndexedDB.find(filter);
-      });
-    }
+    // if (dev.indexedDbLoad !== false) {
+    //   setTimeout(() => {
+    //     // seems blocking. use web worker? bulk get?
+    //     IndexedDB.find(filter);
+    //   });
+    // }
 
     const unsubRelays = this.subscribeRelayPool(filter, sinceLastOpened, mergeSubscriptions);
 
@@ -90,6 +94,7 @@ const PubSub = {
   },
 
   subscribeRelayPool(filter: Filter, sinceLastOpened: boolean, mergeSubscriptions: boolean) {
+    return () => {};
     let relays;
     if (filter.search) {
       relays = Array.from(Relays.searchRelays.keys());

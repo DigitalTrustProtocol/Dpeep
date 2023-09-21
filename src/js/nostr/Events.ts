@@ -127,63 +127,63 @@ const Events = {
     this.likesByMessageId.get(id)?.add(event.pubkey);
     EventDB.insert(event);
   },
-  handleFollowList(event: Event) {
+  // handleFollowList(event: Event) {
 
-    // no need to store follow events in memory because they're already in SocialNetwork.
-    // when we start doing p2p, we can perhaps keep them in memory or just ask from dexie
-    //EventDB.insert(event);
-    const myPub = Key.getPubKey();
+  //   // no need to store follow events in memory because they're already in SocialNetwork.
+  //   // when we start doing p2p, we can perhaps keep them in memory or just ask from dexie
+  //   //EventDB.insert(event);
+  //   const myPub = Key.getPubKey();
 
-    if (event.tags) {
-      for (const tag of event.tags) {
-        if (Array.isArray(tag) && tag[0] === 'p') {
-          const pub = tag[1];
-          // ensure pub is hex
-          if (pub.length === 64 && /^[0-9a-f]+$/.test(pub)) {
-            SocialNetwork.addFollower(ID(tag[1]), ID(event.pubkey));
-          } else {
-            // console.error('non-hex follow tag', tag, 'by', event.pubkey);
-          }
-        }
-      }
-    }
-    if (SocialNetwork.followedByUser.has(ID(event.pubkey))) {
-      for (const previouslyFollowed of SocialNetwork.followedByUser.get(ID(event.pubkey)) || []) {
-        if (
-          !event.tags ||
-          !event.tags?.find((t) => t[0] === 'p' && t[1] === STR(previouslyFollowed))
-        ) {
-          SocialNetwork.removeFollower(previouslyFollowed, ID(event.pubkey));
-        }
-      }
-    }
-    if (event.pubkey === myPub && event.tags?.length) {
-      if ((SocialNetwork.followedByUser.get(ID(myPub))?.size || 0) > 10) {
-        localState.get('showFollowSuggestions').put(false);
-      }
-      localState.get('myFollowList').put(JSON.stringify(event));
-    }
-    if (event.pubkey === myPub && event.content?.length) {
-      try {
-        const relays = JSON.parse(event.content);
-        const urls = Object.keys(relays);
-        if (urls.length) {
-          // remove all existing relays that are not in urls. TODO: just disable
-          console.log('setting relays from your contacs list', urls);
-          for (const url of Relays.relays.keys()) {
-            if (!urls.includes(url)) {
-              Relays.remove(url);
-            }
-          }
-          for (const url of urls) {
-            Relays.add(url);
-          }
-        }
-      } catch (e) {
-        console.log('failed to parse your relays list', event);
-      }
-    }
-  },
+  //   if (event.tags) {
+  //     for (const tag of event.tags) {
+  //       if (Array.isArray(tag) && tag[0] === 'p') {
+  //         const pub = tag[1];
+  //         // ensure pub is hex
+  //         if (pub.length === 64 && /^[0-9a-f]+$/.test(pub)) {
+  //           SocialNetwork.addFollower(ID(tag[1]), ID(event.pubkey));
+  //         } else {
+  //           // console.error('non-hex follow tag', tag, 'by', event.pubkey);
+  //         }
+  //       }
+  //     }
+  //   }
+  //   if (SocialNetwork.followedByUser.has(ID(event.pubkey))) {
+  //     for (const previouslyFollowed of SocialNetwork.followedByUser.get(ID(event.pubkey)) || []) {
+  //       if (
+  //         !event.tags ||
+  //         !event.tags?.find((t) => t[0] === 'p' && t[1] === STR(previouslyFollowed))
+  //       ) {
+  //         SocialNetwork.removeFollower(previouslyFollowed, ID(event.pubkey));
+  //       }
+  //     }
+  //   }
+  //   if (event.pubkey === myPub && event.tags?.length) {
+  //     if ((SocialNetwork.followedByUser.get(ID(myPub))?.size || 0) > 10) {
+  //       localState.get('showFollowSuggestions').put(false);
+  //     }
+  //     localState.get('myFollowList').put(JSON.stringify(event));
+  //   }
+  //   if (event.pubkey === myPub && event.content?.length) {
+  //     try {
+  //       const relays = JSON.parse(event.content);
+  //       const urls = Object.keys(relays);
+  //       if (urls.length) {
+  //         // remove all existing relays that are not in urls. TODO: just disable
+  //         console.log('setting relays from your contacs list', urls);
+  //         for (const url of Relays.relays.keys()) {
+  //           if (!urls.includes(url)) {
+  //             Relays.remove(url);
+  //           }
+  //         }
+  //         for (const url of urls) {
+  //           Relays.add(url);
+  //         }
+  //       }
+  //     } catch (e) {
+  //       console.log('failed to parse your relays list', event);
+  //     }
+  //   }
+  // },
   // async handleBlockList(event: Event) {
   //   if ((this.myBlockEvent?.created_at || -Infinity) > event.created_at) {
   //     return;
@@ -423,7 +423,7 @@ const Events = {
   // },
   handle(event: Event & { id: string }, force = false, saveToIdb = true, retries = 2): boolean {
     if (!event?.id) return false;
-    if (!force && UniqueIds.has(event.id)) {
+    if (!force && UniqueIds.has(event.id)) { 
       return false; // already handled
     }
     ID(event.id); // add to UniqueIds
@@ -447,7 +447,7 @@ const Events = {
     // Accepting metadata so we still get their name. But should we instead save the name on our own list?
     // They might spam with 1 MB events and keep changing their name or something.
     // CK: if event.kind === 0 but is blocked, then we only get the name and ignore the rest. This enables us to show the name of the blocked user in the Graph.
-    // CK: if event.kind one could check for size of content, maybe only let the first event in, and ignore all others.
+    // CK: if event.kind === 0 one could check for size of content, maybe only let the first event in, and ignore all others.
     if (blockManager.isBlocked(publisherId) && event.kind !== 0) {
       return false;
     }
@@ -469,6 +469,7 @@ const Events = {
     this.handledMsgsPerSecond++;
 
     PubSub.subscribedEventIds.delete(event.id);
+    //console.log('WOT: handling event', event);
 
     switch (event.kind) {
       case 0:
@@ -486,26 +487,26 @@ const Events = {
       case 5:
         this.handleDelete(event);
         break;
-      case 3: {
+      //case 3: { // Follow
         // const foundEvent = EventDB.findOne({ kinds: [3], authors: [event.pubkey] });
         // if (foundEvent && foundEvent.created_at >= event.created_at) {
         //   return false;
         // }
-        const existing = SocialNetwork.followListTimestamps.get(publisherId);
-        if (existing && existing >= event.created_at) {
-          return false;
-        }
-        SocialNetwork.followListTimestamps.set(publisherId, event.created_at);
+      //   const existing = SocialNetwork.followListTimestamps.get(publisherId);
+      //   if (existing && existing >= event.created_at) {
+      //     return false;
+      //   }
+      //   SocialNetwork.followListTimestamps.set(publisherId, event.created_at);
 
-        this.maybeAddNotification(event);
-        this.handleFollowList(event);
-        break;
-      }
+      //   this.maybeAddNotification(event);
+      //   this.handleFollowList(event);
+      //   break;
+      // }
       case 6:
         this.maybeAddNotification(event);
         this.handleRepost(event);
         break;
-      case 7:
+      case 7: // Likes
         this.maybeAddNotification(event);
         this.handleReaction(event);
         break;

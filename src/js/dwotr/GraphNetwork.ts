@@ -1,12 +1,12 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
-import WOTPubSub, { BlockKind, ContactsKind, EncryptedDirectMessageKind, EventDeletionKind, MetadataKind, ReactionKind, TextKind, Trust1Kind } from './network/WOTPubSub';
+import WOTPubSub from './network/WOTPubSub';
 import { MAX_DEGREE } from './model/TrustScore';
 import dwotrDB from './network/DWoTRDexie';
 import { debounce } from 'lodash';
 import Key from '@/nostr/Key';
-import { ID, STR } from '@/utils/UniqueIds';
-import eventManager from './EventManager';
+import { ID } from '@/utils/UniqueIds';
+
 import verticeMonitor from './VerticeMonitor';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
@@ -41,6 +41,11 @@ class GraphNetwork {
   submitTrustIndex = {};
   profilesLoaded = false;
 
+  metrics = {
+    vertices: 0,
+    edges: 0,
+  };
+
 
   constructor(wotPubSub: typeof WOTPubSub, db: typeof dwotrDB) {
     this.wotPubSub = wotPubSub;
@@ -71,9 +76,9 @@ class GraphNetwork {
       //'List: ' + list.length + ' edges'
     );
 
-    this.processGraph = true; // Process the whole graph
-    //this.processScore(); // Process score for all vertices within degree of maxDegree and subscribe to trust events
-
+    // Calculate the score for all vertices within degree of maxDegree
+    graphNetwork.g.calculateScore(graphNetwork.sourceId, this.maxDegree);
+    
     this.localDataLoaded = true;
 
     for (let callback of this.readyCallbacks) {
@@ -277,20 +282,16 @@ class GraphNetwork {
 
     let self = this;
     let id = this.subscriptionsCounter++;
-    let since = 0;
-    const authors = new Array<string>();
 
-    for (let v of vertices) {
-      if (since < v.timestamp) since = v.timestamp;
-      authors.push(STR(v.id));
-    }
+    // for (let v of vertices) {
+    //   if (since < v.timestamp) since = v.timestamp;
+    //   authors.push(STR(v.id));
+    // }
 
+    let authors = vertices.map((v) => v.id);
     vertices.forEach((v) => (v.subscribed = id)); // Mark the vertices as subscribed with the current subscription counter
 
-    // Load mostly everything
-    let kinds = [0, 1, 3, 4, 5, 6, 7, BlockKind, Trust1Kind];
-
-    self.unsubs[id] = self.wotPubSub?.subscribeTrust(authors, since, eventManager.eventCallback, kinds); // Subscribe to trust events
+    self.unsubs[id] = self.wotPubSub?.subscribeAuthors(authors); // Subscribe to trust events
   }
 
   unsubscribeAll() {
@@ -344,28 +345,22 @@ class GraphNetwork {
   }
 
   isTrusted(id: number) : boolean {
-    let vertice = this.g.vertices[id];
+    let vertice = this.g.vertices[id] as Vertice;
     if(!vertice) return false;
     return vertice.score.trusted();
   }
 
   isDistrusted(id: number) : boolean {
-    let vertice = this.g.vertices[id];
+    let vertice = this.g.vertices[id] as Vertice;
     if(!vertice) return false;
     return vertice.score.distrusted();
   }
 
-  // Should be a little faster than Key.toNostrHexAddress, but less secure
-  // getHexKey(key: string): string {
-  //   let address = key?.slice(0, 4).toLocaleLowerCase();
-  //   if (address === 'npub' || address === 'nsec' || address === 'note') {
-  //     const { prefix, data } = bech32.decode(key);
-  //     const addr = Helpers.arrayToHex(data);
-  //     return addr;
-  //   }
-
-  //   return key;
-  // }
+  udpateMetrics() {
+    this.metrics.vertices = Object.entries(this.g.vertices).length;
+    this.metrics.edges = Object.entries(this.g.edges).length;
+    return this.metrics;
+  }
 }
 
 const graphNetwork = new GraphNetwork(WOTPubSub, dwotrDB);

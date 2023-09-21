@@ -48,21 +48,21 @@ const Session = {
   unsubscribe() {
     // wat dis
   },
-  loadMyFollowList() {
-    localState.get('myFollowList').once((myFollowList) => {
-      if (!myFollowList) {
-        return;
-      }
-      try {
-        const event = JSON.parse(myFollowList);
-        if (event?.kind === 3) {
-          Events.handle(event);
-        }
-      } catch (e) {
-        // ignore
-      }
-    });
-  },
+  // loadMyFollowList() {
+  //   localState.get('myFollowList').once((myFollowList) => {
+  //     if (!myFollowList) {
+  //       return;
+  //     }
+  //     try {
+  //       const event = JSON.parse(myFollowList);
+  //       if (event?.kind === 3) {
+  //         Events.handle(event);
+  //       }
+  //     } catch (e) {
+  //       // ignore
+  //     }
+  //   });
+  // },
   onLoggedIn() {
     if (loggedIn) {
       return;
@@ -73,7 +73,7 @@ const Session = {
     SocialNetwork.followDistanceByUser.set(myId, 0);
     SocialNetwork.followersByUser.set(myId, new Set());
     SocialNetwork.usersByFollowDistance.set(0, new Set([myId]));
-    this.loadMyFollowList();
+    //this.loadMyFollowList();
     localState.get('globalFilter').once((globalFilter) => {
       if (!globalFilter) {
         localState.get('globalFilter').put(Events.DEFAULT_GLOBAL_FILTER);
@@ -107,38 +107,38 @@ const Session = {
     if (window.location.pathname === '/') {
       Relays.init();
     }
-    IndexedDB.init();
-    const timeout = setTimeout(() => {
-      IrisTo.checkExistingAccount(myPub);
-    }, 1000);
-    SocialNetwork.getProfile(myPub, async (p) => {
-      if (p && p.nip05 && p.nip05.endsWith('@iris.to')) {
-        localState.get('showNoIrisToAddress').put(false);
-        localState.get('existingIrisToAddress').get('name').put(p.nip05.replace('@iris.to', ''));
-        clearTimeout(timeout);
-      }
-    });
+    //IndexedDB.init();
+    // const timeout = setTimeout(() => {
+    //   IrisTo.checkExistingAccount(myPub);
+    // }, 1000);
+    // SocialNetwork.getProfile(myPub, async (p) => {
+    //   if (p && p.nip05 && p.nip05.endsWith('@iris.to')) {
+    //     localState.get('showNoIrisToAddress').put(false);
+    //     localState.get('existingIrisToAddress').get('name').put(p.nip05.replace('@iris.to', ''));
+    //     clearTimeout(timeout);
+    //   }
+    // });
     let unsubFollowers = () => {};
 
-    unsubFollowers = SocialNetwork.getFollowersByUser(myPub, (followers) => {
-      if (!followers?.size) {
-        localState.get('noFollowers').put(true);
-      } else {
-        localState.get('noFollowers').put(false);
-        setTimeout(() => unsubFollowers());
-      }
-    });
+    // unsubFollowers = SocialNetwork.getFollowersByUser(myPub, (followers) => {
+    //   if (!followers?.size) {
+    //     localState.get('noFollowers').put(true);
+    //   } else {
+    //     localState.get('noFollowers').put(false);
+    //     setTimeout(() => unsubFollowers());
+    //   }
+    // });
 
-    setTimeout(() => {
-      PubSub.subscribe({ authors: [myPub] }, undefined, true); // our stuff
-      PubSub.subscribe({ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }, undefined, true); // mentions, reactions, DMs
-      PubSub.subscribe({ '#p': [myPub], kinds: [4] }, undefined, false, false); // dms for us
-      PubSub.subscribe({ authors: [myPub], kinds: [4] }, undefined, false, false); // dms by us
-      Events.subscribeGroups();
-    }, 500);
+    //setTimeout(() => {
+      //PubSub.subscribe({ authors: [myPub] }, undefined, true); // our stuff
+      //PubSub.subscribe({ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }, undefined, true); // mentions, reactions, DMs
+      //PubSub.subscribe({ '#p': [myPub], kinds: [4] }, undefined, false, false); // dms for us
+      //PubSub.subscribe({ authors: [myPub], kinds: [4] }, undefined, false, false); // dms by us
+      //Events.subscribeGroups();
+    //}, 500);
     setInterval(() => {
       Events.handledMsgsPerSecond = 0;
-    }, 5000);
+    }, 1000);
   },
   init: function (options: any) {
     Key.getOrCreate(options);

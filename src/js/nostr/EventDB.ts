@@ -15,6 +15,10 @@ export class EventDB {
     });
   }
 
+  count() {
+    return this.eventsCollection.count();
+  }
+
   get(id: any): Event | undefined {
     const event = this.eventsCollection.by('id', ID(id));
     if (event) {

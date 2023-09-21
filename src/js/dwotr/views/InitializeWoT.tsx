@@ -7,6 +7,7 @@ import StatusIcon, { Status } from '../components/StatusIcon';
 import profileManager from '../ProfileManager';
 import muteManager from '../MuteManager';
 import blockManager from '../BlockManager';
+import followManager from '../FollowManager';
 
 type InitializeWoTProps = {
   path?: string;
@@ -18,12 +19,14 @@ type InitializeWoTProps = {
 // Show loading page for DWoTR setup, when ready, render the rest of the app
 // The user have to be logged in to use the view
 const InitializeWoT = (props: InitializeWoTProps) => {
-  const { hexKey } = useKey(Key.getPubKey());
+  const { hexKey, uid } = useKey(Key.getPubKey());
 
   const [graphStatus, setGraphStatus] = useState<Status>('waiting');
   const [profileStatus, setProfileStatus] = useState<Status>('waiting');
   const [muteStatus, setMuteStatus] = useState<Status>('waiting');
   const [blockStatus, setBlockStatus] = useState<Status>('waiting');
+  const [followStatus, setFollowStatus] = useState<Status>('waiting');
+  const [latestNotes, setLatestNotes] = useState<Status>('waiting');
 
   useEffect(() => {
     setGraphStatus('loading');
@@ -50,6 +53,19 @@ const InitializeWoT = (props: InitializeWoTProps) => {
         }, 0);
       });
 
+      setFollowStatus('loading');
+      followManager.load().then(() => {
+        followManager.nostrSubscribeFollowers(uid); // Subscribe to followers of my profile
+
+        // Wait a little before subscribing to the network
+        setTimeout(() => {
+          followManager.updateNetwork();
+          setFollowStatus('done');
+        }, 100);
+      });
+
+      setLatestNotes('loading');
+      setLatestNotes('done');
     });
 
     setTimeout(() => {
@@ -59,7 +75,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     return () => {};
   }, []);
 
-  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done")
+  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done" && followStatus === "done" && latestNotes === "done")
     props.setInitialized(true);
 
   // Wot Graph
@@ -88,8 +104,14 @@ const InitializeWoT = (props: InitializeWoTProps) => {
           <StatusIcon status={blockStatus} />
           <span>Block list</span>
         </div>
-
-
+        <div className="flex items-center space-x-2">
+          <StatusIcon status={followStatus} />
+          <span>Follow list</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <StatusIcon status={latestNotes} />
+          <span>Notes</span>
+        </div>
       </div>
     </Modal>
   );

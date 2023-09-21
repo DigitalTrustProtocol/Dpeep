@@ -10,6 +10,7 @@ import Reply from './Reply';
 import Repost from './Repost';
 import Zap from './Zap';
 import TrustReactionButtons from '@/dwotr/components/TrustReactionButtons';
+import { EventLoadAll } from '@/dwotr/components/EventLoadAll';
 
 let settings: any = {};
 localState.get('settings').on((s) => (settings = s));
@@ -20,6 +21,7 @@ const ReactionButtons = (props) => {
   const event = props.event;
   const standalone = props.standalone;
   const wot = props.wot;
+  const loadAll = props.loadAll;
 
   return (
     <>
@@ -36,6 +38,7 @@ const ReactionButtons = (props) => {
           <Zap event={event} />
         </Show>
         <TrustReactionButtons event={event} wot={wot} />
+        <EventLoadAll event={event} loadAll={loadAll} />
       </div>
     </>
   );

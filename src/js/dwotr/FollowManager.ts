@@ -1,7 +1,7 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import Key from '@/nostr/Key';
-import wotPubSub, { ContactsKind, FlowKinds } from './network/WOTPubSub';
+import wotPubSub, { ContactsKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
 import Subscriptions from './model/Subscriptions';
@@ -41,6 +41,16 @@ class FollowManager {
   filterDegree: number = 2; // 0 = only owner, 1 = trusted, 2 = secondary, 3 = tertiary, etc Filtering events based on the degree of following
   followDegree: number = 0; // 0 = only owner, 1 = first degree, 2 = second degree, 3 = third degree, etc Following based on the degree of following
 
+  metrics = {
+    TableCount: 0,
+    EventsLoaded: 0,
+    ItemsLoaded: 0,
+    ItemsTotal: 0,
+    UISubs: 0,
+    SubscribeQueue: 0,
+    UnsubscribeQueue: 0,
+  };
+
   isFollowedByMe(profileId: UID): boolean {
     return this.isFollowedBy(profileId);
   }
@@ -50,11 +60,17 @@ class FollowManager {
   }
 
   isFollowed(profileId: UID): boolean {
-    return !!this.items?.get(profileId)?.following?.size;
+    return !!this.items?.get(profileId)?.followedBy?.size;
   }
 
   async handle(event: Event) {
     let pubkeyId = ID(event.pubkey);
+    let myId = ID(Key.getPubKey());
+    let isMe = pubkeyId === myId;
+
+    if (isMe) {
+      console.log('My own contact event', event);
+    }
 
     let item = this.#getItem(pubkeyId);
     if (event.created_at <= (item.timestamp || 0)) {
@@ -66,18 +82,26 @@ class FollowManager {
     }
 
     // Ignore events from profiles that are not in the filter or trusted
-    if (!graphNetwork.isTrusted(pubkeyId) && !this.isFollowed(pubkeyId)) return;
+    if(!this.isFollowed(pubkeyId) && !isMe) {
+      if(!graphNetwork.isTrusted(pubkeyId)) return; // Ignore events from profiles that are not in the filter or trusted
 
-    item.degree = this.getDegree(item);
-    if (item.degree > this.filterDegree) return; // Ignore events from profiles that are not in the filter
+      item.degree = 1; // Trust is degree 1
+    }
+
+    if(item.degree === undefined || item.degree >= DegreeInfinit)
+      item.degree = this.getDegree(item);
+
+    if (!isMe || item.degree > this.filterDegree) return; // Ignore events from profiles that are not in the filter
 
     let pTags = this.addEvent(event, item);
 
     this.#eventEffects(item, pTags);
 
+    this.updateNetwork(); // Update the network subscriptions based on the new event
+
+    // This is async
     this.save(event);
 
-    this.updateNetwork(); // Update the network subscriptions based on the new event
     //this.dispatchAll();
   }
 
@@ -89,20 +113,19 @@ class FollowManager {
   }
 
   #updateSubscriptions() {
-    if(this.subsQueue.size == 0) return;
-
-    let authors = [...this.subsQueue].map((id) => STR(id));
-    wotPubSub.subscribeFlow(authors);
+    let list = this.subsQueue;
+    list.forEach((id) => this.#getItem(id).pubsubRegistered = true);
+    this.subsQueue = new Set();
+    wotPubSub.subscribeAuthors(list);
   }
 
   #updateUnsubscriptions() {
-    if(this.unsubQueue.size == 0) return;
-
-    let authors = [...this.unsubQueue].map((id) => STR(id));
-    wotPubSub.unsubscribeFlow(authors);
+    let list = this.unsubQueue;
+    list.forEach((id) => this.#getItem(id).pubsubRegistered = false);
+    this.unsubQueue = new Set();
+    wotPubSub.unsubscribeFlow(list);
   }
 
-  
 
 
 
@@ -195,7 +218,7 @@ class FollowManager {
 
   #possibleSubscription(item: Item) {
     if (item?.degree === undefined) return false;
-    if (item?.degree > this.followDegree) return false;
+    if (item?.degree > this.filterDegree) return false;
     if (item?.pubsubRegistered) return false;
     return true;
   }
@@ -249,10 +272,11 @@ class FollowManager {
     return item.followedBy || (item.followedBy = new Set());
   }
 
+  
   async save(event: Event | Partial<Event>) {
     //localState.get(FOLLOW_STORE_KEY).put(JSON.stringify(event));
     //IndexedDB.saveEvent(event as Event & { id: string });
-    await storage.follows.put(event as Event);
+    await storage.follows.put(event as Event & { id: string });
   }
 
   // The load system supports multiple degrees of following
@@ -261,13 +285,20 @@ class FollowManager {
     let list = await storage.follows.toArray(); // Very fast load of all follow events
     let events: Map<UID, Event> = new Map(list.map((event) => [ID(event.pubkey), event]));
 
+    this.metrics.EventsLoaded = list.length;
+    this.metrics.ItemsLoaded = this.items.size;
+
+    this.getMetrics();
+
+    // Always create an item for the owner
+    let startItem = this.#getItem(startId, 0);
+
+    this.loadLegacy();
+
     // Load my own following
     let myEvent = events.get(startId);
     if (myEvent) {
       // Add the Event to the following list
-      let startItem = this.#getItem(startId);
-      startItem.degree = 0;
-
       this.#eventEffects(startItem, this.addEvent(myEvent, startItem));
       events.delete(startId);
     }
@@ -276,23 +307,34 @@ class FollowManager {
       this.#addTrustedEvents(events);
     }
 
-    if (this.filterDegree > 1) {
-      this.#addSecondaryEvents(events);
-    }
+    // The WOT is more than enough to load in followings, a minor graph can quickly become huge number of followings
+    // if (this.filterDegree > 1) {
+    //   this.#addSecondaryEvents(events);
+    // }
 
     // Remove all remaining events from Storage, as they are not needed anymore
     if (events.size > 0) {
       await this.#removeRemainingEvents(events);
     }
 
-
-    for(const item of this.items.values()) {
-      if(this.#possibleSubscription(item)) 
-        this.subsQueue.add(item.id);
-    }
-
-    this.updateNetwork();
   }
+
+  loadLegacy() {
+    localState.get('myFollowList').once((myFollowList) => {
+      if (!myFollowList) {
+        return;
+      }
+      try {
+        const event = JSON.parse(myFollowList);
+        if (event?.kind === 3) {
+          this.handle(event);
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
+  }
+
 
   #addTrustedEvents(events: Map<UID, Event>) {
     // Load all trusted followings
@@ -340,8 +382,6 @@ class FollowManager {
     await storage.follows.bulkDelete(keys);
   }
 
-  subscribeAll() {}
-
   async createEvent(): Promise<Partial<Event>> {
     let item = this.#getItem(ID(Key.getPubKey()));
     let following = this.#getFollowingSet(item);
@@ -385,6 +425,51 @@ class FollowManager {
 
     localState.get('showFollowSuggestions').put(false);
   }
+
+  nostrSubscribeFollowers(id: UID) {
+    let parentItem = this.#getItem(id);
+
+    let subSet = new Set<UID>();
+    let following = this.#getFollowingSet(parentItem);
+    for(const id of following) {
+        let item = this.#getItem(id);
+        if(this.#possibleSubscription(item)) {
+          item.pubsubRegistered = true;
+          subSet.add(id);
+          this.subsQueue.delete(id);
+        }
+    }
+
+    wotPubSub.subscribeAuthors(subSet);
+  }
+
+  getFollowedUsers(id: UID = ID(Key.getPubKey())): Array<UID> {
+    let item = this.#getItem(id);
+    let following = this.#getFollowingSet(item);
+
+    return [...following];
+  }
+
+  async tableCount() {
+    return await storage.follows.count();
+  }
+
+  getMetrics() : any {
+
+    this.tableCount().then((count) => {
+      this.metrics.TableCount = count;
+    });
+
+    this.metrics.ItemsTotal = this.items.size;
+    this.metrics.UISubs = this.UISubs.sizeAll();
+    this.metrics.SubscribeQueue = this.subsQueue.size;
+    this.metrics.UnsubscribeQueue = this.unsubQueue.size;
+
+
+    return this.metrics;
+  }
+
+
 }
 
 const followManager = new FollowManager();

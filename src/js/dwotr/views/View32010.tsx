@@ -4,7 +4,7 @@ import { Link } from 'preact-router';
 import graphNetwork from '../GraphNetwork';
 
 import ScrollView from '@/components/ScrollView';
-import WOTPubSub from '../network/WOTPubSub';
+import WOTPubSub, { Trust1Kind } from '../network/WOTPubSub';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { Event } from 'nostr-tools';
 import { throttle } from 'lodash';
@@ -39,7 +39,13 @@ const View32010 = (props: TestDataProps) => {
       }, 1000);
 
       // TrustKind 32010
-      let unsub = WOTPubSub.subscribeTrust(undefined, 0, (event: Event): void => {
+      let kinds = [Trust1Kind];
+      let filters = [{
+        kinds
+      }];
+
+
+      let unsub = WOTPubSub.subscribeFilter(filters, (event: Event): void => {
         if (!isMounted()) return;
 
         let {  pubKey, p: pTags, e: eTags } = eventManager.parseTrustEvent(event);
@@ -67,7 +73,7 @@ const View32010 = (props: TestDataProps) => {
         user.history.push(event);
 
         updateList();
-      }, [32010]);
+      });
       unsubscribe.push(unsub);
       setState({ message: 'Listening for events...' });
     });

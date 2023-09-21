@@ -51,12 +51,13 @@ const Note: React.FC<NoteProps> = ({
     }
     return filter;
   }, [event.id, showReplies]);
+  
   const repliesFilterFn = useCallback((e) => getNoteReplyingTo(e) === event.id, [event.id]);
 
   const { events: replies } = useSubscribe({
     filter: repliesFilter,
     filterFn: repliesFilterFn,
-    enabled: !!showReplies,
+    enabled: !!showReplies && standalone,
   });
 
   if (showRepliedMsg === undefined) {
