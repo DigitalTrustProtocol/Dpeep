@@ -13,6 +13,9 @@ import Name from '../user/Name';
 import TrustScore from '../../dwotr/model/TrustScore';
 import { RenderScoreDistrustLink, RenderScoreTrustLink } from '@/dwotr/components/RenderGraph';
 import Key from '@/nostr/Key';
+import reactionManager from '@/dwotr/ReactionManager';
+import { STR, UID } from '@/utils/UniqueIds';
+import { set, throttle } from 'lodash';
 
 type ReactionData = {
   pubkey: string;
@@ -34,7 +37,7 @@ const Reaction = memo(({ data }: { data: ReactionData }) => {
 
 const ReactionsList = ({ event, wot }) => {
 
-  const [likes, setLikes] = useState(Events.likesByMessageId.get(event.id) || new Set());
+  const [likes, setLikes] = useState(reactionManager.getLikes(event.id));
   const [reposts, setReposts] = useState(Events.repostsByMessageId.get(event.id) || new Set());
   const [zapAmountByUser, setZapAmountByUser] = useState(new Map());
   const [formattedZapAmount, setFormattedZapAmount] = useState('');
@@ -48,9 +51,13 @@ const ReactionsList = ({ event, wot }) => {
   useEffect(() => {
     const unsubFuncs = [] as any[]; // To store unsubscribe functions
 
-    const handleLikes = (likedBy) => {
-      setLikes(new Set(likedBy));
-    };
+    const setLikesThrottle = throttle((likes: Set<UID>) => {
+      setLikes(new Set(likes)); // Update likes state with new likes set
+    }, 1000);
+
+    // const handleLikes = (likes: Set<UID>, downVotes: Set<UID>) => {
+    //   setLikesThrottle(likes);
+    // };
 
     const handleReposts = (repostedBy) => {
       setReposts(new Set(repostedBy));
@@ -81,7 +88,7 @@ const ReactionsList = ({ event, wot }) => {
     };
 
     // Subscribe to each event and store unsubscribe function
-    unsubFuncs.push(Events.getLikes(event.id, handleLikes));
+    unsubFuncs.push(reactionManager.subscribeRelays(event.id, setLikesThrottle));
     unsubFuncs.push(Events.getReposts(event.id, handleReposts));
     unsubFuncs.push(Events.getZaps(event.id, handleZaps));
 
@@ -93,6 +100,8 @@ const ReactionsList = ({ event, wot }) => {
 
   const hasReactions = likes.size > 0 || reposts.size > 0 || zapAmountByUser.size > 0;
   if (!hasReactions) return null;
+  const likesdata = Array.from(likes).map((id) => ({ pubkey:STR(id) })) as ReactionData[];
+
 
   return (
     <>
@@ -110,17 +119,16 @@ const ReactionsList = ({ event, wot }) => {
         </Modal>
       )}
       <div className="flex items-center gap-4 py-2">
-        {likes.size > 0 && (
+        {likesdata.length > 0 && (
           <div className="flex-shrink-0">
             <a
               onClick={() => {
-                const data = Array.from(likes).map((pubkey) => ({ pubkey })) as ReactionData[];
-                setModalReactions(data);
+                setModalReactions(likesdata);
                 setModalTitle('Liked by');
               }}
               className="cursor-pointer hover:underline"
             >
-              {likes.size} <span className="text-neutral-500">Likes</span>
+              {likesdata.length} <span className="text-neutral-500">Likes</span>
             </a>
           </div>
         )}

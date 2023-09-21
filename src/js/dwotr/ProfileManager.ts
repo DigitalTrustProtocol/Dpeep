@@ -14,6 +14,7 @@ import FuzzySearch from '@/nostr/FuzzySearch';
 import { ID, STR } from '@/utils/UniqueIds';
 import Subscriptions from './model/Subscriptions';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
+import blockManager from './BlockManager';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -498,6 +499,11 @@ class ProfileManager {
     this.metrics.TotalMemory = SocialNetwork.profiles.size;
 
     return this.metrics;
+  }
+
+  handle(event: Event) {
+    let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
+    this.addProfileEvent(event, isBlocked);
   }
 
 }

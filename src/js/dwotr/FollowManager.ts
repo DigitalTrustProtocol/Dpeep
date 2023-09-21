@@ -63,6 +63,15 @@ class FollowManager {
     return !!this.items?.get(profileId)?.followedBy?.size;
   }
 
+
+  isAllowed(profileId: UID): boolean {
+    if (!this.filterEnabled) return true; // No filter, so all profiles are allowed
+    if(this.isFollowed(profileId)) return true; // Profile is followed, so it is allowed
+    if(graphNetwork.isTrusted(profileId)) return true; // Profile is trusted, so it is allowed
+    return false; // Profile is not followed or trusted, so it is not allowed 
+  }
+
+
   async handle(event: Event) {
     let pubkeyId = ID(event.pubkey);
     let myId = ID(Key.getPubKey());

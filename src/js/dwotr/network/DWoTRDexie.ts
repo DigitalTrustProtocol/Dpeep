@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie';
 import { EdgeRecord } from '../model/Graph';
 import ProfileRecord from '../model/ProfileRecord';
 import { Event } from 'nostr-tools';
+import { ReactionRecord } from '../ReactionManager';
 
 
 export const DB_NAME = 'DWoTR';
@@ -13,14 +14,16 @@ export class DWoTRDexie extends Dexie {
   edges!: Table<EdgeRecord>;
   profiles!: Table<ProfileRecord>; // ProfileRecord is defined with minimal properties, so all empty property names are not serialized into the database.
   follows!: Table<Event>;
+  reactions!: Table<ReactionRecord>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(5).stores({
+    this.version(6).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       follows: 'id, pubkey',
+      reactions: 'id, eventId, profileId, created_at',
     });
   }
 }

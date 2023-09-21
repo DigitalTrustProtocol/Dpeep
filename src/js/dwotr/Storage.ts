@@ -17,7 +17,10 @@ class Storage {
     return this.db.follows;
   }
 
-
+  get reactions() {
+    return this.db.reactions;
+  }
+  
   get db(): DWoTRDexie {
     if (!this.#db) {
       try {

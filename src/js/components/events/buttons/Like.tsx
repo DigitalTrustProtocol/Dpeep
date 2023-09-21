@@ -2,55 +2,46 @@ import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconFull } from '@heroicons/react/24/solid';
 import { useEffect } from 'preact/hooks';
 
-import Events from '../../../nostr/Events';
-import Key from '../../../nostr/Key';
-import useStateThrottle from '@/dwotr/hooks/useStateThrottle';
+import { useState, useCallback } from 'preact/hooks';
 
-const Like = ({ event }) => {
+import reactionManager from '@/dwotr/ReactionManager';
+import Key from '@/nostr/Key';
+import { ID, UID } from '@/utils/UniqueIds';
 
-  const [state, setState] = useStateThrottle({
-    likes: Events.likesByMessageId.get(event.id)?.size || 0,
+const Like = ({ event, standalone }) => {
+  const [state, setState] = useState({
+    likes: 0,
     liked: false,
-    likedBy: new Set<string>(),
+    likedBy: new Set<UID>(),
   });
 
-  useEffect(() => {
-    // Define handleLikes in useEffect to avoid recreating the function on every render
-    const handleLikes = (likedBy) => {
-      const myPub = Key.getPubKey();
-      setState((prevState) => ({
-        ...prevState,
-        likes: likedBy.size,
-        liked: likedBy.has(myPub),
-        likedBy,
-      }));
+  const getLikes = useCallback(() => {
+    const likedBy = reactionManager.getLikes(ID(event.id));
+    const likes = likedBy.size;
+    const liked = likedBy.has(ID(Key.getPubKey()));
+
+    return {
+      likes,
+      liked,
+      likedBy,
     };
+  }, [setState, event.id]);
 
-    return Events.getLikes(event.id, handleLikes);
+  useEffect(() => {
+    // Do not subscribe on relay server as only WoT likes are showen on the event.
+    // For loading all likes on the event, view the event in standalone mode
+
+    setState(getLikes());
   }, [event]);
-
 
   const likeBtnClicked = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    like(!state.liked);
-  };
 
-  const like = (liked = true) => {
-    if (liked) {
-      const author = event.pubkey;
-      const hexId = Key.toNostrHexAddress(event.id);
-      if (hexId) {
-        Events.publish({
-          kind: 7,
-          content: '+',
-          tags: [
-            ['e', hexId],
-            ['p', author],
-          ],
-        });
-      }
-    }
+    const liked = !state.liked;
+    let value = liked ? 1 : 0;
+    reactionManager.onLike(event.id, event.pubkey, value);
+    setState(getLikes());
   };
 
   return (
@@ -61,7 +52,7 @@ const Like = ({ event }) => {
       onClick={(e) => likeBtnClicked(e)}
     >
       {state.liked ? <HeartIconFull width={18} /> : <HeartIcon width={18} />}
-      {state.likes || ''}
+      {!standalone ? state.likes || '' : ''}
     </a>
   );
 };

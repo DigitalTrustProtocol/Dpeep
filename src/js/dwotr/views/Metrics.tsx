@@ -5,6 +5,7 @@ import profileManager from '../ProfileManager';
 import eventManager from '../EventManager';
 import wotPubSub from '../network/WOTPubSub';
 import Header from '@/components/header/Header';
+import reactionManager from '../ReactionManager';
 
 type TestDataProps = {
   path?: string;
@@ -15,6 +16,7 @@ class Metrics {
   Events: any = {};
   Follow: any = {};
   Relays: any = {};
+  Reactions: any = {}; 
 }
 
 const useMetrics = (): { data: Metrics; time: number } => {
@@ -34,6 +36,7 @@ const useMetrics = (): { data: Metrics; time: number } => {
       d.Events = eventManager.getMetrics();
       d.Follow = followManager.getMetrics();
       d.Relays = wotPubSub.getMetrics();
+      d.Reactions = reactionManager.getMetrics();
 
       return d;
     };

@@ -1,4 +1,4 @@
-import { Event,Filter, getEventHash, getSignature } from 'nostr-tools';
+import { Event, Filter, getEventHash, getSignature } from 'nostr-tools';
 import PubSub, { Unsubscribe } from '../../nostr/PubSub';
 import Relays from '../../nostr/Relays';
 import { EntityType } from '../model/Graph';

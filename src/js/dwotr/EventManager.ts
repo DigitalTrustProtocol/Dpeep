@@ -4,23 +4,30 @@ import { ID, UniqueIds } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
 import graphNetwork from './GraphNetwork';
-import { BlockKind, ContactsKind, EntityItem, MuteKind, Trust1Kind } from './network/WOTPubSub';
+import {
+  BlockKind,
+  ContactsKind,
+  EntityItem,
+  MetadataKind,
+  MuteKind,
+  ReactionKind,
+  Trust1Kind,
+} from './network/WOTPubSub';
 import muteManager from './MuteManager';
 import { EventParser } from './Utils/EventParser';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
+import profileManager from './ProfileManager';
+import reactionManager from './ReactionManager';
 class EventManager {
-
   metrics = {
     TotalMemory: 0,
     Loaded: 0,
     Handle: 0,
-  }    
+  };
 
   constructor() {}
-
-  
 
   createTrustEvent(
     entityPubkey: string,
@@ -129,18 +136,28 @@ class EventManager {
   async eventCallback(event: Event, afterEose: boolean, url: string | undefined) {
     if (!event?.id || UniqueIds.has(event.id)) return false; // Already processed this event
     ID(event.id); // add Event ID to UniqueIds
+    let publisherId = ID(event.pubkey);
+
+    if (blockManager.isBlocked(publisherId) && event.kind !== 0) {
+      return false;
+    }
 
     eventManager.metrics.Handle++;
 
     switch (event.kind) {
-      // case MetadataKind:
-      //   break; 
+      case MetadataKind:
+        profileManager.handle(event);
+        break;
 
-      // case TextKind: 
+      // case TextKind:
       //   break;
 
       case ContactsKind: // Follow Kind 3
         await followManager.handle(event);
+        break;
+
+      case ReactionKind:  
+        reactionManager.handle(event);
         break;
 
       case Trust1Kind:
@@ -160,15 +177,7 @@ class EventManager {
   }
 
   async trustEvent(event: Event) {
-    let {
-      p: pTags,
-      e: eTags,
-      val,
-      pubKey,
-      note,
-      context,
-      timestamp,
-    } = this.parseTrustEvent(event);
+    let { p: pTags, e: eTags, val, pubKey, note, context, timestamp } = this.parseTrustEvent(event);
 
     // Add the trust to the local graph, and update the score
     // The doing the addEdge() method it will check for the created_at timestamp of the event,
@@ -200,7 +209,6 @@ class EventManager {
   }
 
   getMetrics() {
-
     return this.metrics;
   }
 }

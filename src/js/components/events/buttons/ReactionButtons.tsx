@@ -32,7 +32,7 @@ const ReactionButtons = (props) => {
           <Repost event={event} />
         </Show>
         <Show when={settings.showLikes !== false}>
-          <Like event={event} />
+          <Like event={event} standalone={props.standalone} />
         </Show>
         <Show when={settings.showZaps !== false}>
           <Zap event={event} />

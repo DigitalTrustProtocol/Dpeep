@@ -8,6 +8,7 @@ import profileManager from '../ProfileManager';
 import muteManager from '../MuteManager';
 import blockManager from '../BlockManager';
 import followManager from '../FollowManager';
+import reactionManager from '../ReactionManager';
 
 type InitializeWoTProps = {
   path?: string;
@@ -27,6 +28,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const [blockStatus, setBlockStatus] = useState<Status>('waiting');
   const [followStatus, setFollowStatus] = useState<Status>('waiting');
   const [latestNotes, setLatestNotes] = useState<Status>('waiting');
+  const [reactionStatus, setReactionStatus] = useState<Status>('waiting');
 
   useEffect(() => {
     setGraphStatus('loading');
@@ -48,7 +50,6 @@ const InitializeWoT = (props: InitializeWoTProps) => {
               setBlockStatus('done');
             }, 0);
           });
-
     
         }, 0);
       });
@@ -64,6 +65,12 @@ const InitializeWoT = (props: InitializeWoTProps) => {
         }, 100);
       });
 
+      // Reactions
+      setReactionStatus('loading');
+      reactionManager.load().then(() => {
+        setReactionStatus('done');
+      });
+
       setLatestNotes('loading');
       setLatestNotes('done');
     });
@@ -75,7 +82,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     return () => {};
   }, []);
 
-  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done" && followStatus === "done" && latestNotes === "done")
+  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done" && followStatus === "done" && latestNotes === "done" && reactionStatus === "done")
     props.setInitialized(true);
 
   // Wot Graph
@@ -87,7 +94,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   return (
     <Modal centerVertically={true} showContainer={true} onClose={() => {}}>
       <h1>Initalizing Application Context</h1>
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-2 text-base">
         <div className="flex items-center space-x-2">
           <StatusIcon status={graphStatus} />
           <span>WoT network</span>
@@ -97,16 +104,20 @@ const InitializeWoT = (props: InitializeWoTProps) => {
           <span>Profiles</span>
         </div>
         <div className="flex items-center space-x-2">
+          <StatusIcon status={reactionStatus} />
+          <span>Reactions</span>
+        </div>
+        <div className="flex items-center space-x-2">
           <StatusIcon status={muteStatus} />
-          <span>Mute list</span>
+          <span>Mutes</span>
         </div>
         <div className="flex items-center space-x-2">
           <StatusIcon status={blockStatus} />
-          <span>Block list</span>
+          <span>Blocks</span>
         </div>
         <div className="flex items-center space-x-2">
           <StatusIcon status={followStatus} />
-          <span>Follow list</span>
+          <span>Follows</span>
         </div>
         <div className="flex items-center space-x-2">
           <StatusIcon status={latestNotes} />

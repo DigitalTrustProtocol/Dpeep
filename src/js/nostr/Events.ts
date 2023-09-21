@@ -118,15 +118,15 @@ const Events = {
       this.handleNote(event);
     }
   },
-  handleReaction(event: Event) {
-    const id = getLikedEventId(event);
-    if (!id) return;
-    if (!this.likesByMessageId.has(id)) {
-      this.likesByMessageId.set(id, new Set());
-    }
-    this.likesByMessageId.get(id)?.add(event.pubkey);
-    EventDB.insert(event);
-  },
+  // handleReaction(event: Event) {
+  //   const id = getLikedEventId(event);
+  //   if (!id) return;
+  //   if (!this.likesByMessageId.has(id)) {
+  //     this.likesByMessageId.set(id, new Set());
+  //   }
+  //   this.likesByMessageId.get(id)?.add(event.pubkey);
+  //   EventDB.insert(event);
+  // },
   // handleFollowList(event: Event) {
 
   //   // no need to store follow events in memory because they're already in SocialNetwork.
@@ -215,33 +215,33 @@ const Events = {
   //     }
   //   }
   // },
-  handleMetadata(event: Event) {
-    if (!event.content?.length) {
-      return false;
-    }
+  // handleMetadata(event: Event) {
+  //   if (!event.content?.length) {
+  //     return false;
+  //   }
     
-    try {
-      // TODO: CK - Look at this.
-      let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
-      let profile = profileManager.addProfileEvent(event, isBlocked); 
-      if(profile) return true; 
+  //   try {
+  //     // TODO: CK - Look at this.
+  //     let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
+  //     let profile = profileManager.addProfileEvent(event, isBlocked); 
+  //     if(profile) return true; 
        
-      // const profile = JSON.parse(event.content);
-      // // if we have previously deleted our account, log out. appease app store.
-      // if (event.pubkey === Key.getPubKey() && profile.deleted) {
-      //   Session.logOut();
-      //   return;
-      // }
-      // profile.created_at = event.created_at;
-      // delete profile['nip05valid']; // not robust
-      // SocialNetwork.profiles.set(event.pubkey, profile);
-      //}
-    } catch (e) {
-      console.log('error parsing nostr profile', e, event);
+  //     // const profile = JSON.parse(event.content);
+  //     // // if we have previously deleted our account, log out. appease app store.
+  //     // if (event.pubkey === Key.getPubKey() && profile.deleted) {
+  //     //   Session.logOut();
+  //     //   return;
+  //     // }
+  //     // profile.created_at = event.created_at;
+  //     // delete profile['nip05valid']; // not robust
+  //     // SocialNetwork.profiles.set(event.pubkey, profile);
+  //     //}
+  //   } catch (e) {
+  //     console.log('error parsing nostr profile', e, event);
       
-    }
-    return false;
-  },
+  //   }
+  //   return false;
+  // },
   handleDelete(event: Event) {
     const id = event.tags?.find((tag) => tag[0] === 'e')?.[1];
     const myPub = Key.getPubKey();
@@ -472,11 +472,11 @@ const Events = {
     //console.log('WOT: handling event', event);
 
     switch (event.kind) {
-      case 0:
-        if (this.handleMetadata(event) === false) {
-          return false;
-        }
-        break;
+      // case 0:
+      //   if (this.handleMetadata(event) === false) {
+      //     return false;
+      //   }
+      //   break;
       case 1:
         this.maybeAddNotification(event);
         this.handleNote(event);
@@ -506,10 +506,10 @@ const Events = {
         this.maybeAddNotification(event);
         this.handleRepost(event);
         break;
-      case 7: // Likes
-        this.maybeAddNotification(event);
-        this.handleReaction(event);
-        break;
+      // case 7: // Likes
+      //   this.maybeAddNotification(event);
+      //   this.handleReaction(event);
+      //   break;
       case 9735:
         this.maybeAddNotification(event);
         this.handleZap(event);
