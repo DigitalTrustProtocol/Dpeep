@@ -1,21 +1,16 @@
 import { memo } from 'react';
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { nip19, Event } from 'nostr-tools';
 import { Link } from 'preact-router';
 
-import EventDB from '@/nostr/EventDB';
-import { getZappingUser } from '@/nostr/utils';
-
-import Events from '../../nostr/Events'; // Import Events module
-import { decodeInvoice, formatAmount } from '../../utils/Lightning';
 import Modal from '../modal/Modal';
 import Avatar from '../user/Avatar';
 import Name from '../user/Name';
 import TrustScore from '../../dwotr/model/TrustScore';
 import { RenderScoreDistrustLink, RenderScoreTrustLink } from '@/dwotr/components/RenderGraph';
 import Key from '@/nostr/Key';
-import { ID, STR, UID } from '@/utils/UniqueIds';
-import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
+import { STR, UID } from '@/utils/UniqueIds';
+import { formatAmount } from '@/utils/Lightning';
 
 type ReactionData = {
   pubkey: string;
@@ -25,8 +20,10 @@ type ReactionData = {
 type ReactionsListProps = {
   event: Event;
   wot: any;
-  loadGlobal: boolean;
   likes: Set<UID>;
+  zapAmountByUser: Map<string, number>;
+  formattedZapAmount: string;
+  reposts: Set<string>;
 };
 
 const Reaction = memo(({ data }: { data: ReactionData }) => {
@@ -42,12 +39,14 @@ const Reaction = memo(({ data }: { data: ReactionData }) => {
   );
 });
 
-const ReactionsList = ({event, wot, loadGlobal, likes}: ReactionsListProps) => {
-
-  //const [likes, setLikes] = useState(reactionManager.getLikes(event.id));
-  const { zapAmountByUser, formattedZapAmount } = useZaps(event.id, loadGlobal);
-  const reposts = useReposts(event.id, loadGlobal);
-
+const ReactionsList = ({
+  event,
+  wot,
+  likes,
+  zapAmountByUser,
+  formattedZapAmount,
+  reposts,
+}: ReactionsListProps) => {
   const [modalReactions, setModalReactions] = useState([] as ReactionData[]);
   const [modalTitle, setModalTitle] = useState('');
 
@@ -56,7 +55,8 @@ const ReactionsList = ({event, wot, loadGlobal, likes}: ReactionsListProps) => {
   const hasDistrust = score?.hasDistrustScore();
 
   // Dont show reactions if there are none
-  const hasReactions = likes.size > 0 || reposts.size > 0 || zapAmountByUser.size > 0 || hasTrust || hasDistrust;
+  const hasReactions =
+    likes.size > 0 || reposts.size > 0 || zapAmountByUser.size > 0 || hasTrust || hasDistrust;
   if (!hasReactions) return null;
 
   const likesdata = Array.from(likes).map((id) => ({ pubkey: STR(id) })) as ReactionData[];
@@ -150,82 +150,3 @@ const ReactionsList = ({event, wot, loadGlobal, likes}: ReactionsListProps) => {
 };
 
 export default ReactionsList;
-
-
-const useZaps = (messageId: string, loadGlobal: boolean) => {
-  const [zapAmountByUser, setZapAmountByUser] = useState(new Map());
-  const [formattedZapAmount, setFormattedZapAmount] = useState('');
-
-  const isMounted = useIsMounted();
-
-  useEffect(() => {
-    const handleZaps = (zaps) => {
-      if (!isMounted()) return;
-
-      const zapData = new Map<string, number>();
-      let totalZapAmount = 0;
-      const zapEvents = Array.from(zaps?.values()).map((eventId) => EventDB.get(eventId));
-      zapEvents.forEach((zapEvent) => {
-        const bolt11 = zapEvent?.tags.find((tag) => tag[0] === 'bolt11')?.[1];
-        if (!bolt11) {
-          console.log('Invalid zap, missing bolt11 tag');
-          return;
-        }
-        const decoded = decodeInvoice(bolt11);
-        const amount = (decoded?.amount || 0) / 1000;
-        totalZapAmount += amount;
-        const zapper = getZappingUser(zapEvent);
-        if (zapper) {
-          const existing = zapData.get(zapper) || 0;
-          zapData.set(zapper, existing + amount);
-        }
-      });
-
-      setZapAmountByUser(zapData);
-      setFormattedZapAmount(totalZapAmount > 0 ? formatAmount(totalZapAmount) : '');
-    };
-
-    // Set initial zaps
-    // TODO: This is not working, need to fix
-
-    if(!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
-
-    // Subscribe
-    let unsub = Events.getZaps(messageId, handleZaps)
-
-    // Return cleanup function
-    return () => {
-      unsub?.();
-    };
-  }, [messageId, loadGlobal]);
-
-  return { zapAmountByUser, formattedZapAmount };
-}
-
-const useReposts = (messageId: string, loadGlobal: boolean) => {
-  const [reposts, setReposts] = useState(new Set());
-  const isMounted = useIsMounted();
-
-  useEffect(() => {
-
-    const handleReposts = (repostedBy) => {
-      if (!isMounted()) return;
-      setReposts(new Set(repostedBy));
-    };
-
-    // Set initial reposts
-    setReposts(Events.repostsByMessageId.get(messageId) || new Set());
-
-    if(!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
-
-    // Subscribe
-    let unsub = Events.getReposts(messageId, handleReposts)
-
-    // Return cleanup function
-    return () => {
-      unsub?.();
-    };
-  }, [messageId, loadGlobal]);
-
-  return reposts;
-}

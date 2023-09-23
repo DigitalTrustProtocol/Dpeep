@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Event, Filter } from 'nostr-tools';
 
 import EventDB from '@/nostr/EventDB.ts';
-import PubSub from '@/nostr/PubSub.ts';
 import { ID, UID } from '@/utils/UniqueIds';
 import IndexedDB from '@/nostr/IndexedDB';
 

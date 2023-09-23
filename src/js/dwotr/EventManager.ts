@@ -11,6 +11,8 @@ import {
   MetadataKind,
   MuteKind,
   ReactionKind,
+  RepostKind,
+  TextKind,
   Trust1Kind,
 } from './network/WOTPubSub';
 import muteManager from './MuteManager';
@@ -20,8 +22,8 @@ import blockManager from './BlockManager';
 import followManager from './FollowManager';
 import profileManager from './ProfileManager';
 import reactionManager from './ReactionManager';
+import noteManager from './NoteManager';
 class EventManager {
-
   seenRelayEvents: Set<UID> = new Set();
 
   metrics = {
@@ -31,6 +33,10 @@ class EventManager {
   };
 
   constructor() {}
+
+  addSeenEvent(eventId: UID) {
+    this.seenRelayEvents.add(eventId);
+  }
 
   createTrustEvent(
     entityPubkey: string,
@@ -136,8 +142,8 @@ class EventManager {
     return undefined;
   }
 
-  doRelayEvent(event: Event) : boolean {
-    if (!event?.id) return false; 
+  doRelayEvent(event: Event): boolean {
+    if (!event?.id) return false;
     let eventId = ID(event.id); // add Event ID to UniqueIds
 
     if (this.seenRelayEvents.has(eventId)) return false; // already seen this event, skip it
@@ -155,14 +161,18 @@ class EventManager {
         profileManager.handle(event);
         break;
 
-      // case TextKind:
-      //   break;
+      case TextKind:
+        noteManager.handle(event);
+        break;
+      case RepostKind:
+        noteManager.handle(event);
+        break;
 
       case ContactsKind: // Follow Kind 3
         await followManager.handle(event);
         break;
 
-      case ReactionKind:  
+      case ReactionKind:
         reactionManager.handle(event);
         break;
 
@@ -183,7 +193,6 @@ class EventManager {
   }
 
   async trustEvent(event: Event) {
-
     let authorId = ID(event.pubkey);
     if (blockManager.isBlocked(authorId)) return;
 

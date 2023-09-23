@@ -34,12 +34,12 @@ const ProfileStats = ({ address }) => {
           <b>{contactsCount}</b>
           <span className="text-neutral-500"> {t('following')}</span>
         </Link>
-        <Globe size={16} onClick={setLoadGlobal} alt="Load global followers events" />
         <Link href={`/followers/${bech32Key}`}>
           <b>{followedByCount}</b>
           <span className="text-neutral-500"> {t('known_followers')}</span>
         </Link>
         <ProfileScoreLinks str={hexKey} />
+        <Globe size={24} onClick={setLoadGlobal} alt="Load global followers events" className="flex justify-end" />
       </div>
       <Show when={!isMe && knownFollowers.length > 0}>
         <div className="text-neutral-500">

@@ -9,6 +9,7 @@ import muteManager from '../MuteManager';
 import blockManager from '../BlockManager';
 import followManager from '../FollowManager';
 import reactionManager from '../ReactionManager';
+import noteManager from '../NoteManager';
 
 type InitializeWoTProps = {
   path?: string;
@@ -29,11 +30,12 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const [followStatus, setFollowStatus] = useState<Status>('waiting');
   const [latestNotes, setLatestNotes] = useState<Status>('waiting');
   const [reactionStatus, setReactionStatus] = useState<Status>('waiting');
+  
 
   useEffect(() => {
     setGraphStatus('loading');
 
-    graphNetwork.whenReady(() => {
+    graphNetwork.whenReady(async () => {
       setGraphStatus('done');
 
       setProfileStatus('loading');
@@ -59,11 +61,12 @@ const InitializeWoT = (props: InitializeWoTProps) => {
         followManager.subscribeToRelays(); // Subscribe to followers of my profile
         setFollowStatus('done');
 
-        // Wait a little before subscribing to the network
-        // setTimeout(() => {
-        //   followManager.updateNetwork();
-        //   setFollowStatus('done');
-        // }, 100);
+        // Now load the notes
+        setLatestNotes('loading');
+        noteManager.load().then(() => {
+          setLatestNotes('done');
+        });
+
       });
 
       // Reactions
@@ -73,6 +76,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
       });
 
       setLatestNotes('loading');
+
       setLatestNotes('done');
     });
 
@@ -83,7 +87,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     return () => {};
   }, []);
 
-  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done" && followStatus === "done" && latestNotes === "done" && reactionStatus === "done")
+  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done" && followStatus === "done" && latestNotes === "done" && reactionStatus === "done" && latestNotes === "done")
     props.setInitialized(true);
 
   // Wot Graph

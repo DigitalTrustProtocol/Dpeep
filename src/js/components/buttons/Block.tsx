@@ -4,8 +4,6 @@ import { translate as t } from '../../translations/Translation.mjs';
 import Name from '../user/Name';
 import blockManager from '@/dwotr/BlockManager';
 import { useKey } from '@/dwotr/hooks/useKey';
-import SocialNetwork from '@/nostr/SocialNetwork';
-import followManager from '@/dwotr/FollowManager';
 
 type Props = {
   id: string;

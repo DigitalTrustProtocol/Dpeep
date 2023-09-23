@@ -4,12 +4,12 @@ import { GlobeAltIcon as GlobeAltIconFull } from '@heroicons/react/24/solid';
 import { useState } from 'preact/hooks';
 
 
-const Globe = ({ onClick, ...props }) => {
+const Globe = ({ onClick, size = 14, ...props }) => {
 
     const [active, setActive] = useState(false);
 
-    const size = props.size || 14;
-    const alt = props.alt || 'Load all global events from relay servers';
+    const activeClass = active ? 'text-iris-brown' : 'hover:text-iris-brown text-neutral-500';
+    const className = `btn-ghost btn-sm hover:bg-transparent ${activeClass} ${props.className || ''}`;
 
     const onClickHandler = (e) => {
         e.preventDefault();
@@ -19,10 +19,9 @@ const Globe = ({ onClick, ...props }) => {
         onClick(!active);
     };
     
-    const activeClass = active ? 'text-iris-brown' : 'hover:text-iris-brown text-neutral-500';
 
     return (
-        <button  onClick={onClickHandler} title={alt} className={`btn-ghost btn-sm justify-center hover:bg-transparent btn content-center gap-2 rounded-none ${activeClass}`} >
+        <button {...props}  onClick={onClickHandler} className={className}  >
             <Show when={active}>
                 <GlobeAltIconFull width={size} height={size}  />
             </Show>

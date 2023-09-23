@@ -15,15 +15,17 @@ export class DWoTRDexie extends Dexie {
   profiles!: Table<ProfileRecord>; // ProfileRecord is defined with minimal properties, so all empty property names are not serialized into the database.
   follows!: Table<Event>;
   reactions!: Table<ReactionRecord>;
+  notes!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(7).stores({
+    this.version(8).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
       follows: 'pubkey', // Primary key is the pubkey single event per user.
+      notes: 'id, pubkey, kind, created_at, [pubkey+kind]',
     });
   }
 }

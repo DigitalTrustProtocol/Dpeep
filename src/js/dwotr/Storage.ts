@@ -20,6 +20,10 @@ class Storage {
   get reactions() {
     return this.db.reactions;
   }
+
+  get notes() {
+    return this.db.notes;
+  }
   
   get db(): DWoTRDexie {
     if (!this.#db) {

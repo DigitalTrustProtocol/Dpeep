@@ -8,6 +8,7 @@ import followManager from './FollowManager';
 import Key from '@/nostr/Key';
 import blockManager from './BlockManager';
 import { EventMetadata, EventTag } from './Utils/EventParser';
+import eventManager from './EventManager';
 
 
 
@@ -195,6 +196,8 @@ class ReactionManager {
 
     for (let reaction of reactions) {
       let profileId = ID(reaction.profileId);
+
+      eventManager.addSeenEvent(ID(reaction.id)); // No need to handle this event again from Relays
 
       if (followManager.isAllowed(profileId)) {
         this.addValue(ID(reaction.eventId), ID(reaction.profileId), reaction.value);

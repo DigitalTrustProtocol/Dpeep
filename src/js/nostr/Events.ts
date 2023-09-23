@@ -74,48 +74,48 @@ const Events = {
   notificationsSeenTime: 0,
   //myBlockEvent: null as Event | null,
   myFlagEvent: null as Event | null,
-  handleNote(event: Event) {
-    const has = EventDB.get(event.id);
-    if (!has) {
-      EventDB.insert(event);
-    }
+  // handleNote(event: Event) {
+  //   const has = EventDB.get(event.id);
+  //   if (!has) {
+  //     EventDB.insert(event);
+  //   }
 
-    const eventIsRepost = isRepost(event); 
-    const replyingTo = !eventIsRepost && getNoteReplyingTo(event);
-    const myPub = Key.getPubKey();
+  //   const eventIsRepost = isRepost(event); 
+  //   const replyingTo = !eventIsRepost && getNoteReplyingTo(event);
+  //   const myPub = Key.getPubKey();
 
-    if (replyingTo && !eventIsRepost) {
-      const repliedMsgs = event.tags
-        .filter((tag) => tag[0] === 'e')
-        .map((tag) => tag[1])
-        .slice(0, 2);
-      for (const id of repliedMsgs) {
-        // if (
-        //   event.created_at > startTime ||
-        //   event.pubkey === myPub ||
-        //   SocialNetwork.isFollowing(myPub, event.pubkey)
-        // ) {
-        //   //Events.getEventById(id); // generates lots of subscriptions
-        // }
-        if (!this.threadRepliesByMessageId.has(id)) {
-          this.threadRepliesByMessageId.set(id, new Set<string>());
-        }
-        this.threadRepliesByMessageId.get(id)?.add(event.id);
-      }
-    }
-  },
-  handleRepost(event: Event) {
-    const id = getRepostedEventId(event);
-    if (!id) return;
-    if (!this.repostsByMessageId.has(id)) {
-      this.repostsByMessageId.set(id, new Set());
-    }
-    // only handle one repost per post per user. TODO update with newer event if needed.
-    if (!this.repostsByMessageId.get(id)?.has(event.pubkey)) {
-      this.repostsByMessageId.get(id)?.add(event.pubkey);
-      this.handleNote(event);
-    }
-  },
+  //   if (replyingTo && !eventIsRepost) {
+  //     const repliedMsgs = event.tags
+  //       .filter((tag) => tag[0] === 'e')
+  //       .map((tag) => tag[1])
+  //       .slice(0, 2);
+  //     for (const id of repliedMsgs) {
+  //       // if (
+  //       //   event.created_at > startTime ||
+  //       //   event.pubkey === myPub ||
+  //       //   SocialNetwork.isFollowing(myPub, event.pubkey)
+  //       // ) {
+  //       //   //Events.getEventById(id); // generates lots of subscriptions
+  //       // }
+  //       if (!this.threadRepliesByMessageId.has(id)) {
+  //         this.threadRepliesByMessageId.set(id, new Set<string>());
+  //       }
+  //       this.threadRepliesByMessageId.get(id)?.add(event.id);
+  //     }
+  //   }
+  // },
+  // handleRepost(event: Event) {
+  //   const id = getRepostedEventId(event);
+  //   if (!id) return;
+  //   if (!this.repostsByMessageId.has(id)) {
+  //     this.repostsByMessageId.set(id, new Set());
+  //   }
+  //   // only handle one repost per post per user. TODO update with newer event if needed.
+  //   if (!this.repostsByMessageId.get(id)?.has(event.pubkey)) {
+  //     this.repostsByMessageId.get(id)?.add(event.pubkey);
+  //     this.handleNote(event);
+  //   }
+  // },
   // handleReaction(event: Event) {
   //   const id = getLikedEventId(event);
   //   if (!id) return;
@@ -476,10 +476,10 @@ const Events = {
       //     return false;
       //   }
       //   break;
-      case 1:
+      //case 1:
         //this.maybeAddNotification(event);
-        this.handleNote(event);
-        break;
+        // this.handleNote(event);
+        // break;
       case 4:
         this.handleDirectMessage(event);
         break;
@@ -501,10 +501,10 @@ const Events = {
       //   this.handleFollowList(event);
       //   break;
       // }
-      case 6:
+      //case 6:
         //this.maybeAddNotification(event);
-        this.handleRepost(event);
-        break;
+        //this.handleRepost(event);
+        //break;
       // case 7: // Likes
       //   this.maybeAddNotification(event);
       //   this.handleReaction(event);

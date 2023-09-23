@@ -7,6 +7,7 @@ import wotPubSub from '../network/WOTPubSub';
 import Header from '@/components/header/Header';
 import reactionManager from '../ReactionManager';
 import graphNetwork from '../GraphNetwork';
+import noteManager from '../NoteManager';
 
 type TestDataProps = {
   path?: string;
@@ -19,6 +20,7 @@ class Metrics {
   Follow: any = {};
   Relays: any = {};
   Reactions: any = {}; 
+  Notes: any = {};
 }
 
 const useMetrics = (): { data: Metrics; time: number } => {
@@ -40,6 +42,7 @@ const useMetrics = (): { data: Metrics; time: number } => {
       d.Follow = followManager.getMetrics();
       d.Relays = wotPubSub.getMetrics();
       d.Reactions = reactionManager.getMetrics();
+      d.Notes = noteManager.getMetrics();
 
       return d;
     };
