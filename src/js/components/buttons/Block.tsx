@@ -5,6 +5,7 @@ import Name from '../user/Name';
 import blockManager from '@/dwotr/BlockManager';
 import { useKey } from '@/dwotr/hooks/useKey';
 import SocialNetwork from '@/nostr/SocialNetwork';
+import followManager from '@/dwotr/FollowManager';
 
 type Props = {
   id: string;
@@ -29,9 +30,11 @@ const Block = ({ id, showName = false, className, onClick }: Props) => {
 
     blockManager.onBlock(myId, blockedUserId, newValue);
 
-    if (newValue) 
-       SocialNetwork.removeFollower(blockedUserId, myId);
-
+    // TODO: implement this
+    // if (newValue) {
+    //    followManager.removeFollower(blockedUserId, myId);
+    // }
+    
     setIsBlocked(newValue);
 
     onClick?.(e);

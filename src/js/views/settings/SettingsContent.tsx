@@ -19,8 +19,8 @@ const SettingsContent = (props) => {
     language: Language,
     content: ContentPage,
     payments: Payments,
-    backup: Backup,
-    social_network: SocialNetwork,
+    //backup: Backup, // Disabled for now, as it is not working with the WoT network
+    //social_network: SocialNetwork,
     iris_account: IrisAccount,
     dev: Dev,
     dwotr: SettingsDWoTR,

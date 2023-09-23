@@ -90,13 +90,13 @@ const Events = {
         .map((tag) => tag[1])
         .slice(0, 2);
       for (const id of repliedMsgs) {
-        if (
-          event.created_at > startTime ||
-          event.pubkey === myPub ||
-          SocialNetwork.isFollowing(myPub, event.pubkey)
-        ) {
-          //Events.getEventById(id); // generates lots of subscriptions
-        }
+        // if (
+        //   event.created_at > startTime ||
+        //   event.pubkey === myPub ||
+        //   SocialNetwork.isFollowing(myPub, event.pubkey)
+        // ) {
+        //   //Events.getEventById(id); // generates lots of subscriptions
+        // }
         if (!this.threadRepliesByMessageId.has(id)) {
           this.threadRepliesByMessageId.set(id, new Set<string>());
         }
@@ -477,7 +477,7 @@ const Events = {
       //   }
       //   break;
       case 1:
-        this.maybeAddNotification(event);
+        //this.maybeAddNotification(event);
         this.handleNote(event);
         break;
       case 4:
@@ -502,7 +502,7 @@ const Events = {
       //   break;
       // }
       case 6:
-        this.maybeAddNotification(event);
+        //this.maybeAddNotification(event);
         this.handleRepost(event);
         break;
       // case 7: // Likes
@@ -510,7 +510,7 @@ const Events = {
       //   this.handleReaction(event);
       //   break;
       case 9735:
-        this.maybeAddNotification(event);
+        //this.maybeAddNotification(event);
         this.handleZap(event);
         break;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -535,19 +535,19 @@ const Events = {
     // TODO: don't save e.g. old profile & follow events
     // TODO since we're only querying relays since lastSeen, we need to store all beforeseen events and correctly query them on demand
     // otherwise feed will be incomplete
-    if (saveToIdb && dev.indexedDbSave !== false) {
-      const followDistance = SocialNetwork.getFollowDistance(event.pubkey);
-      if (followDistance <= 1) {
-        IndexedDB.saveEvent(event as Event & { id: string });
-      } else if (
-        [2, 3].includes(followDistance) &&
-        event.tags.some((tag) => tag[0] === 'p' && Key.isMine(tag[1]))
-      ) {
-        IndexedDB.saveEvent(event as Event & { id: string });
-      } else if (followDistance <= 4 && [0, 3, 4].includes(event.kind)) {
-        IndexedDB.saveEvent(event as Event & { id: string });
-      }
-    }
+    // if (saveToIdb && dev.indexedDbSave !== false) {
+    //   const followDistance = SocialNetwork.getFollowDistance(event.pubkey);
+    //   if (followDistance <= 1) {
+    //     IndexedDB.saveEvent(event as Event & { id: string });
+    //   } else if (
+    //     [2, 3].includes(followDistance) &&
+    //     event.tags.some((tag) => tag[0] === 'p' && Key.isMine(tag[1]))
+    //   ) {
+    //     IndexedDB.saveEvent(event as Event & { id: string });
+    //   } else if (followDistance <= 4 && [0, 3, 4].includes(event.kind)) {
+    //     IndexedDB.saveEvent(event as Event & { id: string });
+    //   }
+    // }
 
     // should the whole method be moved to PubSub?
     PubSub.handle(event);
@@ -583,38 +583,38 @@ const Events = {
   isMuted(event: Event) {
     return muteManager.isMuted(ID(event.pubkey));
   },
-  maybeAddNotification(event: Event) {
-    // if we're mentioned in tags, add to notifications
-    if (event.kind !== 3 && event.tags?.filter((tag) => tag[0] === 'p').length > 10) {
-      // no hellthreads please. TODO: make configurable in settings
-      return;
-    }
-    const myPub = Key.getPubKey();
-    // TODO: if it's a like, only add if the last p tag is us
-    if (event.pubkey !== myPub && event.tags?.some((tag) => tag[0] === 'p' && tag[1] === myPub)) {
-      if (event.kind === 3) {
-        // only notify if we know that they previously weren't following us
-        const existingFollows = SocialNetwork.followedByUser.get(ID(event.pubkey));
-        if (!existingFollows || existingFollows.has(ID(myPub))) {
-          return;
-        }
-      }
-      if (!this.isMuted(event)) {
-        const target = getEventRoot(event) || getEventReplyingTo(event) || event.id; // TODO get thread root instead
-        const key = `${event.kind}-${target}`;
-        const existing = this.latestNotificationByTargetAndKind.get(key); // also latestNotificationByAuthor?
-        const existingEvent = existing && EventDB.get(existing);
-        if (!existingEvent || existingEvent.created_at < event.created_at) {
-          existing && this.notifications.delete(existing);
-          this.notifications.add(event);
-          this.latestNotificationByTargetAndKind.set(key, event.id);
-        }
-        this.updateUnseenNotificationCount();
-      } else {
-        // console.log('not notifying because muted');
-      }
-    }
-  },
+  // maybeAddNotification(event: Event) {
+  //   // if we're mentioned in tags, add to notifications
+  //   if (event.kind !== 3 && event.tags?.filter((tag) => tag[0] === 'p').length > 10) {
+  //     // no hellthreads please. TODO: make configurable in settings
+  //     return;
+  //   }
+  //   const myPub = Key.getPubKey();
+  //   // TODO: if it's a like, only add if the last p tag is us
+  //   if (event.pubkey !== myPub && event.tags?.some((tag) => tag[0] === 'p' && tag[1] === myPub)) {
+  //     if (event.kind === 3) {
+  //       // only notify if we know that they previously weren't following us
+  //       const existingFollows = SocialNetwork.followedByUser.get(ID(event.pubkey));
+  //       if (!existingFollows || existingFollows.has(ID(myPub))) {
+  //         return;
+  //       }
+  //     }
+  //     if (!this.isMuted(event)) {
+  //       const target = getEventRoot(event) || getEventReplyingTo(event) || event.id; // TODO get thread root instead
+  //       const key = `${event.kind}-${target}`;
+  //       const existing = this.latestNotificationByTargetAndKind.get(key); // also latestNotificationByAuthor?
+  //       const existingEvent = existing && EventDB.get(existing);
+  //       if (!existingEvent || existingEvent.created_at < event.created_at) {
+  //         existing && this.notifications.delete(existing);
+  //         this.notifications.add(event);
+  //         this.latestNotificationByTargetAndKind.set(key, event.id);
+  //       }
+  //       this.updateUnseenNotificationCount();
+  //     } else {
+  //       // console.log('not notifying because muted');
+  //     }
+  //   }
+  // },
   updateUnseenNotificationCount: debounce(() => {
     if (!Events.notificationsSeenTime) {
       return;

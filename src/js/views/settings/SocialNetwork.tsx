@@ -8,7 +8,7 @@ import SocialNetwork from '../../nostr/SocialNetwork';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import blockManager from '@/dwotr/BlockManager.ts';
-import { ID, STR } from '@/utils/UniqueIds.ts';
+import { ID, STR, UID } from '@/utils/UniqueIds.ts';
 
 const SocialNetworkSettings = () => {
   const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
@@ -55,7 +55,8 @@ const SocialNetworkSettings = () => {
     return null;
   });
 
-  const followDistances = Array.from(SocialNetwork.usersByFollowDistance.entries()).slice(1);
+  //const followDistances = Array.from(SocialNetwork.usersByFollowDistance.entries()).slice(1);
+  const followDistances: Array<Set<UID>> = [];
 
   return (
     <div class="centered-container">

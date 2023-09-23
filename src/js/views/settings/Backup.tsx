@@ -152,7 +152,7 @@ const Backup = () => {
             .filter((t) => t[0] === 'p')
             .map((t) => t[1]);
           const newRestoredFollows = followed.filter((f) => !currentFollows.includes(f));
-          SocialNetwork.setFollowed(newRestoredFollows);
+          //SocialNetwork.setFollowed(newRestoredFollows);
           setRestoredFollows(newRestoredFollows);
         }
       }

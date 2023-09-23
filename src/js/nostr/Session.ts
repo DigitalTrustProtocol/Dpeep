@@ -70,9 +70,9 @@ const Session = {
     loggedIn = true;
     const myPub = Key.getPubKey();
     const myId = ID(myPub);
-    SocialNetwork.followDistanceByUser.set(myId, 0);
-    SocialNetwork.followersByUser.set(myId, new Set());
-    SocialNetwork.usersByFollowDistance.set(0, new Set([myId]));
+    //SocialNetwork.followDistanceByUser.set(myId, 0);
+    //SocialNetwork.followersByUser.set(myId, new Set());
+    //SocialNetwork.usersByFollowDistance.set(0, new Set([myId]));
     //this.loadMyFollowList();
     localState.get('globalFilter').once((globalFilter) => {
       if (!globalFilter) {

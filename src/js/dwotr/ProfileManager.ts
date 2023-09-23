@@ -15,6 +15,7 @@ import { ID, STR } from '@/utils/UniqueIds';
 import Subscriptions from './model/Subscriptions';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
+import followManager from './FollowManager';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -334,7 +335,8 @@ class ProfileManager {
       key: profile.key,
       name: profile.name,
       display_name: profile.display_name,
-      followers: SocialNetwork.followersByUser.get(ID(profile.key)) ?? new Set(),
+      followers: followManager.getItem(ID(profile.key)).followedBy,
+      //followers: SocialNetwork.followersByUser.get(ID(profile.key)) ?? new Set(),
     });
     return profile;
   }
@@ -491,6 +493,19 @@ class ProfileManager {
   }
 
 
+  handle(event: Event) {
+    let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
+    this.addProfileEvent(event, isBlocked);
+  }
+
+  setMetadata(data: any) {
+    const event = {
+      kind: 0,
+      content: JSON.stringify(data),
+    };
+    Events.publish(event);
+  }
+
   getMetrics() : any {
 
     this.tableCount().then((count) => {
@@ -501,10 +516,6 @@ class ProfileManager {
     return this.metrics;
   }
 
-  handle(event: Event) {
-    let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
-    this.addProfileEvent(event, isBlocked);
-  }
 
 }
 

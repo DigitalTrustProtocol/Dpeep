@@ -65,7 +65,7 @@ const Footer = () => {
     );
   };
 
-  const key = Key.toNostrBech32Address(Key.getPubKey(), 'npub');
+  const key = Key.toNostrBech32Address(Key.getPubKey(), 'npub') as string;
 
   return (
     <Show when={key && !chatId}>
