@@ -12,6 +12,7 @@ export default {
         'iris-orange': '#ffa600',
         'iris-red': '#f81780',
         'iris-purple': '#8e44ad',
+        'iris-brown': '#603285',
       },
       backgroundColor: {
         'iris-blue': '#1d9bf0',
@@ -19,6 +20,7 @@ export default {
         'iris-orange': '#ffa600',
         'iris-red': '#f81780',
         'iris-purple': '#8e44ad',
+        'iris-brown': '#603285',
       },
       outlineColor: {
         'iris-purple': '#8e44ad',

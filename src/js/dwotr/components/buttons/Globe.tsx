@@ -18,9 +18,11 @@ const Globe = ({ onClick, ...props }) => {
         setActive(!active);
         onClick(!active);
     };
-    //className={`btn ${active ? 'active' : ''}`}
+    
+    const activeClass = active ? 'text-iris-brown' : 'hover:text-iris-brown text-neutral-500';
+
     return (
-        <button  onClick={onClickHandler} title={alt} >
+        <button  onClick={onClickHandler} title={alt} className={`btn-ghost btn-sm justify-center hover:bg-transparent btn content-center gap-2 rounded-none ${activeClass}`} >
             <Show when={active}>
                 <GlobeAltIconFull width={size} height={size}  />
             </Show>

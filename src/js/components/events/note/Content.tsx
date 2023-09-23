@@ -5,13 +5,14 @@ import CreateNoteForm from '@/components/create/CreateNoteForm';
 import ReactionButtons from '@/components/events/buttons/ReactionButtons';
 import Show from '@/components/helpers/Show';
 import HyperText from '@/components/HyperText';
-import SocialNetwork from '@/nostr/SocialNetwork';
 import localState from '@/state/LocalState.ts';
 import { translate as t } from '@/translations/Translation.mjs';
 import Helpers from '@/utils/Helpers';
 
 import Author from './Author';
 import Helmet from './Helmet';
+import profileManager from '@/dwotr/ProfileManager';
+import { ID } from '@/utils/UniqueIds';
 
 let loadReactions = true;
 
@@ -43,9 +44,8 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
 
   useEffect(() => {
     if (standalone) {
-      return SocialNetwork.getProfile(event.pubkey, (profile) => {
-        setName(profile?.display_name || profile?.name || '');
-      });
+      let profile = profileManager.getMemoryProfile(ID(event.pubkey)); 
+      setName(profile?.display_name || profile?.name || '');
     }
   }, [event.pubkey]);
 
@@ -89,10 +89,6 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
     );
   }
 
-  const loadAll = () => {
-    
-  };
-
   return (
     <div className={`flex-grow`}>
       <Author
@@ -132,7 +128,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
         </a>
       </Show>
       <Show when={!isPreview && !asInlineQuote && loadReactions}>
-        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} wot={wot} loadAll={loadAll} />
+        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} wot={wot} />
       </Show>
       <Show when={isQuote && !loadReactions}>
         <div style={{ marginBottom: '15px' }}></div>

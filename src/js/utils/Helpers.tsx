@@ -49,7 +49,7 @@ export default {
     return (
       navigator.standalone ||
       window.matchMedia('(display-mode: standalone)').matches ||
-      document.referrer.includes('android-app://iris.to')
+      document.referrer.includes('android-app://dpeep.com')
     );
   },
 

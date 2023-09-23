@@ -1,5 +1,6 @@
-import { memo, useEffect, useState } from 'react';
-import { nip19 } from 'nostr-tools';
+import { memo } from 'react';
+import { useEffect, useState } from 'preact/hooks';
+import { nip19, Event } from 'nostr-tools';
 import { Link } from 'preact-router';
 
 import EventDB from '@/nostr/EventDB';
@@ -13,13 +14,19 @@ import Name from '../user/Name';
 import TrustScore from '../../dwotr/model/TrustScore';
 import { RenderScoreDistrustLink, RenderScoreTrustLink } from '@/dwotr/components/RenderGraph';
 import Key from '@/nostr/Key';
-import reactionManager from '@/dwotr/ReactionManager';
-import { STR, UID } from '@/utils/UniqueIds';
-import { set, throttle } from 'lodash';
+import { ID, STR, UID } from '@/utils/UniqueIds';
+import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 
 type ReactionData = {
   pubkey: string;
   text?: string;
+};
+
+type ReactionsListProps = {
+  event: Event;
+  wot: any;
+  loadGlobal: boolean;
+  likes: Set<UID>;
 };
 
 const Reaction = memo(({ data }: { data: ReactionData }) => {
@@ -35,12 +42,12 @@ const Reaction = memo(({ data }: { data: ReactionData }) => {
   );
 });
 
-const ReactionsList = ({ event, wot }) => {
+const ReactionsList = ({event, wot, loadGlobal, likes}: ReactionsListProps) => {
 
-  const [likes, setLikes] = useState(reactionManager.getLikes(event.id));
-  const [reposts, setReposts] = useState(Events.repostsByMessageId.get(event.id) || new Set());
-  const [zapAmountByUser, setZapAmountByUser] = useState(new Map());
-  const [formattedZapAmount, setFormattedZapAmount] = useState('');
+  //const [likes, setLikes] = useState(reactionManager.getLikes(event.id));
+  const { zapAmountByUser, formattedZapAmount } = useZaps(event.id, loadGlobal);
+  const reposts = useReposts(event.id, loadGlobal);
+
   const [modalReactions, setModalReactions] = useState([] as ReactionData[]);
   const [modalTitle, setModalTitle] = useState('');
 
@@ -48,60 +55,11 @@ const ReactionsList = ({ event, wot }) => {
   const hasTrust = score?.hasTrustScore();
   const hasDistrust = score?.hasDistrustScore();
 
-  useEffect(() => {
-    const unsubFuncs = [] as any[]; // To store unsubscribe functions
-
-    const setLikesThrottle = throttle((likes: Set<UID>) => {
-      setLikes(new Set(likes)); // Update likes state with new likes set
-    }, 1000);
-
-    // const handleLikes = (likes: Set<UID>, downVotes: Set<UID>) => {
-    //   setLikesThrottle(likes);
-    // };
-
-    const handleReposts = (repostedBy) => {
-      setReposts(new Set(repostedBy));
-    };
-
-    const handleZaps = (zaps) => {
-      const zapData = new Map<string, number>();
-      let totalZapAmount = 0;
-      const zapEvents = Array.from(zaps?.values()).map((eventId) => EventDB.get(eventId));
-      zapEvents.forEach((zapEvent) => {
-        const bolt11 = zapEvent?.tags.find((tag) => tag[0] === 'bolt11')?.[1];
-        if (!bolt11) {
-          console.log('Invalid zap, missing bolt11 tag');
-          return;
-        }
-        const decoded = decodeInvoice(bolt11);
-        const amount = (decoded?.amount || 0) / 1000;
-        totalZapAmount += amount;
-        const zapper = getZappingUser(zapEvent);
-        if (zapper) {
-          const existing = zapData.get(zapper) || 0;
-          zapData.set(zapper, existing + amount);
-        }
-      });
-
-      setZapAmountByUser(zapData);
-      setFormattedZapAmount(totalZapAmount > 0 ? formatAmount(totalZapAmount) : '');
-    };
-
-    // Subscribe to each event and store unsubscribe function
-    unsubFuncs.push(reactionManager.subscribeRelays(event.id, setLikesThrottle));
-    unsubFuncs.push(Events.getReposts(event.id, handleReposts));
-    unsubFuncs.push(Events.getZaps(event.id, handleZaps));
-
-    // Return cleanup function
-    return () => {
-      unsubFuncs.forEach((unsub) => unsub());
-    };
-  }, [event]);
-
-  const hasReactions = likes.size > 0 || reposts.size > 0 || zapAmountByUser.size > 0;
+  // Dont show reactions if there are none
+  const hasReactions = likes.size > 0 || reposts.size > 0 || zapAmountByUser.size > 0 || hasTrust || hasDistrust;
   if (!hasReactions) return null;
-  const likesdata = Array.from(likes).map((id) => ({ pubkey:STR(id) })) as ReactionData[];
 
+  const likesdata = Array.from(likes).map((id) => ({ pubkey: STR(id) })) as ReactionData[];
 
   return (
     <>
@@ -119,7 +77,7 @@ const ReactionsList = ({ event, wot }) => {
         </Modal>
       )}
       <div className="flex items-center gap-4 py-2">
-        {likesdata.length > 0 && (
+        {likes.size > 0 && (
           <div className="flex-shrink-0">
             <a
               onClick={() => {
@@ -128,7 +86,7 @@ const ReactionsList = ({ event, wot }) => {
               }}
               className="cursor-pointer hover:underline"
             >
-              {likesdata.length} <span className="text-neutral-500">Likes</span>
+              {likes.size} <span className="text-neutral-500">Likes</span>
             </a>
           </div>
         )}
@@ -169,12 +127,20 @@ const ReactionsList = ({ event, wot }) => {
         )}
         {hasTrust && (
           <div className="flex-shrink-0" title="Degree 0/1/2">
-            {RenderScoreTrustLink(score, Key.toNostrBech32Address(event.id, 'note') as string, true)}
+            {RenderScoreTrustLink(
+              score,
+              Key.toNostrBech32Address(event.id, 'note') as string,
+              true,
+            )}
           </div>
         )}
         {hasDistrust && (
           <div className="flex-shrink-0" title="Degree 0/1/2">
-            {RenderScoreDistrustLink(score, Key.toNostrBech32Address(event.id, 'note') as string, true)}
+            {RenderScoreDistrustLink(
+              score,
+              Key.toNostrBech32Address(event.id, 'note') as string,
+              true,
+            )}
           </div>
         )}
       </div>
@@ -184,3 +150,82 @@ const ReactionsList = ({ event, wot }) => {
 };
 
 export default ReactionsList;
+
+
+const useZaps = (messageId: string, loadGlobal: boolean) => {
+  const [zapAmountByUser, setZapAmountByUser] = useState(new Map());
+  const [formattedZapAmount, setFormattedZapAmount] = useState('');
+
+  const isMounted = useIsMounted();
+
+  useEffect(() => {
+    const handleZaps = (zaps) => {
+      if (!isMounted()) return;
+
+      const zapData = new Map<string, number>();
+      let totalZapAmount = 0;
+      const zapEvents = Array.from(zaps?.values()).map((eventId) => EventDB.get(eventId));
+      zapEvents.forEach((zapEvent) => {
+        const bolt11 = zapEvent?.tags.find((tag) => tag[0] === 'bolt11')?.[1];
+        if (!bolt11) {
+          console.log('Invalid zap, missing bolt11 tag');
+          return;
+        }
+        const decoded = decodeInvoice(bolt11);
+        const amount = (decoded?.amount || 0) / 1000;
+        totalZapAmount += amount;
+        const zapper = getZappingUser(zapEvent);
+        if (zapper) {
+          const existing = zapData.get(zapper) || 0;
+          zapData.set(zapper, existing + amount);
+        }
+      });
+
+      setZapAmountByUser(zapData);
+      setFormattedZapAmount(totalZapAmount > 0 ? formatAmount(totalZapAmount) : '');
+    };
+
+    // Set initial zaps
+    // TODO: This is not working, need to fix
+
+    if(!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
+
+    // Subscribe
+    let unsub = Events.getZaps(messageId, handleZaps)
+
+    // Return cleanup function
+    return () => {
+      unsub?.();
+    };
+  }, [messageId, loadGlobal]);
+
+  return { zapAmountByUser, formattedZapAmount };
+}
+
+const useReposts = (messageId: string, loadGlobal: boolean) => {
+  const [reposts, setReposts] = useState(new Set());
+  const isMounted = useIsMounted();
+
+  useEffect(() => {
+
+    const handleReposts = (repostedBy) => {
+      if (!isMounted()) return;
+      setReposts(new Set(repostedBy));
+    };
+
+    // Set initial reposts
+    setReposts(Events.repostsByMessageId.get(messageId) || new Set());
+
+    if(!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
+
+    // Subscribe
+    let unsub = Events.getReposts(messageId, handleReposts)
+
+    // Return cleanup function
+    return () => {
+      unsub?.();
+    };
+  }, [messageId, loadGlobal]);
+
+  return reposts;
+}
