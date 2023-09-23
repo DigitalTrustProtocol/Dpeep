@@ -1,8 +1,6 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
-import WOTPubSub from './network/WOTPubSub';
 import { MAX_DEGREE } from './model/TrustScore';
-import dwotrDB from './network/DWoTRDexie';
 import { debounce } from 'lodash';
 import Key from '@/nostr/Key';
 import { ID } from '@/utils/UniqueIds';
@@ -10,6 +8,8 @@ import { ID } from '@/utils/UniqueIds';
 import verticeMonitor from './VerticeMonitor';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
+import wotPubSub from './network/WOTPubSub';
+import storage from './Storage';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -18,18 +18,12 @@ export type ReadyCallback = () => void;
 export const TRUST1 = 'trust1';
 
 class GraphNetwork {
-  db: typeof dwotrDB;
-
   localDataLoaded = false;
 
   g = new Graph();
 
   sourceKey: string | undefined;
   sourceId: number = -1;
-
-  wotPubSub: typeof WOTPubSub | undefined;
-  unsubs = {};
-  subscriptionsCounter = 0;
 
   maxDegree = MAX_DEGREE;
   readyCallbacks: ReadyCallback[] = [];
@@ -42,15 +36,10 @@ class GraphNetwork {
   profilesLoaded = false;
 
   metrics = {
-    vertices: 0,
-    edges: 0,
+    Vertices: 0,
+    Edges: 0,
+    SubscribedtoRelays: 0,
   };
-
-
-  constructor(wotPubSub: typeof WOTPubSub, db: typeof dwotrDB) {
-    this.wotPubSub = wotPubSub;
-    this.db = db;
-  }
 
   async init(source: string) {
     this.sourceKey = source;
@@ -60,7 +49,7 @@ class GraphNetwork {
     this.g.addVertice(this.sourceId); // Add the source vertice to the graph
 
     // Load all vertices from the DB into the graph
-    let list = await this.db.edges.toArray();
+    let list = await storage.edges.toArray();
     for (let record of list) {
       this.g.addEdge(record, false); // Load all edges from the DB into the graph with partial data
     }
@@ -129,7 +118,7 @@ class GraphNetwork {
         if (preVal == currentVal) return; // In the end, if trust value has not changed, then don't publish the trust to the network
 
         // Publish the trust to the network is pretty slow, may be web workers can be used to speed it up UI
-        graphNetwork.wotPubSub?.publishTrust(
+        wotPubSub.publishTrust(
           to,
           currentVal,
           comment,
@@ -194,18 +183,23 @@ class GraphNetwork {
 
     if (this.processGraph) {
       // TODO: Make this async as it is slow
-      graphNetwork.updateSubscriptions();
+      graphNetwork.subscribeToRelays();
     }
 
     this.processGraph = false;
     this.processItems = {};
   }
 
-
-
-  updateSubscriptions() {
+  subscribeToRelays() {
     let vertices = this.g.getUnsubscribedVertices(this.maxDegree);
-    this.subscribeToTrustEvents(vertices);
+    if (vertices.length == 0) return; // Nothing to subscribe to
+
+    let authors = vertices.map((v) => v.id);
+    vertices.forEach((v) => (v.subscribed = 1)); // Mark the vertices as subscribed with the current subscription counter
+
+    this.metrics.SubscribedtoRelays += authors.length;
+
+    wotPubSub.subscribeAuthors(authors); // Subscribe to trust events
   }
 
   async setTrust(props: any, isExternal: boolean): Promise<any> {
@@ -238,7 +232,7 @@ class GraphNetwork {
       record.context = context;
       record.note = note;
       record.timestamp = timestamp;
-      await this.db.edges.put(record);
+      await storage.edges.put(record);
 
       edge = this.g.addEdge(record, false); // Add the record to the graph and return the graph edge
 
@@ -263,11 +257,11 @@ class GraphNetwork {
 
         if (edge.val == 0 && isExternal) {
           // Delete the edge if the value is 0 / neutral and it is an external event
-          await this.db.edges.delete(key);
+          await storage.edges.delete(key);
           this.g.removeEdge(edge);
           edge = undefined;
         } else {
-          await this.db.edges.update(key, updateObject);
+          await storage.edges.update(key, updateObject);
         }
 
         change = true;
@@ -275,29 +269,6 @@ class GraphNetwork {
     }
 
     return { edge, preVal, change };
-  }
-
-  subscribeToTrustEvents(vertices: Array<Vertice>) {
-    if (vertices.length == 0) return; // Nothing to subscribe to
-
-    let self = this;
-    let id = this.subscriptionsCounter++;
-
-    // for (let v of vertices) {
-    //   if (since < v.timestamp) since = v.timestamp;
-    //   authors.push(STR(v.id));
-    // }
-
-    let authors = vertices.map((v) => v.id);
-    vertices.forEach((v) => (v.subscribed = id)); // Mark the vertices as subscribed with the current subscription counter
-
-    self.unsubs[id] = self.wotPubSub?.subscribeAuthors(authors); // Subscribe to trust events
-  }
-
-  unsubscribeAll() {
-    for (let key in this.unsubs) {
-      this.unsubs[key]?.();
-    }
   }
 
   async setTrustAndProcess(
@@ -356,13 +327,13 @@ class GraphNetwork {
     return vertice.score.distrusted();
   }
 
-  udpateMetrics() {
-    this.metrics.vertices = Object.entries(this.g.vertices).length;
-    this.metrics.edges = Object.entries(this.g.edges).length;
+  getMetrics() {
+    this.metrics.Vertices = Object.entries(this.g.vertices).length;
+    this.metrics.Edges = Object.entries(this.g.edges).length;
     return this.metrics;
   }
 }
 
-const graphNetwork = new GraphNetwork(WOTPubSub, dwotrDB);
+const graphNetwork = new GraphNetwork();
 
 export default graphNetwork;

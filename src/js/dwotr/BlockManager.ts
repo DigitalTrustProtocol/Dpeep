@@ -100,9 +100,11 @@ class BlockManager {
 
 
   async handle(event: Event) {
-    let profileId = ID(event.pubkey);
+    let authorId = ID(event.pubkey);
 
-    let sourceV = graphNetwork.g.addVertice(profileId) as BlockVertice;
+    if (blockManager.isBlocked(authorId)) return;
+
+    let sourceV = graphNetwork.g.addVertice(authorId) as BlockVertice;
 
     // Ignore events that are older than the last time we updated the data
     if (sourceV.blockTime && sourceV.blockTime >= event.created_at) return; // Event is older than the current data, ignore it

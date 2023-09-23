@@ -9,8 +9,9 @@ export const useFollows = (key = Key.getPubKey()) => {
   const [followedUsers, setFollowedUsers] = useState<Array<string>>([]);
 
   useEffect(() => {
+    let users = followManager.getFollows(ID(key));
 
-    setFollowedUsers(followManager.getFollowedUsers(ID(key)).map((n) => STR(n)));
+    setFollowedUsers([...users].map((n) => STR(n)));
   }, [key]);
 
 

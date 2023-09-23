@@ -1,5 +1,61 @@
 import Key from "@/nostr/Key";
+import { ID, UID } from "@/utils/UniqueIds";
 import { Event } from "nostr-tools";
+
+
+
+export class EventTag {
+
+  name: string = '';
+  source: Array<string> = [];
+  valid: boolean = true;
+
+}
+
+export class PTagContact extends EventTag {
+  hex: string = '';
+  id: UID = 0;
+  relayUrl?: string;
+  petName?: string;
+
+  static parse(tag: Array<string>) : PTagContact {
+    let p = new PTagContact();
+    p.name = tag[0];
+    p.source = tag;
+    p.hex = Key.toNostrHexAddress(tag[1]) as string; // Convert to hex;
+    if(!p.hex) {
+      p.valid = false;
+      return p;    
+    }
+
+    p.id = ID(p.hex);
+    p.relayUrl =tag.length > 2 ? tag[2] : undefined;
+    p.petName = tag.length > 3 ? tag[3] : undefined;
+    return p;
+  }
+}
+
+
+export class EventMetadata {
+  id: UID = 0;
+  hex: string = '';
+  authorId: UID = 0;
+  source?: Event;
+  valid: boolean = true;
+
+  static parse(event: Event) {
+    let m = new EventMetadata();
+    m.source = event;
+    m.id = ID(event.id);
+    m.hex = Key.toNostrHexAddress(event.pubkey) as string; // Convert to hex;
+    if(!m.hex) {
+      m.valid = false;
+    } else {
+    m.authorId = ID(m.hex);
+    }
+    return m;
+  }
+}
 
 export class EventParser {
 

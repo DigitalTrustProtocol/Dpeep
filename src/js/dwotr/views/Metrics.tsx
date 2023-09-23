@@ -6,12 +6,14 @@ import eventManager from '../EventManager';
 import wotPubSub from '../network/WOTPubSub';
 import Header from '@/components/header/Header';
 import reactionManager from '../ReactionManager';
+import graphNetwork from '../GraphNetwork';
 
 type TestDataProps = {
   path?: string;
 };
 
 class Metrics {
+  Graph: any = {};
   Profiles: any = {};
   Events: any = {};
   Follow: any = {};
@@ -32,6 +34,7 @@ const useMetrics = (): { data: Metrics; time: number } => {
     const intervalRun = (): Metrics => {
       let d = new Metrics();
 
+      d.Graph = graphNetwork.getMetrics();
       d.Profiles = profileManager.getMetrics();
       d.Events = eventManager.getMetrics();
       d.Follow = followManager.getMetrics();
@@ -88,7 +91,10 @@ const MetricsView = (props: TestDataProps) => {
   const content = () => (
     <>
       Dianogstics - {new Date(time).toLocaleString()}
+      <div className="flex flex-row flex-wrap">
       {groups?.map((group) => renderGroup(group.name, group.value))}
+      </div>
+
     </>
   );
 

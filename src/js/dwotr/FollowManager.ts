@@ -8,24 +8,29 @@ import Subscriptions from './model/Subscriptions';
 import profileManager from './ProfileManager';
 import storage from './Storage';
 import graphNetwork from './GraphNetwork';
+import { EventParser, PTagContact } from './Utils/EventParser';
+import blockManager from './BlockManager';
+import Relays, { PublicRelaySettings } from '@/nostr/Relays';
+import EventDB from '@/nostr/EventDB';
 
 //const FOLLOW_STORE_KEY = 'myFollowList';
 const DegreeInfinit = 99;
 
-interface Item {
-  id: UID;
-  following?: Set<UID>;
-  followedBy?: Set<UID>;
-  degree?: number; // Degree of following
-  timestamp?: number; // Last time we received an event from this profile
-  pubsubRegistered?: boolean; // True if we have registered for nostr pubsub events from this profile
+export class FollowItem {
+  id: UID = 0;
+  follows: Set<UID> = new Set();
+  followedBy: Set<UID> = new Set();
+  degree: number = DegreeInfinit; // Degree of following
+  timestamp: number = 0; // Last time we received an event from this profile
+  pubsubRegistered: boolean = false; // True if we have registered for nostr pubsub events from this profile
+  relays = new Map<string, PublicRelaySettings>();
 }
 
 class FollowManager {
   filterEnabled = true;
   followSuggestionsSetting = undefined;
 
-  items = new Map<UID, Item>();
+  items = new Map<UID, FollowItem>();
 
   UISubs = new Subscriptions(); // Callbacks to call when the follower change
 
@@ -43,75 +48,72 @@ class FollowManager {
 
   metrics = {
     TableCount: 0,
-    EventsLoaded: 0,
-    ItemsLoaded: 0,
-    ItemsTotal: 0,
+    Authors: 0,
     UISubs: 0,
-    SubscribeQueue: 0,
-    UnsubscribeQueue: 0,
+    // SubscribeQueue: 0,
+    // UnsubscribeQueue: 0,
+    SubscribedToRelays: 0,
   };
 
   isFollowedByMe(profileId: UID): boolean {
-    return this.isFollowedBy(profileId);
+    return followManager.isFollowedBy(profileId);
   }
 
-  isFollowedBy(profileId: UID, byId = ID(Key.getPubKey())): boolean {
-    return this.items?.get(profileId)?.followedBy?.has(byId) || false;
+  isFollowingMe(profileId: UID): boolean {
+    return followManager.isFollowedBy(ID(Key.getPubKey()), profileId);
+  }
+
+  isFollowedBy(authorId: UID, byId = ID(Key.getPubKey())): boolean {
+    return followManager.items?.get(authorId)?.followedBy?.has(byId) || false;
   }
 
   isFollowed(profileId: UID): boolean {
-    return !!this.items?.get(profileId)?.followedBy?.size;
+    return !!followManager.items?.get(profileId)?.followedBy?.size;
   }
 
-
-  isAllowed(profileId: UID): boolean {
-    if (!this.filterEnabled) return true; // No filter, so all profiles are allowed
-    if(this.isFollowed(profileId)) return true; // Profile is followed, so it is allowed
-    if(graphNetwork.isTrusted(profileId)) return true; // Profile is trusted, so it is allowed
-    return false; // Profile is not followed or trusted, so it is not allowed 
+  isFollowing(authorId: UID, byId = ID(Key.getPubKey())): boolean {
+    return followManager.items?.get(byId)?.follows?.has(authorId) || false;
   }
 
+  isAllowed(authorId: UID): boolean {
+    if (!this.filterEnabled) return true; // No filter, so all authors are allowed
+    if (graphNetwork.isTrusted(authorId)) return true; // Author is trusted, so it is allowed
+    if (this.isFollowing(authorId)) return true; // Author is followed, so it is allowed
+    return false;
+  }
 
   async handle(event: Event) {
-    let pubkeyId = ID(event.pubkey);
+    let authorId = ID(event.pubkey);
     let myId = ID(Key.getPubKey());
-    let isMe = pubkeyId === myId;
+    let isMe = authorId === myId;
 
     if (isMe) {
       console.log('My own contact event', event);
     }
 
-    let item = this.#getItem(pubkeyId);
+    // Ignore events from profiles that are blocked
+    if (blockManager.isBlocked(authorId)) return;
+
+    let item = this.getItem(authorId);
     if (event.created_at <= (item.timestamp || 0)) {
       // Ignore old events
       // Replaypool promised to not send old events, but they do.
       // This is a check and should never happen and code is to be removed
-      console.error('Handling following event that is older than a previous one!!!!', event);
+      //console.error('Handling following event that is older than a previous one!!!!', event);
       return;
     }
 
-    // Ignore events from profiles that are not in the filter or trusted
-    if(!this.isFollowed(pubkeyId) && !isMe) {
-      if(!graphNetwork.isTrusted(pubkeyId)) return; // Ignore events from profiles that are not in the filter or trusted
+    item.degree = this.getDegree(authorId, myId);
 
-      item.degree = 1; // Trust is degree 1
-    }
-
-    if(item.degree === undefined || item.degree >= DegreeInfinit)
-      item.degree = this.getDegree(item);
-
-    if (!isMe || item.degree > this.filterDegree) return; // Ignore events from profiles that are not in the filter
-
-    let pTags = this.addEvent(event, item);
-
-    this.#eventEffects(item, pTags);
-
-    this.updateNetwork(); // Update the network subscriptions based on the new event
-
+    let metadata = this.addEvent(event, item);
+    
     // This is async
-    this.save(event);
-
-    //this.dispatchAll();
+    if (item.degree < 3) {
+      // Only save events from profiles that are followed or trusted
+      this.#eventEffects(item, metadata);
+      this.save(event);
+    }
+    EventDB.insert(event);
   }
 
   updateNetwork() {
@@ -123,209 +125,186 @@ class FollowManager {
 
   #updateSubscriptions() {
     let list = this.subsQueue;
-    list.forEach((id) => this.#getItem(id).pubsubRegistered = true);
+    list.forEach((id) => (this.getItem(id).pubsubRegistered = true));
     this.subsQueue = new Set();
     wotPubSub.subscribeAuthors(list);
   }
 
   #updateUnsubscriptions() {
     let list = this.unsubQueue;
-    list.forEach((id) => this.#getItem(id).pubsubRegistered = false);
+    list.forEach((id) => (this.getItem(id).pubsubRegistered = false));
     this.unsubQueue = new Set();
     wotPubSub.unsubscribeFlow(list);
   }
 
-
-
-
-  getDegree(item: Item): number {
-    if(item.id == ID(Key.getPubKey())) return 0; // Owner is always degree 0
-
-    if (item.degree && item.degree < DegreeInfinit) return item.degree;
-
-    return this.#calculateDegree(item);
-  }
-
-  #calculateDegree(item: Item): number {
-    let followedBy = this.#getFollowedBySet(item);
-
-    let list = [...followedBy].map((id) => this.#getItem(id).degree || DegreeInfinit);
-
-    let degree = Math.min(...list);
-
-    return degree < this.filterDegree ? degree + 1 : DegreeInfinit;
-  }
-
-  #getUrls(pTags: Array<Array<string>> | undefined) {
-    return pTags?.map((tag) => tag[2]).filter((url) => url) || []; // Get urls from p tags, check if they are valid urls
-  }
-
-  #getPetNames(pTags: Array<Array<string>> | undefined) {
-    return (
+  #getPetNames(metadata: any | undefined) {
+    let pTags = metadata?.pTags;
+    let names =
       pTags
-        ?.filter((tag) => tag[3]?.length >= 1)
+        ?.filter((tag) => tag.petName)
         .map((tag) => {
-          return { id: ID(tag[1]), name: tag[3] };
-        }) || []
-    ); // Get pet names from p tags,
+          return { id: tag.id, name: tag.petName };
+        }) || [];
+    return names;
   }
 
-  addEvent(event: Event, item: Item): Array<Array<string>> | undefined {
-    let pTags = event.tags?.filter((tag) => tag[0] === 'p').filter((tag) => tag[1]?.length == 64);
-    if (!pTags) return undefined; // No p tags in this event
+  addEvent(event: Event, item: FollowItem): any | undefined {
+    let metadata = this.parseEvent(event);
+    if (metadata.pTags.length === 0) return undefined;
 
-    let pKeys = pTags?.map((tag) => tag[1]);
-    let pKeySet = new Set<UID>(pKeys.map(ID));
+    let pKeys = metadata.pTags.map((tag) => tag.id);
+    let pKeySet = new Set<UID>(pKeys);
 
-    let pubkeyId = ID(event.pubkey);
+    let authorId = metadata.authorId;
 
-    let following = this.#getFollowingSet(item);
+    let follows = item.follows;
 
-    let deltaAdd = pKeys.map(ID).filter((id) => !following.has(id));
-    let deltaDelete = [...following].filter((id) => !pKeySet.has(id));
+    let deltaAdd = pKeys.filter((id) => !follows.has(id));
+    let deltaDelete = [...follows].filter((id) => !pKeySet.has(id));
 
-    let childDegree = item.degree ? item.degree + 1 : DegreeInfinit;
+    let childDegree = item.degree < this.filterDegree ? item.degree + 1 : DegreeInfinit;
 
     for (const id of deltaAdd) {
-      let item = this.#getItem(id, childDegree);
-      this.addFollower(item, pubkeyId);
-      if (this.#possibleSubscription(item)) this.subsQueue.add(item.id);
+      let item = this.getItem(id, childDegree);
+      this.addFollower(item, authorId);
+      //if (this.#possibleSubscription(item)) this.subsQueue.add(item.id);
     }
 
     for (const id of deltaDelete) {
-      let item = this.#getItem(id);
-      this.removeFollower(item, pubkeyId);
-      if (this.#possibleUnsubscription(item)) this.unsubQueue.add(item.id);
+      let item = this.getItem(id);
+      this.removeFollower(item, authorId);
+      //if (this.#possibleUnsubscription(item)) this.unsubQueue.add(item.id);
     }
+
+    item.relays = Relays.getUrlsFromFollowEvent(event);
 
     item.timestamp = event.created_at;
 
-    return pTags;
+    return metadata;
   }
 
-  #getItem(profileId: UID, degree = DegreeInfinit): Item {
+  parseEvent(event: Event) {
+    let { p } = EventParser.parseTagsArrays(event);
+
+    let metadata = {
+      id: ID(event.id),
+      authorId: ID(event.pubkey),
+      pTags: p.map(PTagContact.parse).filter((tag) => tag.valid), // Parse p tags and filter out invalid tags
+    };
+    return metadata;
+  }
+
+  getItem(profileId: UID, degree = DegreeInfinit): FollowItem {
     let item = this.items.get(profileId);
     if (!item) {
-      item = { id: profileId, degree };
-
+      item = new FollowItem();
+      item.id = profileId;
+      item.degree = degree;
       this.items.set(profileId, item);
     }
     return item;
   }
 
-  #eventEffects(item: Item, pTags: Array<Array<string>> | undefined) {
+  #eventEffects(item: FollowItem, metadata: any | undefined) {
     let myId = ID(Key.getPubKey());
 
     if (myId === item.id) {
-      wotPubSub.updateRelays(this.#getUrls(pTags)); // Update relays from the p tags
+      let urls = metadata.pTags
+        .filter((tag) => tag.valid && tag.relayUrl)
+        .map((tag) => tag.relayUrl);
+      wotPubSub.updateRelays(urls); // Update relays from the p tags
 
       this.updateFollowSuggestionsSetting();
     }
+
     // Set pet names
-    profileManager.setPetNames(item.id, this.#getPetNames(pTags)); // Update pet names from the p tags
+    profileManager.setPetNames(item.id, this.#getPetNames(metadata)); // Update pet names from the p tags
   }
 
-  #possibleSubscription(item: Item) {
-    if (item?.degree === undefined) return false;
-    if (item?.degree > this.filterDegree) return false;
-    if (item?.pubsubRegistered) return false;
-    return true;
-  }
-
-  #possibleUnsubscription(item: Item) {
-    if (!item?.pubsubRegistered) return false; // Do not unsubscribe if not subscribed
-    if (item.followedBy?.size) return false; // Do not unsubscribe if item are followed by someone
-    return true;
-  }
-
-  async onFollow(profileId: UID, isFollowed: boolean) {
+  setFollow(profiles: Array<UID>, isFollowed: boolean) {
     let myId = ID(Key.getPubKey());
 
-    let item = this.#getItem(profileId);
-    if (isFollowed) {
-      this.addFollower(item, myId);
-    } else {
-      this.removeFollower(item, myId);
+    for (const profileId of profiles) {
+      let item = this.getItem(profileId);
+      if (isFollowed) {
+        this.addFollower(item, myId);
+      } else {
+        this.removeFollower(item, myId);
+      }
     }
 
-    this.UISubs.dispatch(profileId, isFollowed);
+    //   this.UISubs.dispatch(profileId, isFollowed);
 
-    let event = await this.createEvent();
+    let event = this.createEvent();
+
     this.save(event);
+    EventDB.insert(event);
     wotPubSub.publish(event);
+    this.subscribeToRelays();
   }
 
-  addFollower(target: Item, followerId: UID): void {
-    let followedBy = this.#getFollowedBySet(target);
-    followedBy.add(followerId);
+  addFollower(target: FollowItem, followerId: UID): void {
+    target.followedBy.add(followerId);
 
-    let source = this.#getItem(followerId);
-    let following = this.#getFollowingSet(source);
-    following.add(target.id);
+    let source = this.getItem(followerId);
+    source.follows.add(target.id);
   }
 
-  removeFollower(target: Item, followerId: UID): void {
-    let followedBy = this.#getFollowedBySet(target);
+  removeFollower(target: FollowItem, followerId: UID): void {
+    let followedBy = target.followedBy;
     followedBy.delete(followerId);
 
-    let source = this.#getItem(followerId);
-    let following = this.#getFollowingSet(source);
-    following.delete(target.id);
+    let source = this.getItem(followerId);
+    source.follows.delete(target.id);
   }
 
-  #getFollowingSet(item: Item): Set<UID> {
-    return item.following || (item.following = new Set());
-  }
-
-  #getFollowedBySet(item: Item): Set<UID> {
-    return item.followedBy || (item.followedBy = new Set());
-  }
-
-  
   async save(event: Event | Partial<Event>) {
-    //localState.get(FOLLOW_STORE_KEY).put(JSON.stringify(event));
-    //IndexedDB.saveEvent(event as Event & { id: string });
-    await storage.follows.put(event as Event & { id: string });
+    await storage.follows.put(event as Event & { pubkey: string });
   }
 
   // The load system supports multiple degrees of following
   // startId is the profile from which in focus of loading
-  async load(startId: UID = ID(Key.getPubKey())) {
-    let list = await storage.follows.toArray(); // Very fast load of all follow events
-    let events: Map<UID, Event> = new Map(list.map((event) => [ID(event.pubkey), event]));
-
-    this.metrics.EventsLoaded = list.length;
-    this.metrics.ItemsLoaded = this.items.size;
-
-    this.getMetrics();
-
-    // Always create an item for the owner
-    let startItem = this.#getItem(startId, 0);
-
+  async load(myId: UID = ID(Key.getPubKey())) {
     this.loadLegacy();
 
-    // Load my own following
-    let myEvent = events.get(startId);
-    if (myEvent) {
-      // Add the Event to the following list
-      this.#eventEffects(startItem, this.addEvent(myEvent, startItem));
-      events.delete(startId);
+    // Need to load my own event first, so we can set the follow list
+    let myEvent = await storage.follows.get(STR(myId)); // Load of my own follow event
+    if (myEvent) this.#loadEvent(myId, myEvent); // Load my own follow event
+
+    let list = await storage.follows.toArray(); // Very fast load of all follow events
+
+    let deltaDelete: Array<string> = [];
+
+    for (const event of list) {
+      let loaded = this.#loadEvent(myId, event);
+
+      if (!loaded) deltaDelete.push(event.pubkey);
     }
 
-    if (this.filterDegree > 0) {
-      this.#addTrustedEvents(events);
-    }
+    // Delete events that are not trusted or followed
+    if (deltaDelete.length > 0) await storage.follows.bulkDelete(deltaDelete);
+  }
 
-    // The WOT is more than enough to load in followings, a minor graph can quickly become huge number of followings
-    // if (this.filterDegree > 1) {
-    //   this.#addSecondaryEvents(events);
-    // }
+  #loadEvent(myId: UID, event: Event): boolean {
+    let authorId = ID(event.pubkey);
+    let item = this.items.get(authorId); // Get the item if it exists
+    if (item && item.timestamp >= event.created_at) return true; // Ignore already loaded events
 
-    // Remove all remaining events from Storage, as they are not needed anymore
-    if (events.size > 0) {
-      await this.#removeRemainingEvents(events);
-    }
+    let degree = this.getDegree(authorId, myId);
+    if (degree >= this.filterDegree) return false; // Ignore events from profiles that are not trusted or followed
 
+    if (!item) item = this.getItem(authorId, degree); // Create a new item if it does not exist
+
+    this.addEvent(event, item);
+
+    return true;
+  }
+
+  getDegree(authorId: UID, myId: UID): number {
+    if (authorId == myId) return 0;
+    if (this.isFollowing(authorId, myId)) return 1;
+    if (graphNetwork.isTrusted(authorId)) return 1;
+    return DegreeInfinit;
   }
 
   loadLegacy() {
@@ -344,64 +323,28 @@ class FollowManager {
     });
   }
 
+  createEvent(): Event {
+    let myId = ID(Key.getPubKey());
+    let item = this.getItem(myId);
 
-  #addTrustedEvents(events: Map<UID, Event>) {
-    // Load all trusted followings
-    for (const id of events.keys()) {
-      if (!graphNetwork.isTrusted(id)) continue;
+    // Add pet names to p tags
+    let pTags = [...item.follows].map((id) => ['p', STR(id), '']);
 
-      let event = events.get(id) as Event;
-
-      let item = this.#getItem(id);
-      item.degree = 1;
-      // Add the Event to the following list
-      this.#eventEffects(item, this.addEvent(event, item));
-
-      events.delete(id);
+    const relaysObj: any = {};
+    for (const url of Relays.enabledRelays()) {
+      relaysObj[url] = { read: true, write: true };
     }
-  }
-
-  #addSecondaryEvents(events: Map<UID, Event>, filterDegree = 2) {
-    // Load all secondary followings
-    let more = true; // Keep looping until we are done
-    let degree = 1;
-
-    while (events.size > 0 && more && degree < filterDegree) {
-      more = false; // Assume we are done
-      degree++; // Increase the degree
-
-      for (const id of events.keys()) {
-        if (!this.isFollowed(id)) continue; // We are not following this profile
-
-        more = true; // We are not done, as we found a new profile to follow
-        let event = events.get(id) as Event;
-
-        let item = this.#getItem(id);
-        item.degree = degree;
-        // Add the Event to the following list
-        this.#eventEffects(item, this.addEvent(event, item));
-        events.delete(id);
-      }
-    }
-  }
-
-  async #removeRemainingEvents(events: Map<UID, Event>) {
-    // Remove all remaining events from Storage, as they are not needed anymore
-    let keys = [...events.keys()].map((id) => STR(id));
-    await storage.follows.bulkDelete(keys);
-  }
-
-  async createEvent(): Promise<Partial<Event>> {
-    let item = this.#getItem(ID(Key.getPubKey()));
-    let following = this.#getFollowingSet(item);
-    let pTags = [...following].map((id) => ['p', STR(id)]);
+    const content = JSON.stringify(relaysObj);
 
     const event = {
       kind: ContactsKind,
-      content: '',
+      content,
       created_at: getNostrTime(),
       tags: [...pTags],
-    };
+    } as Event;
+
+    wotPubSub.sign(event);
+
     return event;
   }
 
@@ -428,57 +371,67 @@ class FollowManager {
   #setFollowSuggestionsSetting() {
     if (this.followSuggestionsSetting === false) return; // Keep hiding the suggestions
 
-    let item = this.#getItem(ID(Key.getPubKey()));
-    let following = this.#getFollowingSet(item);
-    if (following.size < 10) return; // Keep showing the suggestions
+    let item = this.getItem(ID(Key.getPubKey()));
+    if (item.follows.size < 10) return; // Keep showing the suggestions
 
     localState.get('showFollowSuggestions').put(false);
   }
 
-  nostrSubscribeFollowers(id: UID) {
-    let parentItem = this.#getItem(id);
+  subscribeToRelays() {
+    let authors = followManager.getFollows(ID(Key.getPubKey()));
 
-    let subSet = new Set<UID>();
-    let following = this.#getFollowingSet(parentItem);
-    for(const id of following) {
-        let item = this.#getItem(id);
-        if(this.#possibleSubscription(item)) {
-          item.pubsubRegistered = true;
-          subSet.add(id);
-          this.subsQueue.delete(id);
-        }
-    }
+    this.metrics.SubscribedToRelays += authors.size;
 
-    wotPubSub.subscribeAuthors(subSet);
+    console.log(
+      'FollowManager - subscribeToRelays',
+      [...authors].map((id) => STR(id)),
+    );
+
+    wotPubSub.subscribeAuthors(authors);
   }
 
-  getFollowedUsers(id: UID = ID(Key.getPubKey())): Array<UID> {
-    let item = this.#getItem(id);
-    let following = this.#getFollowingSet(item);
+  subscribeContacts(id: UID, cb?: (event: Event) => void): any {
+    const callback = (event: Event) => {
+      followManager.handle(event);
+      cb && cb(event);
+    };
+    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], authors: [STR(id)] }], callback);
+  }
 
-    return [...following];
+  subscribeFollowedBy(id: UID, cb?: (event: Event) => void): any {
+    const callback = (event: Event) => {
+      followManager.handle(event);
+      cb && cb(event);
+    };
+    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], '#p': [STR(id)] }], callback);
+  }
+
+  getFollows(id: UID = ID(Key.getPubKey())): Set<UID> {
+    let item = this.getItem(id);
+
+    return item.follows;
+  }
+
+  getFollowedBy(id: UID = ID(Key.getPubKey())): Set<UID> {
+    return this.getItem(id).followedBy;
   }
 
   async tableCount() {
     return await storage.follows.count();
   }
 
-  getMetrics() : any {
-
+  getMetrics(): any {
     this.tableCount().then((count) => {
       this.metrics.TableCount = count;
     });
 
-    this.metrics.ItemsTotal = this.items.size;
+    this.metrics.Authors = this.items.size;
     this.metrics.UISubs = this.UISubs.sizeAll();
-    this.metrics.SubscribeQueue = this.subsQueue.size;
-    this.metrics.UnsubscribeQueue = this.unsubQueue.size;
-
+    //this.metrics.SubscribeQueue = this.subsQueue.size;
+    //this.metrics.UnsubscribeQueue = this.unsubQueue.size;
 
     return this.metrics;
   }
-
-
 }
 
 const followManager = new FollowManager();

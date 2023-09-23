@@ -19,29 +19,16 @@ export class DWoTRDexie extends Dexie {
   constructor() {
     super(DB_NAME);
 
-    this.version(6).stores({
+    this.version(7).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
-      follows: 'id, pubkey',
       reactions: 'id, eventId, profileId, created_at',
+      follows: 'pubkey', // Primary key is the pubkey single event per user.
     });
   }
 }
 let dwotrDB = new DWoTRDexie();  
 
-// dwotrDB.open().then(() => {
-//   console.log('Database opened version:', dwotrDB.verno);
-//   if (dwotrDB.verno <= 4) { // Checking the database version
-//     dwotrDB.delete().then(() => {
-//       // Recreate the database here
-//       console.log('Database deleted version:', dwotrDB.verno);
-//       dwotrDB.open().then(() => {
-//         console.log('Database opened version:', dwotrDB.verno);
-//       });
-//     }
-//     );
-//   }
-// });
 
 export default dwotrDB;
 

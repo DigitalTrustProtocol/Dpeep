@@ -56,13 +56,14 @@ const InitializeWoT = (props: InitializeWoTProps) => {
 
       setFollowStatus('loading');
       followManager.load().then(() => {
-        followManager.nostrSubscribeFollowers(uid); // Subscribe to followers of my profile
+        followManager.subscribeToRelays(); // Subscribe to followers of my profile
+        setFollowStatus('done');
 
         // Wait a little before subscribing to the network
-        setTimeout(() => {
-          followManager.updateNetwork();
-          setFollowStatus('done');
-        }, 100);
+        // setTimeout(() => {
+        //   followManager.updateNetwork();
+        //   setFollowStatus('done');
+        // }, 100);
       });
 
       // Reactions

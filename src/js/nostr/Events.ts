@@ -30,10 +30,8 @@ import EventMetaStore from './EventsMeta';
 import IndexedDB from './IndexedDB';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
-import Relays from './Relays';
 import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
-import profileManager from '../dwotr/ProfileManager';
 import muteManager from '@/dwotr/MuteManager.ts';
 import blockManager from '@/dwotr/BlockManager.ts';
 
@@ -67,7 +65,7 @@ const Events = {
   zapsByNote: new Map<string, SortedLimitedEventSet>(),
   keyValueEvents: new Map<string, Event>(),
   threadRepliesByMessageId: new Map<string, Set<string>>(),
-  likesByMessageId: new Map<string, Set<string>>(),
+  //likesByMessageId: new Map<string, Set<string>>(),
   repostsByMessageId: new Map<string, Set<string>>(),
   handledMsgsPerSecond: 0,
   decryptedMessages: new Map<string, string>(),
@@ -428,6 +426,7 @@ const Events = {
     }
     ID(event.id); // add to UniqueIds
     let publisherId = ID(event.pubkey);
+
     // if (!force && !this.acceptEvent(event)) {
     //   if (retries) {
     //     // should we retry only if iris has been opened within the last few seconds or the social graph changed?
@@ -670,13 +669,13 @@ const Events = {
     event.sig = await Key.sign(event as Event);
     return event as Event;
   },
-  getLikes(id: string, cb?: (likedBy: Set<string>) => void): Unsubscribe {
-    const callback = () => {
-      cb?.(this.likesByMessageId.get(id) ?? new Set());
-    };
-    callback();
-    return PubSub.subscribe({ '#e': [id], kinds: [7] }, callback, false);
-  },
+  // getLikes(id: string, cb?: (likedBy: Set<string>) => void): Unsubscribe {
+  //   const callback = () => {
+  //     cb?.(this.likesByMessageId.get(id) ?? new Set());
+  //   };
+  //   callback();
+  //   return PubSub.subscribe({ '#e': [id], kinds: [7] }, callback, false);
+  // },
 
   getThreadRepliesCount(id: string, cb?: (threadReplyCount: number) => void): Unsubscribe {
     const callback = () => {

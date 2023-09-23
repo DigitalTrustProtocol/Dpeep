@@ -6,7 +6,35 @@ import { throttle } from 'lodash';
 import storage from './Storage';
 import followManager from './FollowManager';
 import Key from '@/nostr/Key';
+import blockManager from './BlockManager';
+import { EventMetadata, EventTag } from './Utils/EventParser';
 
+
+
+// class ETagReaction extends EventTag  {
+
+//   id: UID = 0;
+//   value: number = 0;
+
+//   static parse(tag: Array<string>) : ETagReaction {
+//     let p = new ETagReaction();
+//     p.name = tag[0];
+//     p.source = tag;
+//     p.value = parseInt(tag[1]);
+//     return p;
+//   }
+// }
+// class ReactionMetadata extends EventMetadata {
+
+//   subjectId: UID = 0;
+//   value: number = 0;
+
+//   static parse(event: Event) : ReactionMetadata {
+//     let m = EventMetadata.parse(event);
+
+//     return m as ReactionMetadata;
+//   }
+// }
 
 export class ReactionRecord {
   id: string = '';
@@ -15,7 +43,6 @@ export class ReactionRecord {
   value: number = 0;
   created_at: number = 0;
 }
-
 
 // Blocks that are aggregated from multiple profiles
 class ReactionManager {
@@ -46,7 +73,7 @@ class ReactionManager {
     this.#saveQueue = new Map<number, ReactionRecord>();
 
     this.metrics.Saved += queue.length;
-        
+
     storage.reactions.bulkPut(queue).finally(() => {
       this.#saving = false;
     });
@@ -60,7 +87,6 @@ class ReactionManager {
     return this.#getDownVotes(eventId);
   }
 
-
   // Block the public key using the logged in user as the Blocker
   onLike(subjectEventId: string, subjectEventPubKey: string, value: number = 1) {
     let myKey = Key.getPubKey();
@@ -72,7 +98,7 @@ class ReactionManager {
 
     let event = this.createEvent(subjectEventId, subjectEventPubKey, value, time);
     wotPubSub.publish(event); // Publish the event to the network
-    
+
     let record = {
       id: event.id,
       eventId: subjectEventId,
@@ -83,9 +109,12 @@ class ReactionManager {
 
     this.save(record); // Save the event to the local database
   }
-  
 
   async handle(event: Event) {
+    let authorId = ID(event.pubkey);
+
+    // Ignore events from profiles that are blocked
+    if (blockManager.isBlocked(authorId)) return;
 
     let reverseTags = event.tags.reverse();
     let e = reverseTags.find((tag) => tag[0] === 'e'); // Subject Event ID
@@ -93,21 +122,20 @@ class ReactionManager {
 
     // let p = reverseTags.find((tag) => tag[0] === 'p'); // Subject Event owner pubkey
     // Notify the profile if its me!?
-    
-    let targetEventKey = e[1];
-    if(!targetEventKey) return;
 
-    this.metrics.Handle ++;
+    let targetEventKey = e[1];
+    if (!targetEventKey) return;
+
+    this.metrics.Handle++;
 
     let value = event.content == '+' ? 1 : event.content == '-' ? -1 : 0;
 
     let targetEventId = ID(targetEventKey);
-    let profileId = ID(event.pubkey);
 
-    this.addValue(targetEventId, profileId, value);
+    this.addValue(targetEventId, authorId, value);
 
     // Only save the event if the profile is followed by our WoT
-    if(followManager.isAllowed(profileId)) {
+    if (followManager.isAllowed(authorId)) {
       let record = {
         id: event.id,
         eventId: targetEventKey,
@@ -120,26 +148,30 @@ class ReactionManager {
     }
   }
 
-  addValue(targetId: UID, profileId, value: number) {
-      let likes = this.#getLikes(targetId);
-      let downVotes = this.#getDownVotes(targetId);
+  // parseEvent(event: Event) {
 
-      if(value == 1) {
-        likes.add(profileId);
-        downVotes.delete(profileId);
-      } else if(value == -1) {
-        likes.delete(profileId);
-        downVotes.add(profileId);
-      } else {
-        // No votes given, remove any existing votes
-        likes.delete(profileId);
-        downVotes.delete(profileId);
-      }
+  // }
+
+  addValue(targetId: UID, profileId, value: number) {
+    let likes = this.#getLikes(targetId);
+    let downVotes = this.#getDownVotes(targetId);
+
+    if (value == 1) {
+      likes.add(profileId);
+      downVotes.delete(profileId);
+    } else if (value == -1) {
+      likes.delete(profileId);
+      downVotes.add(profileId);
+    } else {
+      // No votes given, remove any existing votes
+      likes.delete(profileId);
+      downVotes.delete(profileId);
+    }
   }
 
   #getLikes(eventId: UID): Set<UID> {
     let likes = this.likes.get(eventId);
-    if(!likes) {
+    if (!likes) {
       likes = new Set<UID>();
       this.likes.set(eventId, likes);
     }
@@ -148,13 +180,12 @@ class ReactionManager {
 
   #getDownVotes(eventId: UID): Set<UID> {
     let downVotes = this.downVotes.get(eventId);
-    if(!downVotes) {
+    if (!downVotes) {
       downVotes = new Set<UID>();
       this.downVotes.set(eventId, downVotes);
     }
     return downVotes;
   }
-    
 
   async load() {
     let reactions = await storage.reactions.toArray();
@@ -162,18 +193,18 @@ class ReactionManager {
 
     let deltaDelete: Array<string> = [];
 
-    for(let reaction of reactions) {
+    for (let reaction of reactions) {
       let profileId = ID(reaction.profileId);
 
-      if(followManager.isAllowed(profileId)) {
+      if (followManager.isAllowed(profileId)) {
         this.addValue(ID(reaction.eventId), ID(reaction.profileId), reaction.value);
       } else {
         deltaDelete.push(reaction.id);
       }
-    };
- 
+    }
+
     // Remove reactions from profiles that are not followed
-    if(deltaDelete.length > 0) {
+    if (deltaDelete.length > 0) {
       await storage.reactions.bulkDelete(deltaDelete);
     }
   }
@@ -188,24 +219,27 @@ class ReactionManager {
   }
 
   subscribeRelays(eventId: string, cb: any, since: number = 0, limit: number = 1000) {
-    
+    let filters = [
+      {
+        '#e': [eventId],
+        kinds: [ReactionKind],
+      },
+    ] as Array<Filter>;
 
-    let filters = [{
-      kinds: [ReactionKind],
-      limit,
-      "#e": [eventId],
-    }] as Array<Filter>;
-
-    const cbInstance = (event:Event) => {
+    const cbInstance = (event: Event) => {
       reactionManager.#relayCallback(event);
-      if(cb) cb(reactionManager.getLikes(ID(eventId)), reactionManager.getDownVotes(ID(eventId)));
-    }
-  
+      if (cb) cb(reactionManager.getLikes(ID(eventId)), reactionManager.getDownVotes(ID(eventId)));
+    };
+
     return wotPubSub.subscribeFilter(filters, cbInstance);
   }
 
-  createEvent(eventId: string, eventPubKey: string, value: number = 1, time = getNostrTime()): Partial<Event> {
-
+  createEvent(
+    eventId: string,
+    eventPubKey: string,
+    value: number = 1,
+    time = getNostrTime(),
+  ): Partial<Event> {
     let content = value == 1 ? '+' : value == -1 ? '-' : '';
 
     const event = {
@@ -225,10 +259,9 @@ class ReactionManager {
 
   getMetrics() {
     this.metrics.TotalMemory = this.likes.size + this.downVotes.size;
-    
+
     return this.metrics;
   }
-
 }
 
 const reactionManager = new ReactionManager();

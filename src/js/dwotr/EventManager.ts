@@ -1,6 +1,6 @@
 import EventDB from '@/nostr/EventDB';
 import Events from '@/nostr/Events';
-import { ID, UniqueIds } from '@/utils/UniqueIds';
+import { ID, UID, UniqueIds } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
 import graphNetwork from './GraphNetwork';
@@ -21,6 +21,9 @@ import followManager from './FollowManager';
 import profileManager from './ProfileManager';
 import reactionManager from './ReactionManager';
 class EventManager {
+
+  seenRelayEvents: Set<UID> = new Set();
+
   metrics = {
     TotalMemory: 0,
     Loaded: 0,
@@ -133,14 +136,17 @@ class EventManager {
     return undefined;
   }
 
-  async eventCallback(event: Event, afterEose: boolean, url: string | undefined) {
-    if (!event?.id || UniqueIds.has(event.id)) return false; // Already processed this event
-    ID(event.id); // add Event ID to UniqueIds
-    let publisherId = ID(event.pubkey);
+  doRelayEvent(event: Event) : boolean {
+    if (!event?.id) return false; 
+    let eventId = ID(event.id); // add Event ID to UniqueIds
 
-    if (blockManager.isBlocked(publisherId) && event.kind !== 0) {
-      return false;
-    }
+    if (this.seenRelayEvents.has(eventId)) return false; // already seen this event, skip it
+    this.seenRelayEvents.add(eventId);
+    return true;
+  }
+
+  async eventCallback(event: Event, afterEose: boolean, url: string | undefined) {
+    if (!eventManager.doRelayEvent(event)) return;
 
     eventManager.metrics.Handle++;
 
@@ -177,6 +183,10 @@ class EventManager {
   }
 
   async trustEvent(event: Event) {
+
+    let authorId = ID(event.pubkey);
+    if (blockManager.isBlocked(authorId)) return;
+
     let { p: pTags, e: eTags, val, pubKey, note, context, timestamp } = this.parseTrustEvent(event);
 
     // Add the trust to the local graph, and update the score

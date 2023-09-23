@@ -6,6 +6,7 @@ import Key from '../../nostr/Key';
 import getRelayPool from '@/nostr/relayPool';
 import eventManager from '../EventManager';
 import { STR, UID } from '@/utils/UniqueIds';
+import { getNostrTime } from '../Utils';
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
 
@@ -70,7 +71,7 @@ class WOTPubSub {
   // The idea is that we are only interested in events that are less than 2 weeks old, per default. 
   // Fetching older events can be done by request etc.
   // FlowSince applies primarily to FlowKinds. With StaticKinds we are interested in all events, as they are few.
-  flowSince = (Date.now() / 1000) - (60 * 60 * 24 * 14); // 2 weeks ago, TODO: make this configurable
+  flowSince = getNostrTime() - (60 * 60 * 24 * 14); // 2 weeks ago, TODO: make this configurable
 
   subscriptionId = 0;
   unsubs = new Map<number, any>();
@@ -105,25 +106,27 @@ class WOTPubSub {
     if(authors.length === 0) return;
 
     // Batch authors into 1000 chunks, so subscribe can handle it
-    let batchs = this.batchArray(authors, 100);
+    let batchs = this.batchArray(authors, 10);
 
     for(let batch of batchs) {
     
       let filters = [{
-        batch,
+        authors: batch,
         kinds: FlowKinds,
         since: this.flowSince,
       },
       {
-        batch,
+        authors: batch,
         kinds: StaticKinds,
         since: 0,
-      }];
+      }] as Array<Filter>;
   
-
-      let r = this.subscribeFilter(filters, eventManager.eventCallback);
-      this.subscriptionId ++;
-      this.unsubs.set(this.subscriptionId, r);
+      // Need to delay the subscribe, otherwise relayPool will merge all the subscriptions into one. (I believe)
+      setTimeout(() => {
+        let r = this.subscribeFilter(filters, eventManager.eventCallback);
+        this.subscriptionId ++;
+        this.unsubs.set(this.subscriptionId, r);
+      }, 0);
     }
   }
 

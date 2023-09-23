@@ -11,6 +11,9 @@ import Key from '../../nostr/Key';
 import Name from '../user/Name';
 
 import EventComponent from './EventComponent';
+import { set } from 'lodash';
+import reactionManager from '@/dwotr/ReactionManager';
+import { ID, STR } from '@/utils/UniqueIds';
 
 type Props = {
   event: Event;
@@ -45,9 +48,10 @@ export default function Like(props: Props) {
 
   useEffect(() => {
     if (likedId) {
-      return Events.getLikes(likedId, (likedBy: Set<string>) => {
-        setAllLikes(Array.from(likedBy));
-      });
+      // return Events.getLikes(likedId, (likedBy: Set<string>) => {
+      //   setAllLikes(Array.from(likedBy));
+      // });
+      setAllLikes([...reactionManager.getLikes(ID(likedId))].map((id) => STR(id)));
     }
   }, [likedId]);
 

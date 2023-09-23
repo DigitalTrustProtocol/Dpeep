@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useEffect,  useState } from 'react';
 import throttle from 'lodash/throttle';
 import { Link } from 'preact-router';
 
@@ -10,11 +10,14 @@ import Show from '../../components/helpers/Show.tsx';
 import Avatar from '../../components/user/Avatar.tsx';
 import Name from '../../components/user/Name.tsx';
 import Key from '../../nostr/Key.ts';
-import SocialNetwork from '../../nostr/SocialNetwork.ts';
 import { translate as t } from '../../translations/Translation.mjs';
-import { ID } from '../../utils/UniqueIds.ts';
+import { STR, UID } from '../../utils/UniqueIds.ts';
+import { useKey } from '@/dwotr/hooks/useKey.tsx';
+import { useIsMounted } from '@/dwotr/hooks/useIsMounted.tsx';
+import followManager from '@/dwotr/FollowManager.ts';
 
-const FollowedUser = memo(({ hexKey }: { hexKey: string }) => {
+const FollowedUser = memo(({ id }: { id: UID }) => {
+  const hexKey = STR(id);
   const npub = Key.toNostrBech32Address(hexKey, 'npub') || '';
   return (
     <div key={npub} className="flex w-full">
@@ -24,13 +27,13 @@ const FollowedUser = memo(({ hexKey }: { hexKey: string }) => {
           <Name pub={npub} />
           <br />
           <span className="text-neutral-500 text-sm">
-            {SocialNetwork.followersByUser.get(ID(hexKey))?.size || 0}
+            {followManager.getItem(id).followedBy?.size || 0}
             <i> </i>
             followers
           </span>
         </div>
       </Link>
-      {Key.isMine(hexKey) && <Follow id={npub} />}
+      {Key.isMine(hexKey) && <Follow id={hexKey} />}
     </div>
   );
 });
@@ -42,44 +45,88 @@ type Props = {
 };
 
 const Follows: React.FC<Props> = (props) => {
-  const [follows, setFollows] = useState<any>([]);
-  const followsRef = useRef(new Set());
-  const myPubRef = useRef<string | null>(null);
+  const { uid, myId } = useKey(props.id);
 
-  const sortByName = useCallback((aK, bK) => {
-    const aName = SocialNetwork.profiles.get(ID(aK))?.name;
-    const bName = SocialNetwork.profiles.get(ID(bK))?.name;
-    if (!aName && !bName) return aK.localeCompare(bK);
-    if (!aName) return 1;
-    if (!bName) return -1;
-    return aName.localeCompare(bName);
-  }, []);
+  const [items, setItems] = useState<any>([]);
 
-  const sortByFollowDistance = useCallback(
-    (aK, bK) => {
-      const aDistance = SocialNetwork.followDistanceByUser.get(ID(aK));
-      const bDistance = SocialNetwork.followDistanceByUser.get(ID(bK));
-      if (aDistance === bDistance) return sortByName(aK, bK);
-      if (aDistance === undefined) return 1;
-      if (bDistance === undefined) return -1;
-      return aDistance < bDistance ? -1 : 1;
-    },
-    [sortByName],
-  );
+  const isMounted = useIsMounted();
 
-  const updateSortedFollows = useCallback(
-    throttle(() => {
-      const comparator = (a, b) =>
-        props.followers ? sortByFollowDistance(a, b) : sortByName(a, b);
-      setFollows(Array.from(followsRef.current).sort(comparator));
-    }, 1000),
-    [props.followers, sortByFollowDistance, sortByName],
-  );
+
+  // const sortByName = useCallback((aK, bK) => {
+  //   const aName = SocialNetwork.profiles.get(ID(aK))?.name;
+  //   const bName = SocialNetwork.profiles.get(ID(bK))?.name;
+  //   if (!aName && !bName) return aK.localeCompare(bK);
+  //   if (!aName) return 1;
+  //   if (!bName) return -1;
+  //   return aName.localeCompare(bName);
+  // }, []);
+
+  // const sortByFollowDistance = useCallback(
+  //   (aK, bK) => {
+  //     const aDistance = SocialNetwork.followDistanceByUser.get(ID(aK));
+  //     const bDistance = SocialNetwork.followDistanceByUser.get(ID(bK));
+  //     if (aDistance === bDistance) return sortByName(aK, bK);
+  //     if (aDistance === undefined) return 1;
+  //     if (bDistance === undefined) return -1;
+  //     return aDistance < bDistance ? -1 : 1;
+  //   },
+  //   [sortByName],
+  // );
+
+  // const updateSortedFollows = useCallback(
+  //   throttle(() => {
+  //     const comparator = (a, b) =>
+  //       props.followers ? sortByFollowDistance(a, b) : sortByName(a, b);
+  //     setFollows(Array.from(followsRef.current).sort(comparator));
+  //   }, 1000),
+  //   [props.followers, sortByFollowDistance, sortByName],
+  // );
+
+  // const getContacts = () => {
+
+  // };
+
+  // const getFollowers = () => {
+  //   const hex = Key.toNostrHexAddress(props.id!) || '';
+  //   if (hex) {
+  //     SocialNetwork.getFollowersByUser(hex, (newFollowers) => {
+  //       followsRef.current = newFollowers;
+  //       updateSortedFollows();
+  //     });
+  //   }
+  // };
+
+  const followAll = () => {
+    if (confirm(`${t('follow_all')} (${items.length})?`)) {
+      followManager.setFollow(items.map((hexKey) => STR(hexKey)), true);
+    }
+  };
 
   useEffect(() => {
-    if (props.id) {
-      myPubRef.current = Key.toNostrBech32Address(Key.getPubKey(), 'npub');
-      props.followers ? getFollowers() : getFollows();
+
+    const callback = throttle(() => {
+      if (!isMounted()) return;
+      let item = followManager.getItem(uid);
+
+      if(props.followers) {
+        setItems([...item?.followedBy]);
+      } else {
+        setItems([...item?.follows]);
+      }
+
+    }, 500, { leading: true });
+
+    callback();
+
+    let unsub: any = undefined;
+    if(props.followers) {
+      unsub = followManager.subscribeFollowedBy(uid, callback);
+    } else {
+      unsub = followManager.subscribeContacts(uid, callback);
+    }
+
+    return () => {
+      unsub?.();
     }
   }, [props.id, props.followers]);
 
@@ -87,33 +134,7 @@ const Follows: React.FC<Props> = (props) => {
     return null;
   }
 
-  const getFollows = () => {
-    const hex = Key.toNostrHexAddress(props.id!) || '';
-    if (hex) {
-      SocialNetwork.getFollowedByUser(hex, (newFollows) => {
-        followsRef.current = newFollows; // TODO might still be buggy?
-        updateSortedFollows();
-      });
-    }
-  };
-
-  const getFollowers = () => {
-    const hex = Key.toNostrHexAddress(props.id!) || '';
-    if (hex) {
-      SocialNetwork.getFollowersByUser(hex, (newFollowers) => {
-        followsRef.current = newFollowers;
-        updateSortedFollows();
-      });
-    }
-  };
-
-  const followAll = () => {
-    if (confirm(`${t('follow_all')} (${follows.length})?`)) {
-      SocialNetwork.setFollowed(follows);
-    }
-  };
-
-  const showFollowAll = follows.length > 1 && !(props.id === myPubRef.current && !props.followers);
+  const showFollowAll = items.length > 1 && !(uid === myId && !props.followers);
 
   return (
     <View>
@@ -131,7 +152,7 @@ const Follows: React.FC<Props> = (props) => {
           <Show when={showFollowAll}>
             <span style={{ textAlign: 'right' }} className="hidden md:inline">
               <button className="btn btn-sm btn-neutral" onClick={followAll}>
-                {t('follow_all')} ({follows.length})
+                {t('follow_all')} ({items.length})
               </button>
             </span>
           </Show>
@@ -139,17 +160,17 @@ const Follows: React.FC<Props> = (props) => {
         <Show when={showFollowAll}>
           <p style={{ textAlign: 'right' }} className="inline md:hidden">
             <button className="btn btn-sm btn-neutral" onClick={followAll}>
-              {t('follow_all')} ({follows.length})
+              {t('follow_all')} ({items.length})
             </button>
           </p>
         </Show>
         <div className="flex flex-col w-full gap-4">
           <InfiniteScroll>
-            {follows.map((hexKey) => (
-              <FollowedUser key={hexKey} hexKey={hexKey} />
+            {items.map((key) => (
+              <FollowedUser key={key} id={key} />
             ))}
           </InfiniteScroll>
-          {follows.length === 0 ? '—' : ''}
+          {items.length === 0 ? '—' : ''}
         </div>
       </div>
     </View>

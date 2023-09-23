@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-
-import Key from '../../nostr/Key';
-import SocialNetwork from '../../nostr/SocialNetwork';
 import { translate as t } from '../../translations/Translation.mjs';
+import followManager from '@/dwotr/FollowManager';
+import { useKey } from '@/dwotr/hooks/useKey';
 
 type Props = {
   id: string;
@@ -10,6 +9,8 @@ type Props = {
 };
 
 const Follow = ({ id, className }: Props) => {
+  let { uid, myId } = useKey(id);
+
   const activeClass = 'following';
   const action = t('follow_btn');
   const actionDone = t('following_btn');
@@ -19,11 +20,7 @@ const Follow = ({ id, className }: Props) => {
   const [isFollowed, setIsFollowed] = useState(false);
 
   useEffect(() => {
-    SocialNetwork.getFollowedByUser(Key.getPubKey(), (follows) => {
-      const hex = Key.toNostrHexAddress(id);
-      const follow = hex && follows?.has(hex);
-      setIsFollowed(!!follow);
-    });
+    setIsFollowed(followManager.getItem(myId)?.follows?.has(uid) || false);
   }, [id]);
 
   const handleMouseEnter = () => {
@@ -37,9 +34,7 @@ const Follow = ({ id, className }: Props) => {
   const onClick = (e) => {
     e.preventDefault();
     const newValue = !isFollowed;
-    const hex = Key.toNostrHexAddress(id);
-    if (!hex) return;
-    SocialNetwork.setFollowed(hex, newValue);
+    followManager.setFollow([uid], newValue);
     setIsFollowed(newValue);
   };
 

@@ -45,7 +45,7 @@ const SEARCH_RELAYS = [
   'wss://nostr.novacisko.cz',
 ];
 
-type PublicRelaySettings = {
+export type PublicRelaySettings = {
   read: boolean;
   write: boolean;
 };
@@ -93,11 +93,11 @@ const Relays = {
             const parsed = new URL(url).toString().replace(/\/$/, '');
             urls.set(parsed, content[url]);
           } catch (e) {
-            console.log('invalid relay url', url, event);
+            //console.log('invalid relay url', url, event);
           }
         }
       } catch (e) {
-        console.log('failed to parse relay urls', event);
+        //console.log('failed to parse relay urls', event);
       }
     }
     return urls;

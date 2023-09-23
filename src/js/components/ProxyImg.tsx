@@ -47,10 +47,10 @@ const ProxyImg = (props: Props) => {
 
   const handleError = () => {
     if (proxyFailed) {
-      console.error('original source failed too', props.src);
+      //console.error('original source failed too', props.src);
       props.onError && props.onError();
     } else {
-      console.error('image proxy failed', src, 'trying original source', props.src);
+      //console.error('image proxy failed', src, 'trying original source', props.src);
       setProxyFailed(true);
       setSrc(props.src);
     }
