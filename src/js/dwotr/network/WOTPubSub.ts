@@ -149,8 +149,8 @@ class WOTPubSub {
   }
 
   subscribeFilter(
-    filters: Array<any>,
-    cb: OnEvent,
+    filters: Array<Filter>,
+    cb: OnEvent = eventManager.eventCallback,
   ): Unsubscribe {
     let relays = Relays.enabledRelays();
 

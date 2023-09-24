@@ -4,20 +4,38 @@ import storage from './Storage';
 import { ID, UID } from '@/utils/UniqueIds';
 import wotPubSub, { TextKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
-import EventDB from '@/nostr/EventDB';
 import blockManager from './BlockManager';
 import Key from '@/nostr/Key';
 import { getNoteReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
 import eventManager from './EventManager';
 import followManager from './FollowManager';
+import SortedMap from '@/utils/SortedMap/SortedMap';
+import EventDB from '@/nostr/EventDB';
+
+
+
+const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
+  if (!a[1]) return 1;
+  if (!b[1]) return -1;
+
+  return b[1].created_at - a[1].created_at;
+};
+
+
+export type EventCallback = (event: Event) => void;
 
 class NoteManager {
+
+  notes: SortedMap<UID, Event> = new SortedMap([], sortCreated_at);
+
   deletedEvents: Set<UID> = new Set();
   threadRepliesByMessageId: Map<string, Set<string>> = new Map();
   repostsByMessageId: Map<string, Set<string>> = new Map();
 
   #saveQueue: Map<number, Event> = new Map();
   #saving: boolean = false;
+
+  onEvent: Set<EventCallback> = new Set();
 
   private metrics = {
     TableCount: 0,
@@ -64,10 +82,6 @@ class NoteManager {
 
     if (followManager.isAllowed(authorId)) 
         this.save(event);
-  }
-
-  onNote() {
-    // TODO
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
@@ -158,6 +172,18 @@ class NoteManager {
     if (eventIsRepost) this.#addRepost(event);
 
     EventDB.insert(event);
+    this.#insert(ID(event.id), event);
+    this.#dispatch(event);
+  }
+
+  #insert(id: UID, event: Event) {
+    this.notes.set(id, event);
+  }
+
+  #dispatch(event: Event) {
+    for (let callback of this.onEvent) {
+      callback(event);
+    }
   }
 
   #addRepost(event: Event) {

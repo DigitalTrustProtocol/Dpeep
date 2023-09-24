@@ -1,82 +1,101 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Event, Filter } from 'nostr-tools';
 
-import EventDB from '@/nostr/EventDB.ts';
-import { ID, UID } from '@/utils/UniqueIds';
-import IndexedDB from '@/nostr/IndexedDB';
+import noteManager from '../NoteManager';
+import { throttle } from 'lodash';
+import { UID } from '@/utils/UniqueIds';
 
+
+
+class EventFilter {
+  ids: Set<string> = new Set();
+  authors: Set<string> = new Set();
+  kinds: Set<number> = new Set();
+  filterFn?: (event: Event) => boolean;
+
+  constructor(_filter?: Filter, _filterFn?: (event: Event) => boolean) {
+    this.ids = new Set( _filter?.ids);
+    this.authors = new Set(_filter?.authors);
+    this.kinds = new Set(_filter?.kinds);
+    this.filterFn = _filterFn;
+  }
+}
 
 class EventState {
-  index: Set<UID> = new Set();
+  events: Event[] = [];
   refresh: Event[] = [];
   more: Event[] = [];
 
   batchSize: number = 10;
   time: number = 0;
+  filter: EventFilter;
+  
+  constructor(_filter: Filter, _filterFn?: (event: Event) => boolean) {
+    this.filter = new EventFilter(_filter, _filterFn);
+  }
 
-  // Add event to index
-  // Add event to refresh queue if it's newer than time
-  // Add event to more queue if it's older than time.
+
   add(event: Event) {
-    this.index.add(ID(event.id));
-    if (event.created_at > this.time) {
-      this.refresh.push(event);
-    } else {
+    if(!this.inScope(event)) return;
+
+    if(this.time == 0 || event.created_at <= this.time) {
       this.more.push(event);
+    } else {
+      this.refresh.push(event);
     }
   }
 
-  // Sort the refresh queue and more queue based on created_at with the newest first
-  sort() {
-    this.refresh.sort((a, b) => b.created_at - a.created_at);
+  inScope(event: Event) {
+    if(this.filter.ids.size > 0 && !this.filter.ids.has(event.id)) return false;
+    if(this.filter.authors.size > 0 && !this.filter.authors.has(event.pubkey)) return false;
+    if(this.filter.kinds.size > 0 && !this.filter.kinds.has(event.kind)) return false;
+    if(this.filter.filterFn && !this.filter.filterFn(event)) return false;
+
+    return true;
   }
 
   clear() {
-    this.index.clear();
+    this.events = [];
     this.refresh = [];
     this.more = [];
+    this.time = 0;
   }
+  
 
   // Load all refresh events into the event list
-  mergeRefresh(events: Event[]) {
-    if (this.refresh.length === 0) return events;
+  mergeRefresh() {
+    if (this.refresh.length === 0) return this.events;
 
-    if (events.length > 0) { // if there exists events, merge them with refresh queue
       let sorted = this.refresh.sort((a, b) => b.created_at - a.created_at);
       this.time = sorted[0].created_at; // Set time to the newest event in refresh queue
-      sorted.forEach((event) => this.index.add(ID(event.id)));
       this.refresh = [];
-      return [...sorted, ...events];
-
-    } else {  // if there are no input events, then convert to more queue, don't want to return large numbers of events at once
-      this.more = this.refresh;
-      this.refresh = [];
-      return this.mergeMore(events);
-    }
+      this.events = [...sorted, ...this.events];
+      
+      return this.events;
   }
 
   // Load a batch events into the event list
-  mergeMore(events: Event[]) {
-    if(this.more.length === 0) return events;
+  mergeMore() {
+    if(this.more.length === 0) return this.events;
     
     let delta = this.more.sort((a, b) => b.created_at - a.created_at);
     delta = delta.splice(0, this.batchSize);
 
-    delta.forEach((event) => this.index.add(ID(event.id)));
     if(this.time === 0 && delta.length > 0) this.time = delta[0].created_at;
+
     this.more = this.more.slice(delta.length);
-    return [...events, ...delta];
+    this.events = [...this.events, ...delta];
+    return this.events;
   }
 
-  loadFromMemory(filter: Filter, filterFn?: (event: Event) => boolean) {
-    let e = EventDB.findArray({ ...filter, limit: undefined });
-    if (filterFn) {
-      e = e.filter(filterFn);
-    }
-    e = e.filter((event) => !this.index.has(ID(event.id)));
-    e.forEach((event) => this.add(event));
+  load() {
+    let notes = noteManager.notes.values();
 
-    return e;
+    for (let event of notes) {
+      this.add(event);
+    }
+
+    return this.mergeMore();
   }
 }
 
@@ -86,7 +105,6 @@ interface SubscribeOptions {
   filterFn?: (event: Event) => boolean;
   sinceLastOpened?: boolean;
   mergeSubscriptions?: boolean;
-  enabled?: boolean;
 }
 
 
@@ -94,76 +112,67 @@ const useSubscribe = (ops: SubscribeOptions) => {
   const {
     filter,
     filterFn,
-    enabled = true,
     sinceLastOpened = false,
     mergeSubscriptions = true,
   } = ops;
-
-  const shouldReturnEarly = !enabled || filter.limit === 0;
 
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasRefresh, setHasRefresh] = useState<boolean>(true);
 
-  const eventState = useRef<EventState>(new EventState());
-
-  //const eventQueue = useRef<Map<UID, Event>>(new Map());
+  const eventState = useRef<EventState>(new EventState(filter, filterFn));
   const intervalRef = useRef<any>(undefined);
-
-  // Subscribe to PubSub if filter is not empty and authors are not subscribed
-  useEffect(() => {
-    if (shouldReturnEarly) return;
-
-    setEvents([]); // Clear events on new filter
-    eventState.current.clear(); // Clear the event state
-
-    IndexedDB.find(filter); // Load events from indexedDB
-
-    // Make sure to load author's events if they are not already subscribed
-    //return PubSub.subscribe(filter, () => {}, sinceLastOpened, mergeSubscriptions, 1); // TODO: remove last force parameter (only for testing)
-  }, [filter, filterFn, shouldReturnEarly, sinceLastOpened, mergeSubscriptions]);
 
   // Loading events from memory
   useEffect(() => {
-    if (shouldReturnEarly) return;
+    eventState.current = new EventState(filter, filterFn);
 
-    const load = () => {
-      let e = eventState.current.loadFromMemory(filter, filterFn);
-      if (e.length == 0) return;
-
+    const updateThrottle = throttle(() => {
       setHasRefresh(eventState.current.refresh.length > 0);
       setHasMore(eventState.current.more.length > 0);
+    }, 1000, { leading: false, trailing: true });
+
+    const subscribe = (event: Event) => {
+
+      eventState.current.add(event);
+
+      // Load more events if the event list is too short
+      if(eventState.current.events.length < 10) 
+        setEvents(eventState.current.mergeMore());
+
+      updateThrottle();
     }
 
-    intervalRef.current = setInterval(() => {
-      load(); // Check for new events
-    }, 1000);
+    /// Load all events from memory    
+    setEvents(eventState.current.load()); 
 
-    load(); // Load events on first render
+    // Subscribe to new events, add them to the refresh/more queue
+    noteManager.onEvent.add(subscribe);
 
     return () => {
+      noteManager.onEvent.delete(subscribe);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [filter, filterFn, shouldReturnEarly, setHasMore, setHasRefresh]);
+  }, [filter, filterFn]);
 
   
   const loadMore = useCallback(() => {
-    setEvents(eventState.current.mergeMore(events));
+    setEvents(eventState.current.mergeMore());
     setHasMore(eventState.current.more.length > 0);
-  }, [events]);
+  }, []);
 
 
   // Load events in front of the event list
   const refresh = useCallback(() => {
-    setEvents(eventState.current.mergeRefresh(events));
+    setEvents(eventState.current.mergeRefresh());
     setHasRefresh(eventState.current.refresh.length > 0);
     setHasMore(eventState.current.more.length > 0);
-  }, [events]);
+  }, []);
 
   const loadAll = useCallback(() => {
     // if(loadMoreCleanupRef.current) return; // Already subscribed
     // loadMoreCleanupRef.current = PubSub.subscribe(filter, updateEvents, false, false);
-  }, [events]);
+  }, []);
 
 
   return { events, hasMore, hasRefresh, loadMore, refresh, loadAll };

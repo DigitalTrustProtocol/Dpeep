@@ -61,7 +61,7 @@ const ReactionButtons = (props) => {
         <Globe
           onClick={setLoadGlobal}
           size={20}
-          alt="Load events from outside your network"
+          title="Load events from outside your network"
           className="btn flex justify-end"
         />
       </div>

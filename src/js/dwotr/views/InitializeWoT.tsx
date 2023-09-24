@@ -21,7 +21,7 @@ type InitializeWoTProps = {
 // Show loading page for DWoTR setup, when ready, render the rest of the app
 // The user have to be logged in to use the view
 const InitializeWoT = (props: InitializeWoTProps) => {
-  const { hexKey, uid } = useKey(Key.getPubKey());
+  const { hexKey } = useKey(Key.getPubKey());
 
   const [graphStatus, setGraphStatus] = useState<Status>('waiting');
   const [profileStatus, setProfileStatus] = useState<Status>('waiting');
@@ -30,71 +30,64 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const [followStatus, setFollowStatus] = useState<Status>('waiting');
   const [latestNotes, setLatestNotes] = useState<Status>('waiting');
   const [reactionStatus, setReactionStatus] = useState<Status>('waiting');
-  
 
   useEffect(() => {
     setGraphStatus('loading');
+
+    graphNetwork.init(hexKey);
 
     graphNetwork.whenReady(async () => {
       setGraphStatus('done');
 
       setProfileStatus('loading');
-      profileManager.loadAllProfiles().then(() => {
-        setTimeout(() => {
-          setProfileStatus('done');
+      profileManager.subscribeMyself(); // Subscribe to my own profile
+      await profileManager.loadAllProfiles();
+      setProfileStatus('done');
 
-          muteManager.load();
-          setMuteStatus('done');
+      setMuteStatus('waiting');
+      muteManager.load();
+      setMuteStatus('done');
 
-          setBlockStatus('loading');
-          blockManager.load().then(() => {
-            setTimeout(() => {
-              setBlockStatus('done');
-            }, 0);
-          });
-    
-        }, 0);
-      });
+      setBlockStatus('loading');
+      await blockManager.load();
+      setBlockStatus('done');
 
       setFollowStatus('loading');
-      followManager.load().then(() => {
-        followManager.subscribeToRelays(); // Subscribe to followers of my profile
-        setFollowStatus('done');
-
-        // Now load the notes
-        setLatestNotes('loading');
-        noteManager.load().then(() => {
-          setLatestNotes('done');
-        });
-
-      });
+      await followManager.load();
+      followManager.subscribeToRelays(); // Subscribe to followers of my profile
+      setFollowStatus('done');
 
       // Reactions
       setReactionStatus('loading');
-      reactionManager.load().then(() => {
-        setReactionStatus('done');
-      });
+      await reactionManager.load();
+      setReactionStatus('done');
 
+      // Now load the notes
       setLatestNotes('loading');
-
+      await noteManager.load();
       setLatestNotes('done');
     });
 
-    setTimeout(() => {
-      graphNetwork.init(hexKey);
-    }, 1);
 
     return () => {};
   }, []);
 
-  if(graphStatus === "done" && profileStatus === "done" && muteStatus === "done" && blockStatus === "done" && followStatus === "done" && latestNotes === "done" && reactionStatus === "done" && latestNotes === "done")
+  if (
+    graphStatus === 'done' &&
+    profileStatus === 'done' &&
+    muteStatus === 'done' &&
+    blockStatus === 'done' &&
+    followStatus === 'done' &&
+    latestNotes === 'done' &&
+    reactionStatus === 'done' &&
+    latestNotes === 'done'
+  )
     props.setInitialized(true);
 
   // Wot Graph
   // Profiles
   // Mutes & Blocks
   // Events and Subscriptions
-
 
   return (
     <Modal centerVertically={true} showContainer={true} onClose={() => {}}>

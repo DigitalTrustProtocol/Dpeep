@@ -16,6 +16,7 @@ import Subscriptions from './model/Subscriptions';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
+import wotPubSub from './network/WOTPubSub';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -395,6 +396,17 @@ class ProfileManager {
     if (!profile) return;
     profileManager.dispatchProfile(profile);
   }
+
+
+  subscribeMyself() {
+      const myPub = Key.getPubKey();
+      wotPubSub.subscribeAuthors([ID(myPub)]); // our stuff
+      wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }]); // mentions, reactions, DMs
+      wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4] }]); // dms for us
+      wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4] }]); // dms by us
+      //Events.subscribeGroups();
+  }
+
 
 
   subscribe(address: string, cb: (e: any) => void): Unsubscribe {
