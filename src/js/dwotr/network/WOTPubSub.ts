@@ -107,6 +107,18 @@ class WOTPubSub {
     this.unsubs.set(evnetId, unSub);
   }
 
+  getAuthorEvent(authorId: UID, kinds: Array<number> = [0], cb?: OnEvent) {
+
+    let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
+      unSub();
+      eventManager.eventCallback(event);
+      if (cb) cb(event, afterEose, url);
+    };
+
+    let unSub = this.subscribeFilter([{ authors: [STR(authorId)], kinds, limit:1 }], callback);
+  }
+
+
   updateRelays(urls: Array<string> | undefined) {
     if (!urls) return;
   }

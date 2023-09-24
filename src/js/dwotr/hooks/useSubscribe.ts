@@ -3,9 +3,6 @@ import { Event, Filter } from 'nostr-tools';
 
 import noteManager from '../NoteManager';
 import { throttle } from 'lodash';
-import { UID } from '@/utils/UniqueIds';
-
-
 
 class EventFilter {
   ids: Set<string> = new Set();

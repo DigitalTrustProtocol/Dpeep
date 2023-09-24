@@ -391,13 +391,6 @@ class ProfileManager {
   
 
 
-  subscriptionCallback(event: Event) {
-    let profile = SocialNetwork.profiles.get(ID(event.pubkey));
-    if (!profile) return;
-    profileManager.dispatchProfile(profile);
-  }
-
-
   subscribeMyself() {
       const myPub = Key.getPubKey();
       wotPubSub.subscribeAuthors([ID(myPub)]); // our stuff
@@ -408,53 +401,52 @@ class ProfileManager {
   }
 
 
+  // subscribe(address: string, cb: (e: any) => void): Unsubscribe {
+  //   return () => {};
+  //   const hexPub = Key.toNostrHexAddress(address) as string;
+  //   const id = ID(hexPub);
 
-  subscribe(address: string, cb: (e: any) => void): Unsubscribe {
-    return () => {};
-    const hexPub = Key.toNostrHexAddress(address) as string;
-    const id = ID(hexPub);
+  //   let subsciptionIndex = this.subscriptions.add(id, cb);
+  //   let profile = this.getMemoryProfile(id);
 
-    let subsciptionIndex = this.subscriptions.add(id, cb);
-    let profile = this.getMemoryProfile(id);
+  //   if (profile.isDefault) {
+  //     // Check if profile is in IndexedDB
+  //     this.loadProfile(hexPub).then((record) => {
+  //       if (record) {
+  //         // exists in DB
+  //         this.subscribeCallback(record, cb);
+  //       } else {
+  //         // Check if profile is in API
+  //         profileManager.fetchProfile(hexPub).then((data) => {
+  //           // TODO verify sig
+  //           if (!data) return;
 
-    if (profile.isDefault) {
-      // Check if profile is in IndexedDB
-      this.loadProfile(hexPub).then((record) => {
-        if (record) {
-          // exists in DB
-          this.subscribeCallback(record, cb);
-        } else {
-          // Check if profile is in API
-          profileManager.fetchProfile(hexPub).then((data) => {
-            // TODO verify sig
-            if (!data) return;
+  //           let eventProfile = this.addProfileEvent(data);
 
-            let eventProfile = this.addProfileEvent(data);
+  //           this.subscribeCallback(eventProfile, cb);
+  //         });
+  //       }
+  //     });
+  //   } 
 
-            this.subscribeCallback(eventProfile, cb);
-          });
-        }
-      });
-    } 
-
-    // Instantly send the profile to the callback
-    this.subscribeCallback(profile, cb);
+  //   // Instantly send the profile to the callback
+  //   this.subscribeCallback(profile, cb);
     
-    // If not already subscribed to updates
-    if (!this.subscriptions.hasUnsubscribe(id)) {
-      // Then subscribe to updates via nostr relays, but only once per address
-      let unsub = PubSub.subscribe(
-        { kinds: [0], authors: [hexPub] },
-        this.subscriptionCallback,
-        false,
-      );
-      this.subscriptions.addUnsubscribe(id, unsub);
-    } 
-    return () => {
-      this.subscriptions.remove(id, subsciptionIndex);
-    }
+  //   // If not already subscribed to updates
+  //   if (!this.subscriptions.hasUnsubscribe(id)) {
+  //     // Then subscribe to updates via nostr relays, but only once per address
+  //     let unsub = PubSub.subscribe(
+  //       { kinds: [0], authors: [hexPub] },
+  //       this.subscriptionCallback,
+  //       false,
+  //     );
+  //     this.subscriptions.addUnsubscribe(id, unsub);
+  //   } 
+  //   return () => {
+  //     this.subscriptions.remove(id, subsciptionIndex);
+  //   }
 
-  }
+  // }
 
   subscribeCallback(profile: ProfileMemory | undefined, cb: (e: any) => void) {
     if (!profile) return;
