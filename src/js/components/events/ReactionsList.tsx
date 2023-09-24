@@ -19,7 +19,7 @@ type ReactionData = {
 
 type ReactionsListProps = {
   event: Event;
-  wot: any;
+  wot?: any;
   likes: Set<UID>;
   zapAmountByUser: Map<string, number>;
   formattedZapAmount: string;

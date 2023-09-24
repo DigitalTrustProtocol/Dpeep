@@ -3,7 +3,7 @@ import { RelayPool } from 'nostr-relaypool';
 import Events from '@/nostr/Events.ts';
 import Relays from '@/nostr/Relays.ts';
 import localState from '@/state/LocalState.ts';
-import { UniqueIds } from '@/utils/UniqueIds.ts';
+//import { UniqueIds } from '@/utils/UniqueIds.ts';
 
 let relayPoolInstance: RelayPool | null = null;
 
@@ -46,20 +46,20 @@ const getRelayPool = () => {
   relayPoolInstance = new RelayPool(Relays.enabledRelays(), {
     useEventCache: false,
     autoReconnect: true,
-    externalGetEventById: (id) => {
-      return (
-        (UniqueIds.has(id) && {
-          sig: '',
-          id: '',
-          kind: 0,
-          tags: [],
-          content: '',
-          created_at: 0,
-          pubkey: '',
-        }) ||
-        undefined
-      );
-    },
+    // externalGetEventById: (id) => {
+    //   return (
+    //     (UniqueIds.has(id) && {
+    //       sig: '',
+    //       id: '',
+    //       kind: 0,
+    //       tags: [],
+    //       content: '',
+    //       created_at: 0,
+    //       pubkey: '',
+    //     }) ||
+    //     undefined
+    //   );
+    // },
   });
 
   const compareUrls = (a: string, b: string): boolean => {

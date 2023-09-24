@@ -39,26 +39,18 @@ export type FeedProps = {
 
 
 const Feed = (props: FeedProps) => {
-  const timeoutRef = useRef<any>(undefined);
-
   const fetchEvents = props.fetchEvents || useSubscribe;
   const feedTopRef = useRef<HTMLDivElement>(null);
-  const { showDisplayAs, filterOptions, emptyMessage } = props;
+  const { showDisplayAs, filterOptions } = props;
   if (!filterOptions || filterOptions.length === 0) {
     throw new Error('Feed requires at least one filter option');
   }
   const displayAsParam = Helpers.getUrlParameter('display') === 'grid' ? 'grid' : 'feed';
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
-  //const [showUntil, setShowUntil] = useHistoryState(Math.floor(Date.now() / 1000), 'showUntil');
   const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
-  const [timesup, setTimesup] = useState<boolean>(false);
-
+  
   const filterOption = filterOptions[filterOptionIndex];
-
-  // useEffect(() => {
-  //   setShowUntil(Math.floor(Date.now() / 1000));
-  // }, [filterOption, displayAs]);
 
   const filterFn = useCallback(
     (event) => {
@@ -120,39 +112,12 @@ const Feed = (props: FeedProps) => {
     }
   }, [events, hasRefresh, hasMore]);
 
-  // useEffect(() => {
-    
-
-  //   timeoutRef.current = setTimeout(() => {
-  //       setTimesup(true);
-  //     }, 20000); // 20 seconds
-  //   return () => {
-  //     clearTimeout(timeoutRef.current);
-  //   }
-  // }, [setTimesup]);
-  
-
-  // TODO [shownEvents, setShownEvents] = useHistoryState([], 'shownEvents'); which is only updated when user clicks
-
-  // if (events.length && Key.isMine(events[0].pubkey) && events[0].created_at > showUntil) {
-  //   setShowUntil(Math.floor(Date.now() / 1000));
-  // }
-
-  //const hasNewEvents = events.length && events[0].created_at > showUntil;
-
-  //const isEmpty = events.length === 0;
-
+ 
   const infiniteScrollKeyString = `${infiniteScrollKey}-${displayAs}-${filterOption.name}`;
 
-  //const showEmptyMessage = (timesup && isEmpty);
-
-
+ 
   let items = events.filter((event) => !hiddenEvents.has(event.id));
 
-
-      // if (event.created_at > showUntil) {
-    //   return null;
-    // }
 
   return (
     <>
@@ -171,8 +136,6 @@ const Feed = (props: FeedProps) => {
             setInfiniteScrollKey(infiniteScrollKey + 1);
 
             refresh(); // Add new events
-
-            //setShowUntil(Math.floor(Date.now() / 1000));
           }}
         />
       </Show>

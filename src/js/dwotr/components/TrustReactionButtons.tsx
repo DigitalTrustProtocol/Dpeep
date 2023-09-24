@@ -12,7 +12,7 @@ const TrustReactionButtons = (props) => {
   });
 
   const event = props.event;
-  const wot = props.wot;
+  const wot = props?.wot;
 
   useEffect(() => {
     const v = wot?.vertice;

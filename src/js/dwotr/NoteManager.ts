@@ -11,6 +11,7 @@ import eventManager from './EventManager';
 import followManager from './FollowManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventDB from '@/nostr/EventDB';
+import reactionManager from './ReactionManager';
 
 
 
@@ -80,8 +81,8 @@ class NoteManager {
 
     this.#addNote(event);
 
-    if (followManager.isAllowed(authorId)) 
-        this.save(event);
+    //if (followManager.isAllowed(authorId) || reactionManager.) 
+    this.save(event); // Save all for now
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
@@ -131,6 +132,13 @@ class NoteManager {
 
     return event;
   }
+
+  requestNote(id: UID) {
+    if (this.notes.has(id)) return;
+
+    wotPubSub.getEvent(id);
+  }
+
 
   // ---- Private methods ----
 

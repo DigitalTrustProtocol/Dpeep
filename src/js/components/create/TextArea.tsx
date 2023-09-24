@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Event } from 'nostr-tools';
 
 import Show from '@/components/helpers/Show';
 import SearchBox from '@/components/searchbox/SearchBox.tsx';
@@ -14,7 +15,7 @@ interface TextAreaProps {
   submit: () => void;
   attachmentsChanged: (event) => void;
   placeholder: string;
-  replyingTo?: string;
+  replyingTo?: Event;
   autofocus?: boolean;
   forceAutoFocusMobile?: boolean;
   onFocus?: () => void;
@@ -52,8 +53,8 @@ const TextArea: React.FC<TextAreaProps> = ({
         .once((text) => setValue(text));
     } else {
       const currentHistoryState = window.history.state;
-      if (currentHistoryState && currentHistoryState['replyTo' + replyingTo]) {
-        setValue(currentHistoryState['replyTo' + replyingTo]);
+      if (currentHistoryState && currentHistoryState['replyTo' + replyingTo.id]) {
+        setValue(currentHistoryState['replyTo' + replyingTo.id]);
       }
     }
   }, []);

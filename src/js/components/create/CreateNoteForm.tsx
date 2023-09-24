@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { useCallback, useState } from 'preact/hooks';
+import { Event } from 'nostr-tools';
 
 import TextArea from '@/components/create/TextArea';
 import { sendNostr } from '@/components/create/util';
@@ -11,7 +12,7 @@ import { translate as t } from '@/translations/Translation.mjs';
 import Icons from '@/utils/Icons';
 
 type CreateNoteFormProps = {
-  replyingTo?: string;
+  replyingTo?: Event;
   onSubmit?: (text: string) => void;
   placeholder?: string;
   class?: string;
@@ -53,7 +54,7 @@ function CreateNoteForm({
     if (replyingTo) msg.replyingTo = replyingTo;
 
     await sendNostr(msg);
-    onFormSubmit?.(msg);
+    onFormSubmit?.(msg.text);
 
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();

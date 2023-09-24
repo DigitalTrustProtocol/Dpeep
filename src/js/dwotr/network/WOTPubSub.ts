@@ -5,7 +5,7 @@ import { EntityType } from '../model/Graph';
 import Key from '../../nostr/Key';
 import getRelayPool from '@/nostr/relayPool';
 import eventManager from '../EventManager';
-import { STR, UID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
@@ -63,19 +63,26 @@ type NostrKind = number;
 // Notes:
 // - likes, comments, zaps.
 
-export const FlowKinds = [TextKind, RepostKind, ReactionKind, ReportKind, ZapKind, EventDeletionKind];
+export const FlowKinds = [
+  TextKind,
+  RepostKind,
+  ReactionKind,
+  ReportKind,
+  ZapKind,
+  EventDeletionKind,
+];
 export const StaticKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind, Trust1Kind];
-  
+
+export type EventCallback = (event: Event) => void;
 
 class WOTPubSub {
-  // The idea is that we are only interested in events that are less than 2 weeks old, per default. 
+  // The idea is that we are only interested in events that are less than 2 weeks old, per default.
   // Fetching older events can be done by request etc.
   // FlowSince applies primarily to FlowKinds. With StaticKinds we are interested in all events, as they are few.
-  flowSince = getNostrTime() - (60 * 60 * 24 * 14); // 2 weeks ago, TODO: make this configurable
+  flowSince = getNostrTime() - 60 * 60 * 24 * 14; // 2 weeks ago, TODO: make this configurable
 
   subscriptionId = 0;
   unsubs = new Map<number, any>();
-
 
   subscribedAuthors = new Set<UID>();
 
@@ -86,73 +93,83 @@ class WOTPubSub {
     Callbacks: 0,
   };
 
+  // Gets an event
+  getEvent(evnetId: UID, cb?: OnEvent) {
+    if (this.unsubs.has(evnetId)) return;
+
+    let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
+      this.unsubs.get(ID(event.id))?.(); // unsubscribe
+      eventManager.eventCallback(event);
+      if (cb) cb(event, afterEose, url);
+    };
+
+    let unSub = this.subscribeFilter([{ ids: [STR(evnetId)], kinds: [1,6], limit:1 }], callback);
+    this.unsubs.set(evnetId, unSub);
+  }
+
   updateRelays(urls: Array<string> | undefined) {
     if (!urls) return;
   }
 
-
   // Do we need to break up hugh subscriptions into smaller ones? YES
-  subscribeAuthors(
-    authorIDs: Set<UID> | Array<UID>
-  ) {
+  subscribeAuthors(authorIDs: Set<UID> | Array<UID>) {
     let authors: Array<string> = [];
 
-    for(let id of authorIDs) {
-      if(this.subscribedAuthors.has(id)) continue;
+    for (let id of authorIDs) {
+      if (this.subscribedAuthors.has(id)) continue;
       this.subscribedAuthors.add(id);
       authors.push(STR(id));
     }
 
-    if(authors.length === 0) return;
+    if (authors.length === 0) return;
 
     // Batch authors into 1000 chunks, so subscribe can handle it
     let batchs = this.batchArray(authors, 10);
 
-    for(let batch of batchs) {
-    
-      let filters = [{
-        authors: batch,
-        kinds: FlowKinds,
-        since: this.flowSince,
-      },
-      {
-        authors: batch,
-        kinds: StaticKinds,
-        since: 0,
-      }] as Array<Filter>;
-  
+    for (let batch of batchs) {
+      let filters = [
+        {
+          authors: batch,
+          kinds: FlowKinds,
+          since: this.flowSince,
+        },
+        {
+          authors: batch,
+          kinds: StaticKinds,
+          since: 0,
+        },
+      ] as Array<Filter>;
+
       // Need to delay the subscribe, otherwise relayPool will merge all the subscriptions into one. (I believe)
       setTimeout(() => {
         let r = this.subscribeFilter(filters, eventManager.eventCallback);
-        this.subscriptionId ++;
+        this.subscriptionId++;
         this.unsubs.set(this.subscriptionId, r);
       }, 0);
     }
   }
 
-
   unsubscribeFlow(authorIDs: Set<UID> | Array<UID>) {
     // TODO: unsubscribe authors, currently its unknown how to do this effectly without unsubscribing all authors
     // workaround: unsubscribe all authors and subscribe again with the same authors
     // Or subscribe each author individually and keep track of the subscriptions, but this is not optimal and the number of subscriptions can be huge
-
   }
 
   batchArray(arr: Array<any>, batchSize: number = 1000) {
     const batchedArr: Array<any> = [];
-    
+
     for (let i = 0; i < arr.length; i += batchSize) {
       batchedArr.push(arr.slice(i, i + batchSize));
     }
-    
+
     return batchedArr;
   }
 
-  subscribeFilter(
-    filters: Array<Filter>,
-    cb: OnEvent = eventManager.eventCallback,
-  ): Unsubscribe {
+  subscribeFilter(filters: Array<Filter>, cb?: OnEvent): Unsubscribe {
     let relays = Relays.enabledRelays();
+
+    if (!cb) 
+      cb = eventManager.eventCallback;
 
     const unsub = getRelayPool().subscribe(
       filters,
@@ -160,7 +177,7 @@ class WOTPubSub {
       (event: Event, afterEose: boolean, url: string | undefined) => {
         setTimeout(() => {
           this.metrics.Callbacks++;
-          cb(event, afterEose, url);
+          cb?.(event, afterEose, url);
         }, 0);
       },
       0,

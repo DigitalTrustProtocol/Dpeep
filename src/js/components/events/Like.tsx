@@ -6,12 +6,10 @@ import { route } from 'preact-router';
 import EventDB from '@/nostr/EventDB';
 import { getEventReplyingTo } from '@/nostr/utils';
 
-import Events from '../../nostr/Events';
 import Key from '../../nostr/Key';
 import Name from '../user/Name';
 
 import EventComponent from './EventComponent';
-import { set } from 'lodash';
 import reactionManager from '@/dwotr/ReactionManager';
 import { ID, STR } from '@/utils/UniqueIds';
 

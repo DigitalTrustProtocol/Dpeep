@@ -12,7 +12,6 @@ import Show from '../../components/helpers/Show.tsx';
 import { shouldSkipProxy } from '../../components/ProxyImg.tsx';
 import ProfileCard from '../../components/user/ProfileCard.tsx';
 import Key from '../../nostr/Key.ts';
-import SocialNetwork from '../../nostr/SocialNetwork.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';

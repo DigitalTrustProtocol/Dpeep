@@ -27,7 +27,7 @@ localState.get('settings').on((s) => (settings = s));
 const ReactionButtons = (props) => {
   const event = props.event as Event;
   const standalone = props.standalone;
-  const wot = props.wot;
+  const wot = props?.wot;
 
   const [loadGlobal, setLoadGlobal] = useState<boolean>(false);
   const { likes, onLike } = useLikes(event.id, event.pubkey, loadGlobal);
@@ -78,7 +78,7 @@ const useLikes = (messageId: string, author: string, loadGlobal: boolean) => {
   const onLike = useCallback(
     (active: boolean) => {
       const value = active ? 1 : 0;
-      reactionManager.onLike(messageId, author, value);
+      reactionManager.submitLike(messageId, author, value);
       setLikes(new Set(reactionManager.getLikes(ID(messageId))));
     },
     [messageId],

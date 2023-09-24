@@ -23,8 +23,11 @@ import followManager from './FollowManager';
 import profileManager from './ProfileManager';
 import reactionManager from './ReactionManager';
 import noteManager from './NoteManager';
+import { throttle } from 'lodash';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
+
+  requestedEvents: Set<UID> = new Set();
 
   metrics = {
     TotalMemory: 0,
@@ -33,6 +36,23 @@ class EventManager {
   };
 
   constructor() {}
+
+
+  loadRequestedEvents = throttle(async () => {
+    if (this.requestedEvents.size == 0) return;
+
+  });
+
+
+  requestEvents(eventId: UID | UID[]) {
+    let ids = Array.isArray(eventId) ? eventId : [eventId];
+
+    for (let id of ids) {
+      if (this.requestedEvents.has(id)) return;
+
+      this.requestedEvents.add(id);
+    }
+  }
 
   addSeenEvent(eventId: UID) {
     this.seenRelayEvents.add(eventId);
@@ -151,8 +171,8 @@ class EventManager {
     return true;
   }
 
-  async eventCallback(event: Event, afterEose: boolean, url: string | undefined) {
-    if (!eventManager.doRelayEvent(event)) return;
+  async eventCallback(event: Event) {
+    if (!eventManager.doRelayEvent(event)) return false;
 
     eventManager.metrics.Handle++;
 
@@ -190,6 +210,7 @@ class EventManager {
         Events.handle(event, false, true);
         break;
     }
+    return true;
   }
 
   async trustEvent(event: Event) {

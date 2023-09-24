@@ -17,6 +17,7 @@ import Repost from './Repost';
 import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
+import wotPubSub from '@/dwotr/network/WOTPubSub';
 
 declare global {
   interface Window {
@@ -71,7 +72,8 @@ const EventComponent = (props: EventComponentProps) => {
     }
     if (!event) {
       retrievingTimeout.current = setTimeout(() => setRetrieving(true), 1000);
-      Events.getEventById(hex, true, handleEvent);
+      //Events.getEventById(hex, true, handleEvent);
+      wotPubSub.getEvent(ID(hex), handleEvent);
     }
 
     return () => {

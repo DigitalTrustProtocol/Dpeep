@@ -33,7 +33,7 @@ type Props = {
   asInlineQuote?: boolean;
   event: any;
   isPreview?: boolean;
-  wot: any;
+  wot?: any;
 };
 
 
@@ -137,7 +137,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
         <hr className="-mx-2 opacity-10 my-2" />
         <CreateNoteForm
           autofocus={!standalone}
-          replyingTo={event.id}
+          replyingTo={event}
           placeholder={t('write_your_reply')}
         />
       </Show>

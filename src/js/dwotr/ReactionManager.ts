@@ -9,6 +9,7 @@ import Key from '@/nostr/Key';
 import blockManager from './BlockManager';
 import { EventMetadata, EventTag } from './Utils/EventParser';
 import eventManager from './EventManager';
+import noteManager from './NoteManager';
 
 
 
@@ -89,7 +90,7 @@ class ReactionManager {
   }
 
   // Block the public key using the logged in user as the Blocker
-  onLike(subjectEventId: string, subjectEventPubKey: string, value: number = 1) {
+  submitLike(subjectEventId: string, subjectEventPubKey: string, value: number = 1) {
     let myKey = Key.getPubKey();
     let myId = ID(myKey);
 
@@ -135,6 +136,8 @@ class ReactionManager {
 
     this.addValue(targetEventId, authorId, value);
 
+    noteManager.requestNote(targetEventId); // Request the notes for the event
+
     // Only save the event if the profile is followed by our WoT
     if (followManager.isAllowed(authorId)) {
       let record = {
@@ -148,10 +151,6 @@ class ReactionManager {
       this.save(record);
     }
   }
-
-  // parseEvent(event: Event) {
-
-  // }
 
   addValue(targetId: UID, profileId, value: number) {
     let likes = this.#getLikes(targetId);

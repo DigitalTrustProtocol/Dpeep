@@ -144,7 +144,8 @@ const useSubscribe = (ops: SubscribeOptions) => {
     }
 
     /// Load all events from memory    
-    setEvents(eventState.current.load()); 
+    let list = eventState.current.load();
+    setEvents(list); 
 
     // Subscribe to new events, add them to the refresh/more queue
     noteManager.onEvent.add(subscribe);
