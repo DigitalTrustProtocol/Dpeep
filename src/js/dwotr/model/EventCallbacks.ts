@@ -3,66 +3,45 @@
 import { UID } from '@/utils/UniqueIds';
 
 // Its uses a counter for each callback and a key to identify the same group of callbacks.
-export default class Subscriptions {
-  callbacks = new Map<UID, Map<number, any>>();
-  unsubscribe = new Map<UID, any>();
-
-  counter = 0;
-
+export default class EventCallbacks {
+  private callbacks = new Map<UID, Set<Function>>();
+  
   has(key: UID) {
     return this.callbacks.has(key);
   }
 
   // Add a callback to the list of callbacks for the given key.
-  add(key: UID, callback: any) {
+  add(key: UID, callback: Function) {
     if (!this.callbacks.has(key)) {
-      this.callbacks.set(key, new Map<number, any>());
+      this.callbacks.set(key, new Set());
     }
 
-    let index = this.counter++;
-    let map = this.callbacks.get(key)!;
-    map.set(index, callback);
-    return index;
+    this.callbacks.get(key)!.add(callback);
   }
 
-  hasUnsubscribe(key: UID) {
-    return this.unsubscribe.has(key);
-  }
-
-  addUnsubscribe(key: UID, callback: any) {
-    if (!this.unsubscribe.has(key)) {
-      this.unsubscribe.set(key, callback);
-    }
-  }
-
-  removeUnsubscribe(key: UID) {
-    if (!this.unsubscribe.has(key)) return;
-
-    let callback = this.unsubscribe.get(key)!;
-    callback();
-    this.unsubscribe.delete(key);
-  }
 
   // Remove a callback from the list of callbacks for the given key.
-  remove(key: UID, index: number) {
-    if (!this.callbacks.has(key)) return;
+  remove(key: UID, callback: Function) {
+    this.callbacks.get(key)?.delete(callback);
+  }
 
-    let map = this.callbacks.get(key)!;
-    map.delete(index);
-    if (map.size == 0) {
-      this.callbacks.delete(key);
-      this.removeUnsubscribe(key);
+
+  dispatchAll(value: any | Function) {
+    let fn = typeof value === 'function' ? value : (v: any) => value;
+
+    for (const id of this.callbacks.keys()) {
+      this.dispatch(id, fn(id));
     }
   }
 
   // Dispatch an event to all callbacks for the given key.
-  dispatch(key: UID, event: any) {
+  dispatch(key: UID, value: any) {
     if (!this.callbacks.has(key)) return;
 
-    let map = this.callbacks.get(key)!;
-    map.forEach((callback) => {
-      callback(event);
-    });
+    let set = this.callbacks.get(key)!;
+    for (const callback of set) {
+      callback(value);
+    }
   }
 
   // Remove all callbacks for the given key.

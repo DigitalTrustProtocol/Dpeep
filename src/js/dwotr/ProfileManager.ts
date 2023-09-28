@@ -1,7 +1,6 @@
 import { Event } from 'nostr-tools';
 import Events from '../nostr/Events';
 import IndexedDB from '../nostr/IndexedDB';
-import PubSub, { Unsubscribe } from '../nostr/PubSub';
 import SocialNetwork from '../nostr/SocialNetwork';
 import Key from '../nostr/Key';
 import { throttle } from 'lodash';
@@ -11,12 +10,13 @@ import storage from './Storage';
 import { hexName } from './Utils';
 import { ProfileEvent } from './network/ProfileEvent';
 import FuzzySearch from '@/nostr/FuzzySearch';
-import { ID, STR } from '@/utils/UniqueIds';
-import Subscriptions from './model/Subscriptions';
+import { ID, STR, UID } from '@/utils/UniqueIds';
+import EventCallbacks from './model/EventCallbacks';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
 import wotPubSub from './network/WOTPubSub';
+import EventDB from '@/nostr/EventDB';
 
 class ProfileManager {
   loaded: boolean = false;
@@ -387,7 +387,7 @@ class ProfileManager {
 
   // ---- New system ----
 
-  subscriptions = new Subscriptions();
+  callbacks = new EventCallbacks();
   
 
 
@@ -400,6 +400,23 @@ class ProfileManager {
       //Events.subscribeGroups();
   }
 
+
+  // Get the latest profile
+  
+  subscribeProfile(profileId: UID, cb: (profile: ProfileMemory) => void, kinds = [0], delay = 1000) {
+
+    this.callbacks.add(profileId, cb);
+
+    const handleEvent = (event: Event) => {
+      // At this point the profile should be loaded into memory from the event
+      let profile = profileManager.getMemoryProfile(profileId);
+
+      this.callbacks.dispatch(profileId, profile);      
+    }
+
+
+    wotPubSub.getAuthorEvent(profileId, kinds, handleEvent, delay); // delay 1 sec
+  }
 
   // subscribe(address: string, cb: (e: any) => void): Unsubscribe {
   //   return () => {};
@@ -468,7 +485,7 @@ class ProfileManager {
     let mem = ProfileMemory.fromRecord(profile);
     let event = new ProfileEvent(mem);
 
-    this.subscriptions.dispatch(mem.id, event);
+    this.callbacks.dispatch(mem.id, event);
   }
 
   // ---- Pet names ----

@@ -78,7 +78,7 @@ export default function Zap(props: Props) {
             {allZaps.length > 1 && <span> and {allZaps.length - 1} others </span>} {zappedText}
           </div>
         </div>
-        <EventComponent key={zappedId + props.event.id} id={zappedId} fullWidth={false} />
+        <EventComponent key={zappedId + props.event.id} id={zappedId} fullWidth={false} event={props.event} />
       </div>
     </div>
   );

@@ -189,7 +189,7 @@ const Feed = (props: FeedProps) => {
         >
           {items.map((event) => {
             return (
-              <EventComponent key={`${event.id}EC`} id={event.id} {...filterOption.eventProps} />
+              <EventComponent key={`${event.id}EC`} id={event.id} event={event} {...filterOption.eventProps} />
             );
           })}
         </InfiniteScroll>

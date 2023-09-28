@@ -1,11 +1,11 @@
 import { Event, Filter, getEventHash, getSignature } from 'nostr-tools';
-import PubSub, { Unsubscribe } from '../../nostr/PubSub';
+import PubSub from '../../nostr/PubSub';
 import Relays from '../../nostr/Relays';
 import { EntityType } from '../model/Graph';
 import Key from '../../nostr/Key';
 import getRelayPool from '@/nostr/relayPool';
 import eventManager from '../EventManager';
-import { ID, STR, UID } from '@/utils/UniqueIds';
+import { STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
@@ -63,7 +63,7 @@ type NostrKind = number;
 // Notes:
 // - likes, comments, zaps.
 
-export const FlowKinds = [
+export const StreamKinds = [
   TextKind,
   RepostKind,
   ReactionKind,
@@ -71,9 +71,21 @@ export const FlowKinds = [
   ZapKind,
   EventDeletionKind,
 ];
-export const StaticKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind, Trust1Kind];
+export const ReplaceableKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind, Trust1Kind];
 
+export type OnEventCallback = (event: Event, afterEose: boolean, url: string | undefined) => void;
 export type EventCallback = (event: Event) => void;
+export type Unsubscribe = () => void;
+export type OnEoseCallback = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => void;
+
+export type SubscribeOptions = {
+  filters: Filter[];
+  onEvent?: EventCallback;
+  onEose?: OnEoseCallback;
+  onClose?: () => void;
+  onDone?: () => void;
+  maxDelayms: number;
+};
 
 class WOTPubSub {
   // The idea is that we are only interested in events that are less than 2 weeks old, per default.
@@ -91,33 +103,43 @@ class WOTPubSub {
     SubscribedAuthors: 0,
     Subscriptions: 0,
     Callbacks: 0,
+    Profiles: 0,
+    NoteEvents: 0,
+    ContactEvents: 0,
+    ReactionEvents: 0,
+    TrustEvents: 0,
   };
 
   // Gets an event
-  getEvent(evnetId: UID, cb?: OnEvent) {
-    if (this.unsubs.has(evnetId)) return;
-
+  getEvent(evnetId: UID, cb?: OnEvent, delay: number = 0) {
+    return;
     let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
-      this.unsubs.get(ID(event.id))?.(); // unsubscribe
+      unSub?.();
       eventManager.eventCallback(event);
       if (cb) cb(event, afterEose, url);
     };
 
-    let unSub = this.subscribeFilter([{ ids: [STR(evnetId)], kinds: [1,6], limit:1 }], callback);
-    this.unsubs.set(evnetId, unSub);
+    let unSub = this.subscribeFilter(
+      [{ ids: [STR(evnetId)], kinds: [1, 6], limit: 1 }],
+      callback,
+      delay,
+    );
   }
 
-  getAuthorEvent(authorId: UID, kinds: Array<number> = [0], cb?: OnEvent) {
-
+  getAuthorEvent(authorId: UID, kinds: Array<number> = [0], cb?: OnEvent, delay: number = 0) {
+    return;
     let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
-      unSub();
+      unSub?.();
       eventManager.eventCallback(event);
       if (cb) cb(event, afterEose, url);
     };
 
-    let unSub = this.subscribeFilter([{ authors: [STR(authorId)], kinds, limit:1 }], callback);
+    let unSub = this.subscribeFilter(
+      [{ authors: [STR(authorId)], kinds, limit: 1 }],
+      callback,
+      delay,
+    );
   }
-
 
   updateRelays(urls: Array<string> | undefined) {
     if (!urls) return;
@@ -142,23 +164,91 @@ class WOTPubSub {
       let filters = [
         {
           authors: batch,
-          kinds: FlowKinds,
+          kinds: StreamKinds,
           since: this.flowSince,
         },
         {
           authors: batch,
-          kinds: StaticKinds,
+          kinds: ReplaceableKinds,
           since: 0,
         },
       ] as Array<Filter>;
 
-      // Need to delay the subscribe, otherwise relayPool will merge all the subscriptions into one. (I believe)
+      // Need to delay the subscribe, otherwise relayPool may merge all the subscriptions into one. (I believe)
       setTimeout(() => {
         let r = this.subscribeFilter(filters, eventManager.eventCallback);
         this.subscriptionId++;
         this.unsubs.set(this.subscriptionId, r);
       }, 0);
     }
+  }
+
+  // Do we need to break up hugh subscriptions into smaller ones? YES
+  async ReplaceableEventsOnce(
+    ids: Array<string>,
+    authors: Array<string>,
+    kinds: Array<number> = [0],
+    cb?: EventCallback,
+  ): Promise<boolean> {
+    let filters = [
+      {
+        //ids,
+        authors,
+        kinds,
+      } as Filter,
+    ];
+
+    let relays = this.getRelays(filters);
+
+    let promise = new Promise<boolean>((resolve, reject) => {
+      
+      let tries = 0;
+      let authorsRest = new Set<string>(authors);
+      let idsRest = new Set<string>(ids);
+
+      const onEvent = (event: Event) => {
+        console.log('ReplaceableEventsOnce', idsRest?.size, authorsRest?.size);
+        eventManager.eventCallback(event);
+        cb?.(event);
+        idsRest?.delete(event.id);
+        authorsRest?.delete(event.pubkey);
+        if (!!idsRest?.size && !!authorsRest?.size) resolve?.(true);
+      };
+
+      const onEose = (relayUrl: string) => {
+        console.log('ReplaceableEventsOnce.onEose', relayUrl, tries, relays);
+        // if (idsRest.size === 0 && authorsRest.size === 0) { // DO we need this?
+        //   resolve(true);
+        //   return;
+        // }
+
+        if (relays.includes(relayUrl)) {
+          tries++;
+        }
+
+        if (tries === relays.length) {
+          resolve(false);
+          //reject(new Error(`Failed to fetch events for ${idsRest.size} IDs and ${authorsRest.size} authors`));
+        }
+      }
+
+      getRelayPool().subscribe(
+        filters,
+        relays,
+        onEvent,
+        undefined,
+        onEose,
+        {
+          allowDuplicateEvents: false,
+          allowOlderEvents: false,
+          logAllEvents: false,
+          unsubscribeOnEose: true,
+          //dontSendOtherFilters: true,
+          //defaultRelays: string[]
+        },
+      );
+    });
+    return promise;
   }
 
   unsubscribeFlow(authorIDs: Set<UID> | Array<UID>) {
@@ -177,11 +267,12 @@ class WOTPubSub {
     return batchedArr;
   }
 
-  subscribeFilter(filters: Array<Filter>, cb?: OnEvent): Unsubscribe {
-    let relays = Relays.enabledRelays();
-
-    if (!cb) 
-      cb = eventManager.eventCallback;
+  subscribeFilter(
+    filters: Array<Filter>,
+    cb: OnEvent = eventManager.eventCallback,
+    delay = 0,
+  ): Unsubscribe {
+    let relays = this.getRelays(filters);
 
     const unsub = getRelayPool().subscribe(
       filters,
@@ -189,10 +280,16 @@ class WOTPubSub {
       (event: Event, afterEose: boolean, url: string | undefined) => {
         setTimeout(() => {
           this.metrics.Callbacks++;
+          this.metrics.Profiles += event.kind === MetadataKind ? 1 : 0;
+          this.metrics.NoteEvents += event.kind === TextKind ? 1 : 0;
+          this.metrics.ContactEvents += event.kind === ContactsKind ? 1 : 0;
+          this.metrics.ReactionEvents += event.kind === ReactionKind ? 1 : 0;
+          this.metrics.TrustEvents += event.kind === Trust1Kind ? 1 : 0;
+
           cb?.(event, afterEose, url);
         }, 0);
       },
-      0,
+      delay,
       undefined,
       {
         // Options
@@ -202,6 +299,45 @@ class WOTPubSub {
     );
 
     return unsub;
+  }
+
+
+  // Available functions in RelayPool
+  // --------------------------------
+  // RelayPool::publish(event: Event, relays: string[])
+
+  // RelayPool::onnotice(cb: (url: string, msg: string) => void)
+
+  // RelayPool::onerror(cb: (url: string, msg: string) => void)
+
+  // RelayPool::setWriteRelaysForPubKey(pubkey: string, writeRelays: string[])
+
+  // RelayPool::subscribeReferencedEvents(
+  //     event: Event,
+  //     onEvent: OnEvent,
+  //     maxDelayms?: number,
+  //     onEose?: OnEose,
+  //     options: SubscriptionOptions = {}
+  //   ): () => void
+
+  // RelayPool::fetchAndCacheMetadata(pubkey: string): Promise<Event>
+
+  // RelayPool::subscribeReferencedEventsAndPrefetchMetadata(
+  //     event: Event,
+  //     onEvent: OnEvent,
+  //     maxDelayms?: number,
+  //     onEose?: OnEose,
+  //     options: SubscriptionOptions = {}
+  //   ): () => void
+
+  // RelayPool::setCachedMetadata(pubkey: string, metadata: Event)
+
+  getRelays(filters: Array<Filter> = []) {
+    let relays = Relays.enabledRelays();
+    if (filters.length > 0 && filters[0].search) {
+      relays = Array.from(Relays.searchRelays.keys());
+    }
+    return relays;
   }
 
   publishTrust(

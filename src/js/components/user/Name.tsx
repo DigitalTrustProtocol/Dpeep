@@ -13,7 +13,7 @@ type Props = {
 
 
 const Name = (props: Props) => {
-  const profile = useProfile(props.pub);
+  const { profile } = useProfile(props.pub);
 
   const wot = useVerticeMonitor(ID(props.pub), ['badName', 'neutralName', 'goodName'], '');
 

@@ -4,7 +4,7 @@ import Key from '@/nostr/Key';
 import wotPubSub, { ContactsKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
-import Subscriptions from './model/Subscriptions';
+import EventCallbacks from './model/EventCallbacks';
 import profileManager from './ProfileManager';
 import storage from './Storage';
 import graphNetwork from './GraphNetwork';
@@ -12,6 +12,7 @@ import { EventParser, PTagContact } from './Utils/EventParser';
 import blockManager from './BlockManager';
 import Relays, { PublicRelaySettings } from '@/nostr/Relays';
 import EventDB from '@/nostr/EventDB';
+import { throttle } from 'lodash';
 
 //const FOLLOW_STORE_KEY = 'myFollowList';
 const DegreeInfinit = 99;
@@ -32,7 +33,7 @@ class FollowManager {
 
   items = new Map<UID, FollowItem>();
 
-  UISubs = new Subscriptions(); // Callbacks to call when the follower change
+  callbacks = new EventCallbacks(); // Callbacks to call when the follower change
 
   subsQueue = new Set<UID>(); // A queue of profiles to subscribe to
   unsubQueue = new Set<UID>(); // A queue of profiles to unsubscribe from
@@ -49,11 +50,30 @@ class FollowManager {
   metrics = {
     TableCount: 0,
     Authors: 0,
-    UISubs: 0,
+    UICallbacks: 0,
     // SubscribeQueue: 0,
     // UnsubscribeQueue: 0,
     SubscribedToRelays: 0,
   };
+
+  #saveQueue: Map<number, Event> = new Map();
+  #saving: boolean = false;
+  private saveBulk = throttle(() => {
+    if (this.#saving) {
+      this.saveBulk(); // try again later
+      return;
+    }
+
+    this.#saving = true;
+
+    const queue = [...this.#saveQueue.values()];
+    this.#saveQueue = new Map<number, Event>();
+
+    storage.follows.bulkPut(queue).finally(() => {
+      this.#saving = false;
+    });
+  }, 1000);
+
 
   isFollowedByMe(profileId: UID): boolean {
     return followManager.isFollowedBy(profileId);
@@ -82,7 +102,7 @@ class FollowManager {
     return false;
   }
 
-  async handle(event: Event) {
+  handle(event: Event) {
     let authorId = ID(event.pubkey);
     let myId = ID(Key.getPubKey());
     let isMe = authorId === myId;
@@ -113,7 +133,6 @@ class FollowManager {
       this.#eventEffects(item, metadata);
       this.save(event);
     }
-    EventDB.insert(event);
   }
 
   updateNetwork() {
@@ -238,7 +257,9 @@ class FollowManager {
     let event = this.createEvent();
 
     this.save(event);
+    
     EventDB.insert(event);
+    
     wotPubSub.publish(event);
     this.subscribeToRelays();
   }
@@ -258,8 +279,9 @@ class FollowManager {
     source.follows.delete(target.id);
   }
 
-  async save(event: Event | Partial<Event>) {
-    await storage.follows.put(event as Event & { pubkey: string });
+  save(event: Event) {
+    this.#saveQueue.set(ID(event.id), event);
+    this.saveBulk(); // Save to IndexedDB in bulk by throttling
   }
 
   // The load system supports multiple degrees of following
@@ -349,8 +371,8 @@ class FollowManager {
   }
 
   dispatchAll() {
-    for (const id of this.UISubs.keys()) {
-      this.UISubs.dispatch(id, this.isFollowed(id));
+    for (const id of this.callbacks.keys()) {
+      this.callbacks.dispatch(id, this.isFollowed(id));
     }
   }
 
@@ -426,9 +448,7 @@ class FollowManager {
     });
 
     this.metrics.Authors = this.items.size;
-    this.metrics.UISubs = this.UISubs.sizeAll();
-    //this.metrics.SubscribeQueue = this.subsQueue.size;
-    //this.metrics.UnsubscribeQueue = this.unsubQueue.size;
+    this.metrics.UICallbacks = this.callbacks.sizeAll();
 
     return this.metrics;
   }

@@ -169,6 +169,7 @@ const Note: React.FC<NoteProps> = ({
             isReply={true}
             isQuoting={!standalone}
             showReplies={1}
+            event={event}
           />
         ))}
       </InfiniteScroll>

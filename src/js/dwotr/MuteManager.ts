@@ -5,7 +5,7 @@ import Key from '@/nostr/Key';
 import wotPubSub, { MuteKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
-import Subscriptions from './model/Subscriptions';
+import EventCallbacks from './model/EventCallbacks';
 
 const MUTE_STORE_KEY = 'Mutes';
 
@@ -17,7 +17,7 @@ class MuteManager {
 
   timestamp = 0;
 
-  subscriptions = new Subscriptions(); // Callbacks to call when the mutes change
+  callbacks = new EventCallbacks(); // Callbacks to call when the mutes change
 
   // Is the key muted?
   isMuted(id: UID): boolean {
@@ -41,7 +41,7 @@ class MuteManager {
       this.noteMutes.delete(id);
     }
 
-    this.subscriptions.dispatch(id, isMuted);
+    this.callbacks.dispatch(id, isMuted);
 
     let event = await muteManager.createEvent();
     this.save(event);
@@ -64,7 +64,7 @@ class MuteManager {
 
     this.privateMutes = new Set(privateList.map(ID));
 
-    this.dispatchAll();
+    this.callbacks.dispatchAll(this.isMuted);
   }
 
   async handle(event: Event) {
@@ -117,11 +117,11 @@ class MuteManager {
     return event;
   }
 
-  dispatchAll() {
-    for (const id of this.subscriptions.keys()) {
-      this.subscriptions.dispatch(id, this.isMuted(id));
-    }
-  }
+  // dispatchAll() {
+  //   for (const id of this.callbacks.keys()) {
+  //     this.callbacks.dispatch(id, this.isMuted(id));
+  //   }
+  // }
 
 }
 

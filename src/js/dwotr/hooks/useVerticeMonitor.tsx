@@ -23,13 +23,13 @@ const useVerticeMonitor = (id: UID, options?: any, option?: any) => {
             findOption(e);
         }
 
-        let index = verticeMonitor.subscriptions.add(id, cb);
+        verticeMonitor.callbacks.add(id, cb);
 
         // Call manually the graphNetwork.resolveTrust the first time
         findOption(graphNetwork.g.vertices[id]);
 
         return () => {
-            verticeMonitor.subscriptions.remove(id, index);
+            verticeMonitor.callbacks.remove(id, cb);
         }
     }, [id]);
 

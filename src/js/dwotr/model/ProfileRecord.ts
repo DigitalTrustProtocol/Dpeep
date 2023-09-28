@@ -31,6 +31,8 @@ export class ProfileMemory extends ProfileRecord {
     
     isDefault: boolean = false;
 
+    relayLastUpdate: number = 0;
+
 
 
     constructor(id: number) {

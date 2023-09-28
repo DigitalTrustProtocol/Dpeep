@@ -24,7 +24,7 @@ function getProfileState(profile: any, hasError: boolean, props: Props) {
   let isBlocked = blockManager.isBlocked(ID(hexKey));
   let hasPic =
     profile?.picture && !hasError && !props?.hidePicture && !isBlocked;
-  let avatar = !hasPic ? profileManager.createImageUrl(hexKey, props.width) : '';
+  let avatar = "";// !hasPic ? profileManager.createImageUrl(hexKey, props.width) : '';
   let isActive = ['online', 'active'].includes(profile.activity || '');
 
   return { ...profile, hasPic, avatar, isActive, activity: props?.activity };
@@ -34,7 +34,7 @@ function getProfileState(profile: any, hasError: boolean, props: Props) {
 const MyAvatar: React.FC<Props> = (props) => {
   const { hexKey } = useKey(props.str);
   const [hasError, setHasError] = useState<boolean>(false);
-  const profile = useProfile(hexKey);
+  const { profile } = useProfile(hexKey);
   const [state, setState] = useState<any>(null); // Will be set in useEffect
 
   useEffect(() => {

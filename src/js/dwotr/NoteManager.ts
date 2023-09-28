@@ -33,8 +33,6 @@ class NoteManager {
   threadRepliesByMessageId: Map<string, Set<string>> = new Map();
   repostsByMessageId: Map<string, Set<string>> = new Map();
 
-  #saveQueue: Map<number, Event> = new Map();
-  #saving: boolean = false;
 
   onEvent: Set<EventCallback> = new Set();
 
@@ -47,6 +45,8 @@ class NoteManager {
 
   };
 
+  #saveQueue: Map<number, Event> = new Map();
+  #saving: boolean = false;
   private saveBulk = throttle(() => {
     if (this.#saving) {
       this.saveBulk(); // try again later
@@ -95,7 +95,7 @@ class NoteManager {
     let deltaDelete: Array<string> = [];
 
     for (let note of notes) {
-      eventManager.addSeenEvent(ID(note.id));
+      eventManager.addSeen(ID(note.id));
 
       if (this.#canAddNote(note)) {
         this.#addNote(note);
@@ -107,7 +107,7 @@ class NoteManager {
     this.metrics.Deleted += deltaDelete.length;
 
     // Remove notes from profiles that are not relevant
-    if (deltaDelete.length > 0) await storage.notes.bulkDelete(deltaDelete);
+    //if (deltaDelete.length > 0) await storage.notes.bulkDelete(deltaDelete);
   }
 
   save(event: Event) {
@@ -136,7 +136,7 @@ class NoteManager {
   requestNote(id: UID) {
     if (this.notes.has(id)) return;
 
-    wotPubSub.getEvent(id);
+    wotPubSub.getEvent(id, undefined, 1000);
   }
 
 

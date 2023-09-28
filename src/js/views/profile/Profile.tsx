@@ -28,7 +28,7 @@ function getNpub(id: string) {
 function Profile(props) {
   const [npub, setNpub] = useState(getNpub(props.id));
   const { hexKey: hexPub, bech32Key, isMe } = useKey(npub, false); //
-  const profile = useProfile(hexPub) as any;
+  const { profile } = useProfile(hexPub) as any;
 
   const [blocked, setBlocked] = useState(false);
   const [bannerModalOpen, setBannerModalOpen] = useState(false);

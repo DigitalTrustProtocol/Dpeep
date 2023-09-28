@@ -7,7 +7,7 @@ import IndexedDB from '@/nostr/IndexedDB';
 import Key from '@/nostr/Key';
 import wotPubSub, { BlockKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
-import Subscriptions from './model/Subscriptions';
+import EventCallbacks from './model/EventCallbacks';
 
 class BlockVertice extends Vertice {
   blocks?: Set<UID>;
@@ -17,7 +17,7 @@ class BlockVertice extends Vertice {
 
 // Blocks that are aggregated from multiple profiles
 class BlockManager {
-  subscriptions = new Subscriptions(); // Callbacks to call when the mutes change
+  callbacks = new EventCallbacks(); // Callbacks to call when the mutes change
 
   isBlocked(id: number): boolean {
     let targetV = graphNetwork.g.vertices[id] as BlockVertice;
@@ -62,7 +62,7 @@ class BlockManager {
       if (targetV.blockedBy) delete targetV.blockedBy[myId];
     }
 
-    this.subscriptions.dispatch(targetId, isBlocked); // Notify subscribers, UI Components
+    this.callbacks.dispatch(targetId, isBlocked); // Notify subscribers, UI Components
 
     let event = await blockManager.createEvent(myV);
     this.save(event); // Save the event to the local database
@@ -93,8 +93,8 @@ class BlockManager {
   }
 
   dispatchAll() {
-    for (const id of this.subscriptions.keys()) {
-      this.subscriptions.dispatch(id, this.isBlocked(id));
+    for (const id of this.callbacks.keys()) {
+      this.callbacks.dispatch(id, this.isBlocked(id));
     }
   }
 

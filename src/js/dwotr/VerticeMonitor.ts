@@ -1,9 +1,9 @@
 import graphNetwork from './GraphNetwork';
 import { Vertice } from './model/Graph';
-import Subscriptions from './model/Subscriptions';
+import EventCallbacks from './model/EventCallbacks';
 
 class VerticeMonitor {
-  subscriptions = new Subscriptions();
+  callbacks = new EventCallbacks();
 
   processChange(vertices: Array<Vertice>) {
     if (!vertices || vertices.length == 0) return;
@@ -28,7 +28,7 @@ class VerticeMonitor {
   }
 
   dispatchAll() {
-    for (const id of this.subscriptions.keys()) {
+    for (const id of this.callbacks.keys()) {
       let vertice = graphNetwork.g.vertices[id];
       if (!vertice) continue;
 
@@ -39,7 +39,7 @@ class VerticeMonitor {
   }
 
   dispatch(vertice: Vertice) {
-    this.subscriptions.dispatch(vertice.id, vertice);
+    this.callbacks.dispatch(vertice.id, vertice);
   }
 
   findOption(vertice: Vertice | undefined, options: Array<any> | undefined): any {

@@ -28,9 +28,9 @@ const DEFAULT_RELAYS = [
   'wss://nostr-pub.wellorder.net',
   'wss://offchain.pub',
   'wss://nos.lol',
-  'wss://relay.snort.social',
-  'wss://relay.current.fyi',
-  'wss://soloco.nl',
+  //'wss://relay.snort.social',
+  //'wss://relay.current.fyi', Slow!
+  //'wss://soloco.nl',
 ];
 
 const SEARCH_RELAYS = [

@@ -46,6 +46,8 @@ const getRelayPool = () => {
   relayPoolInstance = new RelayPool(Relays.enabledRelays(), {
     useEventCache: false,
     autoReconnect: true,
+    skipVerification: true, // Done manually as seen event are ignored. Way faster approach.
+
     // externalGetEventById: (id) => {
     //   return (
     //     (UniqueIds.has(id) && {

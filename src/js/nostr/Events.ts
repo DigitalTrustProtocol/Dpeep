@@ -252,7 +252,6 @@ const Events = {
     }
   },
   handleZap(event) {
-    EventDB.insert(event);
     const zappedNote = event.tags?.find((tag) => tag[0] === 'e')?.[1];
     if (!zappedNote) {
       return; // TODO you can also zap profiles
@@ -315,7 +314,6 @@ const Events = {
       // ignore
     }
 
-    EventDB.insert(event);
     if (!maybeSecretChat) {
       this.saveDMToLocalState(event, localState.get('chats').get(chatId));
     }

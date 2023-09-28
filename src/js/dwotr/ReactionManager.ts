@@ -136,6 +136,7 @@ class ReactionManager {
 
     this.addValue(targetEventId, authorId, value);
 
+    // This is not good puts a lot of load on the browser
     noteManager.requestNote(targetEventId); // Request the notes for the event
 
     // Only save the event if the profile is followed by our WoT
@@ -196,7 +197,7 @@ class ReactionManager {
     for (let reaction of reactions) {
       let profileId = ID(reaction.profileId);
 
-      eventManager.addSeenEvent(ID(reaction.id)); // No need to handle this event again from Relays
+      eventManager.addSeen(ID(reaction.id)); // No need to handle this event again from Relays
 
       if (followManager.isAllowed(profileId)) {
         this.addValue(ID(reaction.eventId), ID(reaction.profileId), reaction.value);

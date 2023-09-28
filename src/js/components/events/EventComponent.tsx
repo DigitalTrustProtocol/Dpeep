@@ -5,7 +5,7 @@ import EventDB from '@/nostr/EventDB';
 import { isRepost } from '@/nostr/utils.ts';
 import { EventID } from '@/utils/Hex/Hex.ts';
 
-import Events from '../../nostr/Events';
+import { Event } from 'nostr-tools';
 import { translate as t } from '../../translations/Translation.mjs';
 import Icons from '../../utils/Icons';
 
@@ -18,6 +18,7 @@ import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
 import wotPubSub from '@/dwotr/network/WOTPubSub';
+import noteManager from '@/dwotr/NoteManager';
 
 declare global {
   interface Window {
@@ -44,36 +45,46 @@ export interface EventComponentProps {
   isQuoting?: boolean;
   feedOpenedAt?: number;
   fullWidth?: boolean;
+  event?: Event;
 }
 
 const EventComponent = (props: EventComponentProps) => {
   const hex = useMemo(() => new EventID(props.id).hex, [props.id]);
-  const [event, setEvent] = useState(EventDB.get(hex));
+  const [event, setEvent] = useState(props.event);
   const [retrieving, setRetrieving] = useState<boolean>(false);
   const retrievingTimeout = useRef<any>();
   const unmounted = useRef<boolean>(false);
 
 
   useEffect(() => {
+
     // Moved inside useEffect to avoid recreating the function on every render
-    const handleEvent = (e: any) => {
-      if (e) {
-        clearTimeout(retrievingTimeout.current);
-        if (!unmounted.current) {
-          setRetrieving(false);
-          setEvent(e);
-        }
-      }
-    };
+    // const handleEvent = (e: any) => {
+    //   if (e) {
+    //     clearTimeout(retrievingTimeout.current);
+    //     if (!unmounted.current) {
+    //       setRetrieving(false);
+    //       setEvent(e);
+    //     }
+    //   }
+    // };
   
     //console.log('EventComponent init'); // this gets called more than displayCount - unnecessary?
     if (props.standalone && (event || retrievingTimeout.current)) {
       window.prerenderReady = true;
     }
     if (!event) {
-      retrievingTimeout.current = setTimeout(() => setRetrieving(true), 1000);
+
+      //let e = noteManager.notes.get(ID(hex));
+      let e = EventDB.get(hex);
+      setEvent(e);
+
+      //retrievingTimeout.current = setTimeout(() => setRetrieving(true), 1000);
       //Events.getEventById(hex, true, handleEvent);
-      wotPubSub.getEvent(ID(hex), handleEvent);
+      //wotPubSub.getEvent(ID(hex), handleEvent); // Should be ok with network load 
+      if(!e) {
+        console.log('EventComponent event is not provided', hex, props);
+      }
     }
 
     return () => {
@@ -86,14 +97,15 @@ const EventComponent = (props: EventComponentProps) => {
     'opacity-0': !retrieving,
   });
 
-  if (!event) {
-    return (
-      <div key={props.id} className={loadingClass}>
-        <div className="text">{t('looking_up_message')}</div>
-        {props.asInlineQuote ? null : <EventDropdown id={props.id || ''} event={event} />}
-      </div>
-    );
-  }
+  if(!event) return null;
+  // if (!event) {
+  //   return (
+  //     <div key={props.id} className={loadingClass}>
+  //       <div className="text">{t('looking_up_message')}</div>
+  //       {props.asInlineQuote ? null : <EventDropdown id={props.id || ''} event={event} />}
+  //     </div>
+  //   );
+  // }
 
   if (blockManager.isBlocked(ID(event.pubkey))) {
     if (props.standalone || props.isQuote) {

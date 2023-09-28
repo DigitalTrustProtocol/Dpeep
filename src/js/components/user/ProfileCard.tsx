@@ -23,27 +23,8 @@ import TrustProfileButtons from '../../dwotr/components/TrustProfileButtons';
 import Stats from './Stats';
 import blockManager from '@/dwotr/BlockManager.ts';
 
+
 const ProfileCard = (props: { hexPub: string; npub: string }) => {
-  const getWebsite = (websiteProfile: string) => {
-    try {
-      const tempWebsite = websiteProfile.match(/^https?:\/\//)
-        ? websiteProfile
-        : 'http://' + websiteProfile;
-      const url = new URL(tempWebsite);
-      return url.href.endsWith('/') ? url.href.slice(0, -1) : url.href;
-    } catch (e) {
-      return '';
-    }
-  };
-
-  const getLightning = (profile: any) => {
-    let lightning = profile.lud16 || profile.lud06;
-    if (lightning && !lightning.startsWith('lightning:')) {
-      lightning = 'lightning:' + lightning;
-    }
-    return lightning;
-  };
-
   const { hexPub, npub } = props;
   const [profile, setProfile] = useState<any>(SocialNetwork.profiles.get(ID(hexPub)) || {});
   const [lightning, setLightning] = useState<string>(getLightning(profile));
@@ -250,3 +231,23 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
 };
 
 export default ProfileCard;
+
+function getWebsite(websiteProfile: string) {
+  try {
+    const tempWebsite = websiteProfile.match(/^https?:\/\//)
+      ? websiteProfile
+      : 'http://' + websiteProfile;
+    const url = new URL(tempWebsite);
+    return url.href.endsWith('/') ? url.href.slice(0, -1) : url.href;
+  } catch (e) {
+    return '';
+  }
+};
+
+function getLightning(profile: any) {
+  let lightning = profile.lud16 || profile.lud06;
+  if (lightning && !lightning.startsWith('lightning:')) {
+    lightning = 'lightning:' + lightning;
+  }
+  return lightning;
+};

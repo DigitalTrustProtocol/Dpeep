@@ -1,7 +1,7 @@
 import EventDB from '@/nostr/EventDB';
 import Events from '@/nostr/Events';
-import { ID, UID, UniqueIds } from '@/utils/UniqueIds';
-import { Event } from 'nostr-tools';
+import { ID, UID } from '@/utils/UniqueIds';
+import { Event, validateEvent, verifySignature } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
 import graphNetwork from './GraphNetwork';
 import {
@@ -29,10 +29,15 @@ class EventManager {
 
   requestedEvents: Set<UID> = new Set();
 
+  items: Map<UID, Event> = new Map();
+
+
+
+
   metrics = {
     TotalMemory: 0,
     Loaded: 0,
-    Handle: 0,
+    HandleEvents: 0,
   };
 
   constructor() {}
@@ -54,9 +59,6 @@ class EventManager {
     }
   }
 
-  addSeenEvent(eventId: UID) {
-    this.seenRelayEvents.add(eventId);
-  }
 
   createTrustEvent(
     entityPubkey: string,
@@ -162,19 +164,47 @@ class EventManager {
     return undefined;
   }
 
+
+  seen(eventId: UID) {
+    return this.seenRelayEvents.has(eventId);
+  }
+
+  addSeen(eventId: UID) {
+    this.seenRelayEvents.add(eventId);
+  }
+
+  verify(event: Event) {
+    if (!event?.id) return false;
+    if(!validateEvent(event) || !verifySignature(event)) return false;
+    return true;
+  }
+
+
   doRelayEvent(event: Event): boolean {
     if (!event?.id) return false;
     let eventId = ID(event.id); // add Event ID to UniqueIds
 
-    if (this.seenRelayEvents.has(eventId)) return false; // already seen this event, skip it
+
+    if (this.seenRelayEvents.has(eventId)) {
+      return false; // already seen this event, skip it
+    } 
+
+    // Relay-pool do not validate events, so we need to do it here.
+    // Validate an event takes about 14ms, so this is a big performance boost avoid validating events that we have already seen
+    if(!validateEvent(event) || !verifySignature(event)) return false;
+
     this.seenRelayEvents.add(eventId);
     return true;
   }
 
   async eventCallback(event: Event) {
-    if (!eventManager.doRelayEvent(event)) return false;
+    
+    this.addSeen(ID(event.id));
 
-    eventManager.metrics.Handle++;
+    // Use for now 
+    EventDB.insert(event);
+
+    eventManager.metrics.HandleEvents++;
 
     switch (event.kind) {
       case MetadataKind:
@@ -189,7 +219,7 @@ class EventManager {
         break;
 
       case ContactsKind: // Follow Kind 3
-        await followManager.handle(event);
+        followManager.handle(event);
         break;
 
       case ReactionKind:
@@ -209,7 +239,9 @@ class EventManager {
       default:
         Events.handle(event, false, true);
         break;
+
     }
+
     return true;
   }
 

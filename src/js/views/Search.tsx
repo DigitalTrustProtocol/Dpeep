@@ -13,7 +13,7 @@ import { useProfile } from '../dwotr/hooks/useProfile';
 import useCachedFetch from '@/utils/useCachedFetch';
 
 const SuggestionProfile = memo(({ pubkey }: { pubkey: string }) => {
-  const profile = useProfile(pubkey) as any;
+  const { profile } = useProfile(pubkey) as any;
 
   if(!profile) return null; // Will not render before profile is ready
 
@@ -89,10 +89,10 @@ const Search = (props: any) => {
         }}
       />
       <div className="max-h-[50vh] overflow-y-auto">
-        <SmallFeed events={trendingPosts} />
+        {/* <SmallFeed events={trendingPosts} /> */}
       </div>
       <div className="max-h-[50vh] overflow-y-auto">
-        <FollowSuggestionsAPI />
+        {/* <FollowSuggestionsAPI /> */}
       </div>
     </div>
   );

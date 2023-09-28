@@ -34,39 +34,40 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   useEffect(() => {
     setGraphStatus('loading');
 
-    graphNetwork.init(hexKey);
+    //graphNetwork.init(hexKey);
 
-    graphNetwork.whenReady(async () => {
+    //graphNetwork.whenReady(async () => {
       setGraphStatus('done');
 
       setProfileStatus('loading');
-      profileManager.subscribeMyself(); // Subscribe to my own profile
-      await profileManager.loadAllProfiles();
+      //profileManager.subscribeMyself(); // Subscribe to my own profile
+      //await profileManager.loadAllProfiles();
       setProfileStatus('done');
 
       setMuteStatus('waiting');
-      muteManager.load();
+      //muteManager.load();
       setMuteStatus('done');
 
       setBlockStatus('loading');
-      await blockManager.load();
+      //await blockManager.load();
       setBlockStatus('done');
 
       setFollowStatus('loading');
-      await followManager.load();
-      followManager.subscribeToRelays(); // Subscribe to followers of my profile
+      followManager.load().then(() => {
+      //followManager.subscribeToRelays(); // Subscribe to followers of my profile
       setFollowStatus('done');
+      });
 
       // Reactions
       setReactionStatus('loading');
-      await reactionManager.load();
+      //await reactionManager.load();
       setReactionStatus('done');
 
       // Now load the notes
       setLatestNotes('loading');
-      await noteManager.load();
+      //await noteManager.load();
       setLatestNotes('done');
-    });
+    //});
 
 
     return () => {};
