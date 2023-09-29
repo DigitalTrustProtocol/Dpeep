@@ -22,7 +22,7 @@ type SavedRelays = {
 let savedRelays: SavedRelays = {};
 
 const DEFAULT_RELAYS = [
-  'wss://eden.nostr.land',
+  //'wss://eden.nostr.land',
   'wss://nostr.fmt.wiz.biz',
   'wss://relay.damus.io',
   'wss://nostr-pub.wellorder.net',

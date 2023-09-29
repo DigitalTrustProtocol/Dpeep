@@ -5,14 +5,14 @@ import { Event } from 'nostr-tools';
 import { mergeRight } from 'ramda';
 import { seconds, first } from 'hurdak';
 import { getNostrTime } from '../Utils';
-import { SubscribeOptions } from './WOTPubSub';
+import { FeedOptions } from './WOTPubSub';
 import { EPOCH } from '../Utils/Nostr';
 import relaySubscription from './RelaySubscription';
 import { ICursor } from './ICursor';
 
 
 export class RelayEventCursor implements ICursor {
-  pageSize = 50;
+  limit = 50;
 
   //  An event matches a filter if since <= created_at <= until holds.
   until = getNostrTime();
@@ -24,13 +24,13 @@ export class RelayEventCursor implements ICursor {
 
   timeout = 3000;
 
-  subscribeOptions: SubscribeOptions;
+  subscribeOptions: FeedOptions;
 
   buffer: Event[] = [];
 
-  constructor(opts: SubscribeOptions, size = 10) {
+  constructor(opts: FeedOptions, size = 50) {
     this.subscribeOptions = opts;
-    this.pageSize = size;
+    this.limit = size;
   }
 
   hasMore(): boolean {
@@ -40,29 +40,27 @@ export class RelayEventCursor implements ICursor {
 
 
   async load(): Promise<number> {
-    const limit = this.pageSize;
-
     // If we're already loading, or we have enough buffered, do nothing
-    if (this.done || this.loading || limit <= 0) {
+    if (this.done) {
       return 0;
     }
 
-    const { since, until } = this;
-    const { filters, onEvent, onClose, onDone } = this.subscribeOptions;
-
-    this.loading = true;
+    const { limit, since, until } = this;
+    const { filter, onEvent, onClose, onDone } = this.subscribeOptions;
 
     let options = {
-      filters: filters.map(mergeRight({ until, limit, since })),
-      onEvent: (event: Event) => {
+      filter: { ...filter,  until, limit, since },
+      onEvent: (event: Event, afterEose: boolean, relayUrl: string) => {
         this.until = Math.min(until, event.created_at) - 1;
+        
+        // The event has been added to eventHandler memory, but not yet to the buffer
+        if(this.subscribeOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
+
         this.buffer.push(event);
-        onEvent?.(event);
-        //console.log('Relay Feed event', this.buffer.length, this.until, this.since);
+        onEvent?.(event, afterEose, relayUrl);
       },
       maxDelayms: 0,
       onClose: () => {
-        this.loading = false;
         // Relays can't be relied upon to return events in descending order, do exponential
         // windowing to ensure we get the most recent stuff on first load, but eventually find it all
         if (this.buffer.length === 0) {
@@ -79,12 +77,12 @@ export class RelayEventCursor implements ICursor {
 
         if (this.done) onDone?.();
 
-        console.log('Relay Feed closed, events loaded', this.buffer.length, 'done', this.done, 'Since: ', new Date(this.since * 1000).toLocaleString(), 'Until: ', this.until ? new Date(this.until * 1000).toLocaleString() : 'undefined');
+        //console.log('Closed Sub Relay: ', relayUrl, afterEose, new Date(event.created_at * 1000).toLocaleString());
+        //console.log('Relay Feed closed, events loaded', this.buffer.length, 'done', this.done, 'Since: ', new Date(this.since * 1000).toLocaleString(), 'Until: ', this.until ? new Date(this.until * 1000).toLocaleString() : 'undefined');
       },
-    } as SubscribeOptions;
+    } as FeedOptions;
 
     await relaySubscription.Once(options);
-
 
     return this.buffer.length;
   }
@@ -105,7 +103,4 @@ export class RelayEventCursor implements ICursor {
     return first(this.take(1));
   }
 
-  clone(): ICursor {
-    return new RelayEventCursor(this.subscribeOptions, this.pageSize);
-  }
 }

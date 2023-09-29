@@ -1,8 +1,8 @@
-import { FilterOption } from '@/components/feed/types';
+import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 
 type FilterOptionsProps = {
-  filterOptions: FilterOption[];
-  activeOption: FilterOption;
+  filterOptions: FeedOptions[];
+  activeOption: FeedOptions;
   onOptionClick: (option: number) => void;
 };
 

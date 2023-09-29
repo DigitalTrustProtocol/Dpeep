@@ -174,9 +174,7 @@ class EventManager {
   }
 
   verify(event: Event) {
-    if (!event?.id) return false;
-    if(!validateEvent(event) || !verifySignature(event)) return false;
-    return true;
+    return verifySignature(event);
   }
 
 

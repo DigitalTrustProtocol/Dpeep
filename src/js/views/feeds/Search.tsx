@@ -21,6 +21,7 @@ const Search: React.FC<Props> = ({ query }) => {
 
     return [
       {
+        id: 'search',
         name: 'Search',
         filter,
         filterFn,

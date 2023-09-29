@@ -15,108 +15,87 @@ import { isRepost } from '@/nostr/utils.ts';
 import useHistoryState from '@/state/useHistoryState.ts';
 import Helpers from '@/utils/Helpers';
 
-import { translate as t } from '../../translations/Translation.mjs';
-import { ID } from '@/utils/UniqueIds';
-import blockManager from '@/dwotr/BlockManager';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { FilterOption } from './types';
 import useSubscribe from '@/dwotr/hooks/useSubscribe';
+import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 
 export type FeedProps = {
-  filterOptions: FilterOption[];
+  filterOptions: FeedOptions[];
   showDisplayAs?: boolean;
-  filterFn?: (event: any) => boolean;
+  //filterFn?: (event: any) => boolean;
   emptyMessage?: string;
-  fetchEvents?: (opts: any) => {
-    events: Event[];
-    hasMore: boolean;
-    hasRefresh: boolean;
-    loadMore: () => void;
-    refresh: () => void;
-    loadAll: () => void;
-  };
+  fetchEvents?: any;
+   // (opts: any) => {
+  //   events: Event[];
+  //   hasMore: boolean;
+  //   hasRefresh: boolean;
+  //   loadMore: () => void;
+  //   refresh: () => void;
+  //   loadAll: () => void;
+  // };
 };
 
 
-const Feed = (props: FeedProps) => {
-  const fetchEvents = props.fetchEvents || useSubscribe;
+const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
+  //const fetchEvents = props.fetchEvents || useSubscribe;
   const feedTopRef = useRef<HTMLDivElement>(null);
-  const { showDisplayAs, filterOptions } = props;
-  if (!filterOptions || filterOptions.length === 0) {
-    throw new Error('Feed requires at least one filter option');
-  }
+
   const displayAsParam = Helpers.getUrlParameter('display') === 'grid' ? 'grid' : 'feed';
+  
+
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
   const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
   
   const filterOption = filterOptions[filterOptionIndex];
 
-  const filterFn = useCallback(
-    (event) => {
-      if (blockManager.isBlocked(ID(event.pubkey))) {
-        return false;
-      }
+    // when giving params to Feed, be careful that they don't unnecessarily change on every render
+  const { events, hasMore, hasRefresh, loadMore, refresh } = useSubscribe(filterOption);
 
-      if (filterOption.filterFn) {
-        return filterOption.filterFn(event);
-      }
-      return true;
-    },
-    [filterOption],
-  );
-
-  // when giving params to Feed, be careful that they don't unnecessarily change on every render
-  const { events, hasMore, hasRefresh, loadMore, refresh } = fetchEvents({
-    filter: filterOption.filter,
-    filterFn,
-    sinceLastOpened: false,
-    mergeSubscriptions: true,
-  });
-
-  const hiddenEvents = useMemo(() => {
-    const hiddenEvents = new Set<string>();
-    if (!filterOption.mergeReposts) {
-      return hiddenEvents;
-    }
-    const seenReposts = new Set<string>();
-    for (const event of events) {
-      if (isRepost(event)) {
-        for (const tag of event.tags) {
-          if (tag[0] === 'e') {
-            if (seenReposts.has(tag[1])) {
-              hiddenEvents.add(event.id);
-              continue;
-            }
-            seenReposts.add(tag[1]);
-          }
-        }
-      } else if (seenReposts.has(event.id)) {
-        hiddenEvents.add(event.id);
-      }
-    }
-    return hiddenEvents;
-  }, [events]);
+  // const hiddenEvents = useMemo(() => {
+  //   const hiddenEvents = new Set<string>();
+  //   if (!filterOption.mergeReposts) {
+  //     return hiddenEvents;
+  //   }
+  //   const seenReposts = new Set<string>();
+  //   for (const event of events) {
+  //     if (isRepost(event)) {
+  //       for (const tag of event.tags) {
+  //         if (tag[0] === 'e') {
+  //           if (seenReposts.has(tag[1])) {
+  //             hiddenEvents.add(event.id);
+  //             continue;
+  //           }
+  //           seenReposts.add(tag[1]);
+  //         }
+  //       }
+  //     } else if (seenReposts.has(event.id)) {
+  //       hiddenEvents.add(event.id);
+  //     }
+  //   }
+  //   return hiddenEvents;
+  // }, [events]);
 
 
   useEffect(() => {
-    if(events.length === 0 && hasRefresh) {
-      refresh(); // Auto refresh to show new events
-      return;
-    }
+    // if(events.length === 0 && hasRefresh) {
+    //   refresh(); // Auto refresh to show new events
+    //   return;
+    // }
 
     // 10 should be enough to fill the screen
-    if(events.length < 10 && hasMore) {
-      loadMore(); // Auto load more to fill the screen
-      return;
-    }
+    // if(events.length < 10 && hasMore) {
+    //   loadMore(); // Auto load more to fill the screen
+    //   return;
+    // }
   }, [events, hasRefresh, hasMore]);
 
  
   const infiniteScrollKeyString = `${infiniteScrollKey}-${displayAs}-${filterOption.name}`;
 
  
-  let items = events.filter((event) => !hiddenEvents.has(event.id));
+  //let items = events.filter((event) => !hiddenEvents.has(event.id));
+  let items = events;
 
 
   return (

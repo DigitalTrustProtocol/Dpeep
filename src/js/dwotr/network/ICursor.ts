@@ -11,6 +11,6 @@ export interface ICursor {
     count(): number;
     peek(): Event;
     pop(): Event;
-    clone(): ICursor;
+    
   }
   

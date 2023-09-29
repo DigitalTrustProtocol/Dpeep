@@ -8,7 +8,6 @@ import eventManager from '../EventManager';
 import { STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 
-export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
 
 // Wot Custom
 export const Trust1Kind: number = 32010;
@@ -73,18 +72,25 @@ export const StreamKinds = [
 ];
 export const ReplaceableKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind, Trust1Kind];
 
+export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
+
 export type OnEventCallback = (event: Event, afterEose: boolean, url: string | undefined) => void;
 export type EventCallback = (event: Event) => void;
 export type Unsubscribe = () => void;
 export type OnEoseCallback = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => void;
 
-export type SubscribeOptions = {
-  filters: Filter[];
-  onEvent?: EventCallback;
+export type FeedOptions = {
+  id?: string;
+  name?: string;
+  filter: Filter;
+  filterFn?: (event: Event) => boolean;
+  onEvent?: OnEvent;
   onEose?: OnEoseCallback;
   onClose?: () => void;
   onDone?: () => void;
-  maxDelayms: number;
+  maxDelayms?: number;
+  eventProps?: any;
+  mergeReposts?: boolean;
 };
 
 class WOTPubSub {

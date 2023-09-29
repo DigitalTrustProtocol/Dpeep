@@ -1,5 +1,5 @@
 import { RelayEventCursor } from "./RelayEventCursor";
-import { SubscribeOptions } from "./WOTPubSub";
+import { FeedOptions } from "./WOTPubSub";
 import { ContextLoader } from "./ContextLoader";
 
 
@@ -15,12 +15,12 @@ export class ContextFeedProvider {
 
 
 
-    subscribeOptions: SubscribeOptions;
+    subscribeOptions: FeedOptions;
 
     cursor: RelayEventCursor;
     contextLoader: ContextLoader; 
 
-    constructor(subscribeOptions: SubscribeOptions) {
+    constructor(subscribeOptions: FeedOptions) {
         this.subscribeOptions = subscribeOptions;
         this.cursor = new RelayEventCursor(subscribeOptions);
         this.contextLoader = new ContextLoader();

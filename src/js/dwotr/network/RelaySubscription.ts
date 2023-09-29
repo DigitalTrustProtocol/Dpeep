@@ -1,29 +1,32 @@
 import { Event, Filter } from 'nostr-tools';
 import wotPubSub, {
-  EventCallback,
   OnEoseCallback,
   OnEvent,
   ReplaceableKinds,
   StreamKinds,
-  SubscribeOptions,
+  FeedOptions,
 } from './WOTPubSub';
 import getRelayPool from '@/nostr/relayPool';
 
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import eventManager from '../EventManager';
+import Relays from '@/nostr/Relays';
 
 
 class RelaySubscription {
   subscribedAuthors = new Set<UID>();
 
+  logging = false;
 
   subCount = 0;
   subs = new Map<number, () => void>();
 
+  #subCounter = 0;
+
   // Continuously subscribe to authors and most kinds of events.
   // This is used to keep the relay connection alive and constantly getting new events.
   // Used the for WoT context. Following and trusted authors are subscribed to.
-  OnAuthors(authorIds: Set<UID>, since: 0, kinds = [...StreamKinds, ...ReplaceableKinds], onEose?: OnEoseCallback,  onEvent?: EventCallback) : Array<number> {
+  OnAuthors(authorIds: Set<UID>, since: 0, kinds = [...StreamKinds, ...ReplaceableKinds], onEose?: OnEoseCallback,  onEvent?: OnEvent) : Array<number> {
     let authors: Array<string> = [];
 
     for (let id of authorIds) {
@@ -39,19 +42,18 @@ class RelaySubscription {
     let subs: Array<number> = [];
 
     for (let batch of batchs) {
-      let filters = [
+      let filter = 
         {
           authors: batch,
           kinds,
           since,
-        },
-      ] as Array<Filter>;
+        } as Filter;
 
       let options = {
-        filters,
+        filter,
         onEvent,
         onEose,
-      } as SubscribeOptions;
+      } as FeedOptions;
 
       subs.push(this.On(options));
     }
@@ -64,22 +66,22 @@ class RelaySubscription {
   async getEventsByAuthor(
     authors: Array<string>,
     kinds: Array<number>,
-    onEvent?: EventCallback,
+    onEvent?: OnEvent,
     limit?: number | undefined,
     since?: number | undefined,
     until?: number | undefined,
   ): Promise<boolean> {
-    let filters = [
+    let filter = 
       {
         authors,
         kinds,
         since,
         until,
         limit,
-      } as Filter,
-    ];
+      } as Filter;
+    
 
-    return this.getEventsByFilters(filters, onEvent);
+    return this.getEventsByFilters(filter, onEvent);
   }
 
 
@@ -87,33 +89,41 @@ class RelaySubscription {
   // Return a true value when done and false if timed out.
   async getEventsById(
     ids: Array<string>,
-    kinds: Array<number>,
-    onEvent?: EventCallback,
+    kinds?: Array<number>,
+    onEvent?: OnEvent,
     limit?: number | undefined,
     since?: number | undefined,
     until?: number | undefined,
-  ): Promise<boolean> {
-    let filters = [
+  ): Promise<Array<Event>> {
+    let filter = 
       {
         ids,
         kinds,
         since,
         until,
         limit,
-      },
-    ];
+      } as Filter;
+    
+    let events: Array<Event> = [];
 
-    return this.getEventsByFilters(filters, onEvent);
+    const cb = (event: Event, afterEose: boolean, url: string | undefined) => {
+      events.push(event);
+      onEvent?.(event, afterEose, url);
+    };
+
+    await this.getEventsByFilters(filter, cb);
+
+    return events;
   }
 
   async getEventsByFilters(
-    filters: Array<Filter>,
-    cb?: EventCallback,
+    filter: Filter,
+    cb?: OnEvent,
   ): Promise<boolean> {
     let options = {
-      filters,
+      filter,
       onEvent: cb,
-    } as SubscribeOptions;
+    } as FeedOptions;
 
     return this.Once(options);
   }
@@ -121,10 +131,18 @@ class RelaySubscription {
 
   // A Once subscription is used to get events by options.
   // Return a true value when done and false if timed out.
-  async Once(options: SubscribeOptions, timeOut: number = 3000): Promise<boolean> {
-    let timer: NodeJS.Timeout;
+  async Once(options: FeedOptions, timeOut: number = 1000): Promise<boolean> {
 
-    let relays = wotPubSub.getRelays(options.filters);
+    let timer: NodeJS.Timeout;
+    let stopWatch = Date.now();
+
+    let subCounter = ++this.#subCounter;
+    let relays = Relays.enabledRelays();
+    let slowRelays = new Set<string>(relays);
+
+    if(this.logging)
+      console.log("RelaySubscription:Once:Called", " - Sub:", subCounter);
+
 
     let promise = new Promise<boolean>((resolve, _) => {
 
@@ -135,23 +153,34 @@ class RelaySubscription {
       timer = setTimeout(() => {
         state.closed = true;
         options.onClose?.();
+        if(this.logging) 
+          console.log('RelaySubscription:Once:Timeout', relays.length, 'relays', Date.now() - stopWatch, 'ms', " - Slow Relays:", slowRelays.size, slowRelays, " - Sub:", subCounter);
+
         resolve(false);
       }, timeOut);
 
       let tries = 0;
 
-      const onEvent = this.#getOnEvent(options.onEvent as OnEvent, state);
+      const onEvent = this.#createOnEvent(options.onEvent as OnEvent, state);
 
       const onEose = (relayUrl: string, minCreatedAt: number) => {
-        //console.log('onEose', relayUrl, tries, relays);
+       
+        if (slowRelays.has(relayUrl)) 
+          slowRelays.delete(relayUrl);
 
         if (relays.includes(relayUrl)) 
           tries++;
+
+       if(this.logging)
+          console.log('RelaySubscription:Once:onEose', relayUrl, `${tries}/${relays.length}`, " - Sub:", subCounter);
         
         let allEosed = tries === relays.length;
         options.onEose?.(allEosed, relayUrl, minCreatedAt);
 
         if (allEosed) {
+          if(this.logging) 
+            console.log('RelaySubscription:Once:Done', relays.length, 'relays', Date.now() - stopWatch, 'ms', " - Sub:", subCounter);
+
           state.closed = true;
           clearTimeout(timer);
           options.onClose?.();
@@ -159,7 +188,7 @@ class RelaySubscription {
         }
       };
 
-      getRelayPool().subscribe(options.filters, relays, onEvent, undefined, onEose, {
+      getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
         allowDuplicateEvents: false,
         allowOlderEvents: false,
         logAllEvents: false,
@@ -174,27 +203,25 @@ class RelaySubscription {
 
   // A Continues subscription is used to get events by options.
   // Return a unsubribe number value, used to unsubscribe.
-  On(options: SubscribeOptions) : number {
+  On(options: FeedOptions) : number {
     let relayIndex = new Map<string, number>();
 
-    let relays = wotPubSub.getRelays(options.filters);
+    let relays = Relays.enabledRelays();
 
     let state ={
       closed: false
     } 
 
-    const onEvent = this.#getOnEvent(options.onEvent as OnEvent, state);
+    const onEvent = this.#createOnEvent(options.onEvent as OnEvent, state);
 
     const onEose = (relayUrl: string, minCreatedAt: number) => {
-      //console.log('onEose', relayUrl, minCreatedAt);
-
       relayIndex.set(relayUrl, 0);
       let allEosed = [...relayIndex.values()].every((v) => v === 0);
 
       options.onEose?.(allEosed, relayUrl, minCreatedAt);
     };
 
-    let unsub = getRelayPool().subscribe(options.filters, relays, onEvent, undefined, onEose, {
+    let unsub = getRelayPool().subscribe(options.filter, relays, onEvent, undefined, onEose, {
       allowDuplicateEvents: false,
       allowOlderEvents: false,
       logAllEvents: false,
@@ -231,19 +258,29 @@ class RelaySubscription {
   }
 
 
-  #getOnEvent(userOnEvent: OnEvent, state: any) {
+  #createOnEvent(userOnEvent: OnEvent, state: any) {
+
+    let subCounter = this.#subCounter;
 
     const onEvent = (event: Event, afterEose: boolean, url: string | undefined) => {
+
+      if(this.logging)
+        console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
+
+
       let id = ID(event.id);
       if(eventManager.seen(id)) { // Skip verify and eventHandle on seen events
-        if(!state?.closed)
-          userOnEvent?.(event, afterEose, url);
+        if(this.logging)
+          console.log('RelaySubscription:onEvent:seen - ID:', event.id, " - Sub:", subCounter);
+        //if(!state?.closed)
+        userOnEvent?.(event, afterEose, url);
       }; 
 
+      // By waiting with verifying the event until its a new event, saves a lot of time.
       if(!eventManager.verify(event)) return; // Skip events that are not valid.
 
       eventManager.eventCallback(event).then((_) => {
-        if(!state?.closed)
+        //if(!state?.closed)
           userOnEvent?.(event, afterEose, url);
       });
     }

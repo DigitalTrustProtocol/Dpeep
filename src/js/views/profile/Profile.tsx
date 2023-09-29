@@ -99,19 +99,22 @@ function Profile(props) {
   const filterOptions = useMemo(() => {
     return [
       {
+        id: 'posts'+hexPub,
         name: t('posts'),
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
-        filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
+        filterFn: (event) => !getEventReplyingTo(event) || !isRepost(event),
         eventProps: { showRepliedMsg: true },
       },
       {
+        id: 'replies'+hexPub,
         name: t('posts_and_replies'),
-        filter: { authors: [hexPub], kinds: [1, 6], limit: 5 },
+        filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
         eventProps: { showRepliedMsg: true, fullWidth: false },
       },
       {
+        id: 'reposts'+hexPub,
         name: t('likes'),
-        filter: { authors: [hexPub], kinds: [7], limit: 5 },
+        filter: { authors: [hexPub], kinds: [7], limit: 10 },
       },
     ];
   }, [hexPub]);

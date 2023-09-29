@@ -10,15 +10,13 @@ import { translate as t } from '../../translations/Translation.mjs';
 import Icons from '../../utils/Icons';
 
 import Note from './note/Note';
-import EventDropdown from './EventDropdown';
 import Follow from './Follow';
 import Like from './Like';
 import Repost from './Repost';
 import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
-import wotPubSub from '@/dwotr/network/WOTPubSub';
-import noteManager from '@/dwotr/NoteManager';
+import contextLoader from '@/dwotr/network/ContextLoader';
 
 declare global {
   interface Window {
@@ -75,16 +73,14 @@ const EventComponent = (props: EventComponentProps) => {
     }
     if (!event) {
 
-      //let e = noteManager.notes.get(ID(hex));
       let e = EventDB.get(hex);
-      setEvent(e);
-
-      //retrievingTimeout.current = setTimeout(() => setRetrieving(true), 1000);
-      //Events.getEventById(hex, true, handleEvent);
-      //wotPubSub.getEvent(ID(hex), handleEvent); // Should be ok with network load 
       if(!e) {
-        console.log('EventComponent event is not provided', hex, props);
-      }
+        // Failsafe in case the event is not in the DB, should only happen rarely
+        contextLoader.getEventsByIdWithContext([ID(hex)]).then((list: Array<Event>) => {
+          setEvent(list[0]);
+        });
+      } else 
+        setEvent(e);
     }
 
     return () => {

@@ -10,6 +10,7 @@ import blockManager from '../BlockManager';
 import followManager from '../FollowManager';
 import reactionManager from '../ReactionManager';
 import noteManager from '../NoteManager';
+import relaySubscription from '../network/RelaySubscription';
 
 type InitializeWoTProps = {
   path?: string;
@@ -32,6 +33,8 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const [reactionStatus, setReactionStatus] = useState<Status>('waiting');
 
   useEffect(() => {
+    relaySubscription.logging = true;
+
     setGraphStatus('loading');
 
     //graphNetwork.init(hexKey);
@@ -55,7 +58,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
       setFollowStatus('loading');
       followManager.load().then(() => {
       //followManager.subscribeToRelays(); // Subscribe to followers of my profile
-      setFollowStatus('done');
+        setFollowStatus('done');
       });
 
       // Reactions

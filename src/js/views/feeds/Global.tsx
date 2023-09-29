@@ -7,23 +7,26 @@ import { getEventReplyingTo, isRepost } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
 import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
+import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 
 const Global: React.FC<RouteProps> = () => {
   const filterOptions = useMemo(
     () => [
       {
+        id: 'global',
         name: t('posts'),
         filter: { kinds: [1, 6], limit: 10 },
         filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         eventProps: { showRepliedMsg: true },
         mergeReposts: true,
-      },
+      } as FeedOptions,
       {
+        id: 'global-replies',
         name: t('posts_and_replies'),
         filter: { kinds: [1, 6], limit: 5 },
         eventProps: { showRepliedMsg: true, fullWidth: false },
         mergeReposts: true,
-      },
+      } as FeedOptions,
     ],
     [],
   );

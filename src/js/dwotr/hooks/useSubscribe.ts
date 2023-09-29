@@ -4,7 +4,7 @@ import { Event, Filter } from 'nostr-tools';
 import noteManager from '../NoteManager';
 import { set, throttle } from 'lodash';
 import { ContextFeedProvider } from '../network/ContextFeedProvider';
-import { SubscribeOptions } from '../network/WOTPubSub';
+import { FeedOptions } from '../network/WOTPubSub';
 import { FeedProvider } from '../network/FeedProvider';
 import { RelayEventCursor } from '../network/RelayEventCursor';
 
@@ -110,26 +110,14 @@ class EventFilter {
 //   }
 // }
 
-interface ISubscribeOptions {
-  filter: Filter;
-  filterFn?: (event: Event) => boolean;
-  sinceLastOpened?: boolean;
-  mergeSubscriptions?: boolean;
-}
 
-const useSubscribe = (ops: ISubscribeOptions) => {
-  const { filter, filterFn, sinceLastOpened = false, mergeSubscriptions = true } = ops;
+const useSubscribe = (ops: FeedOptions) => {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasRefresh, setHasRefresh] = useState<boolean>(true);
 
-  const opts = {
-    filters: [filter],
-    maxDelayms: 0,
-  } as SubscribeOptions;
-
-  const feedProvider = useRef<FeedProvider>(new FeedProvider(new RelayEventCursor(opts, 100), 10));
+  const feedProvider = useRef<FeedProvider>(new FeedProvider(new RelayEventCursor(ops, 100), 10));
   const intervalRef = useRef<any>(undefined);
   const loading = useRef<boolean>(false);
 
@@ -146,6 +134,9 @@ const useSubscribe = (ops: ISubscribeOptions) => {
   useEffect(() => {
     loading.current = true;
     feedProvider.current.load().then((list) => {
+
+      console.log('useSubscribe:load', list.length, list.map(e => e.id + '- Kind: ' + e.kind));
+
       setEvents(list);
       setHasMore(feedProvider.current.hasMore());
       loading.current = false;
@@ -191,7 +182,7 @@ const useSubscribe = (ops: ISubscribeOptions) => {
       //noteManager.onEvent.delete(subscribe);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [filter, filterFn]);
+  }, [ops]);
 
   const loadMore = useCallback(() => {
     if(loading.current == true) return;

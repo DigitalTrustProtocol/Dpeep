@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import {Filter} from 'nostr-tools';
 import CreateNoteForm from '@/components/create/CreateNoteForm';
 import FeedComponent from '@/components/feed/Feed';
 import Show from '@/components/helpers/Show';
@@ -9,25 +10,28 @@ import { translate as t } from '@/translations/Translation.mjs';
 import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { useFollows } from '@/dwotr/hooks/useFollows';
+import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 
 const Home: React.FC<RouteProps> = () => {
   const followedUsers = useFollows();
 
-  const filterOptions = useMemo(
+  const options = useMemo(
     () => [
       {
+        id: 'home',
         name: t('posts'),
-        filter: { kinds: [1, 6], authors: followedUsers, limit: 10 },
+        filter: { kinds: [1, 6], authors: followedUsers, limit: 10 } as Filter,
         filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         mergeReposts: true,
         eventProps: { showRepliedMsg: true },
-      },
+      } as FeedOptions,
       {
+        id: 'home-replies',
         name: t('posts_and_replies'),
         filter: { kinds: [1, 6], authors: followedUsers, limit: 5 },
         mergeReposts: true,
         eventProps: { showRepliedMsg: true, fullWidth: false },
-      },
+      } as FeedOptions,
     ],
     [followedUsers],
   );
@@ -40,7 +44,7 @@ const Home: React.FC<RouteProps> = () => {
           <CreateNoteForm autofocus={false} placeholder={t('whats_on_your_mind')} />
         </div>
         <Show when={followedUsers.length}>
-          <FeedComponent key={`feed-${followedUsers.length}`} filterOptions={filterOptions} />
+          <FeedComponent key={`feed-${followedUsers.length}`} filterOptions={options} />
         </Show>
       </div>
     </View>
