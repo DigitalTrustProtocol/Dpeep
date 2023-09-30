@@ -2,7 +2,6 @@
 
 import { Event } from 'nostr-tools';
 
-import { mergeRight } from 'ramda';
 import { seconds, first } from 'hurdak';
 import { getNostrTime } from '../Utils';
 import { FeedOptions } from './WOTPubSub';
@@ -11,12 +10,12 @@ import relaySubscription from './RelaySubscription';
 import { ICursor } from './ICursor';
 
 
-export class RelayEventCursor implements ICursor {
+export class CursorRelay implements ICursor {
   limit = 50;
 
   //  An event matches a filter if since <= created_at <= until holds.
   until = getNostrTime();
-  delta = seconds(60, 'minute');
+  delta = seconds(10, 'minute');
   since = this.until - this.delta;
 
   loading = false;
@@ -24,12 +23,12 @@ export class RelayEventCursor implements ICursor {
 
   timeout = 3000;
 
-  subscribeOptions: FeedOptions;
+  feedOptions: FeedOptions;
 
   buffer: Event[] = [];
 
   constructor(opts: FeedOptions, size = 50) {
-    this.subscribeOptions = opts;
+    this.feedOptions = opts;
     this.limit = size;
   }
 
@@ -39,14 +38,14 @@ export class RelayEventCursor implements ICursor {
 
 
 
-  async load(): Promise<number> {
+  async load(timeOut: number = 3000): Promise<number> {
     // If we're already loading, or we have enough buffered, do nothing
     if (this.done) {
       return 0;
     }
 
     const { limit, since, until } = this;
-    const { filter, onEvent, onClose, onDone } = this.subscribeOptions;
+    const { filter, onEvent, onClose, onDone } = this.feedOptions;
 
     let options = {
       filter: { ...filter,  until, limit, since },
@@ -54,18 +53,21 @@ export class RelayEventCursor implements ICursor {
         this.until = Math.min(until, event.created_at) - 1;
         
         // The event has been added to eventHandler memory, but not yet to the buffer
-        if(this.subscribeOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
+        if(this.feedOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
 
         this.buffer.push(event);
         onEvent?.(event, afterEose, relayUrl);
       },
       maxDelayms: 0,
-      onClose: () => {
+      onClose: (subId:number) => {
+
         // Relays can't be relied upon to return events in descending order, do exponential
         // windowing to ensure we get the most recent stuff on first load, but eventually find it all
-        if (this.buffer.length === 0) {
-          this.delta *= 5;
-        }
+
+        let factor = 10;
+        //let factor = Math.floor(this.limit / this.buffer.length + 1);
+        if(this.buffer.length < 10) 
+          this.delta *= factor;
 
         if (this.since <= EPOCH) {
           this.done = true;
@@ -73,16 +75,16 @@ export class RelayEventCursor implements ICursor {
 
         this.since -= this.delta;
 
-        onClose?.();
+        onClose?.(subId);
 
-        if (this.done) onDone?.();
+        if (this.done) onDone?.(subId);
 
-        //console.log('Closed Sub Relay: ', relayUrl, afterEose, new Date(event.created_at * 1000).toLocaleString());
+        console.log('Closed Sub Relay', ' - SubID:', subId, " - Since:", new Date(this.since * 1000).toLocaleString(), " - Until:", new Date(this.until * 1000).toLocaleString(), " - Limit:", this.limit, " - Delta:", this.delta, " - Factor:", factor, " - Buffer:", this.buffer.length, " - Done:", this.done);
         //console.log('Relay Feed closed, events loaded', this.buffer.length, 'done', this.done, 'Since: ', new Date(this.since * 1000).toLocaleString(), 'Until: ', this.until ? new Date(this.until * 1000).toLocaleString() : 'undefined');
       },
     } as FeedOptions;
 
-    await relaySubscription.Once(options);
+    await relaySubscription.Once(options, timeOut);
 
     return this.buffer.length;
   }

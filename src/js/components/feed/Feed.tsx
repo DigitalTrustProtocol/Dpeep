@@ -1,8 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useMemo } from 'preact/hooks';
-
-import { Event } from 'nostr-tools';
-
+import { useEffect, useRef, useState } from 'react';
 
 import EventComponent from '@/components/events/EventComponent';
 import DisplaySelector from '@/components/feed/DisplaySelector';
@@ -11,7 +7,6 @@ import ImageGrid from '@/components/feed/ImageGrid';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
 
 import Show from '@/components/helpers/Show';
-import { isRepost } from '@/nostr/utils.ts';
 import useHistoryState from '@/state/useHistoryState.ts';
 import Helpers from '@/utils/Helpers';
 
@@ -78,16 +73,16 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
 
 
   useEffect(() => {
-    // if(events.length === 0 && hasRefresh) {
-    //   refresh(); // Auto refresh to show new events
-    //   return;
-    // }
+    if(events.length === 0 && hasRefresh) {
+      refresh(); // Auto refresh to show new events
+      return;
+    }
 
     // 10 should be enough to fill the screen
-    // if(events.length < 10 && hasMore) {
-    //   loadMore(); // Auto load more to fill the screen
-    //   return;
-    // }
+    if(events.length < 10 && hasMore) {
+      loadMore(); // Auto load more to fill the screen
+      return;
+    }
   }, [events, hasRefresh, hasMore]);
 
  
@@ -149,11 +144,11 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
           next={loadMore}
           hasMore={hasMore}
           loader={<></>}
-          // endMessage={
-          //   // // "<p style={{ textAlign: 'center' }}>
-          //   // //   <b>No more notes</b>
-          //   // // </p>
-          // }
+          endMessage={
+            <p style={{ textAlign: 'center' }}>
+              <b>------------------------- No more notes</b>
+            </p>
+          }
           // below props only if you need pull down functionality
 
           refreshFunction={refresh}

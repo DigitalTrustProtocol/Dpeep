@@ -131,7 +131,7 @@ class RelaySubscription {
 
   // A Once subscription is used to get events by options.
   // Return a true value when done and false if timed out.
-  async Once(options: FeedOptions, timeOut: number = 1000): Promise<boolean> {
+  async Once(options: FeedOptions, timeOut: number = 3000): Promise<boolean> {
 
     let timer: NodeJS.Timeout;
     let stopWatch = Date.now();
@@ -152,10 +152,11 @@ class RelaySubscription {
 
       timer = setTimeout(() => {
         state.closed = true;
-        options.onClose?.();
+        options.onClose?.(subCounter);
         if(this.logging) 
           console.log('RelaySubscription:Once:Timeout', relays.length, 'relays', Date.now() - stopWatch, 'ms', " - Slow Relays:", slowRelays.size, slowRelays, " - Sub:", subCounter);
 
+        unsub?.();
         resolve(false);
       }, timeOut);
 
@@ -183,12 +184,13 @@ class RelaySubscription {
 
           state.closed = true;
           clearTimeout(timer);
-          options.onClose?.();
+          options.onClose?.(subCounter);
+          unsub?.();
           resolve(true);
         }
       };
 
-      getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
+      let unsub = getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
         allowDuplicateEvents: false,
         allowOlderEvents: false,
         logAllEvents: false,
@@ -198,10 +200,51 @@ class RelaySubscription {
       });
     });
 
+    
+
     return promise;
   }
 
   // A Continues subscription is used to get events by options.
+    // Return a unsubribe number value, used to unsubscribe.
+  Map(options: FeedOptions) : number {
+    let relayIndex = new Map<string, number>();
+
+    let relays = Relays.enabledRelays();
+
+    let state ={
+      closed: false
+    } 
+
+    const onEvent = this.#createOnEvent(options.onEvent as OnEvent, state);
+
+    const onEose = (relayUrl: string, minCreatedAt: number) => {
+      relayIndex.set(relayUrl, 0);
+      let allEosed = [...relayIndex.values()].every((v) => v === 0);
+
+      options.onEose?.(allEosed, relayUrl, minCreatedAt);
+
+      if (allEosed) {
+        state.closed = true;
+        options.onClose?.(0);
+        unsub?.();
+      }
+    };
+
+    let unsub = getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
+      allowDuplicateEvents: false,
+      allowOlderEvents: false,
+      logAllEvents: false,
+      unsubscribeOnEose: false,
+      //dontSendOtherFilters: true,
+      //defaultRelays: string[]
+    });
+
+    this.subs.set(++this.subCount, unsub);
+    return this.subCount;
+  }
+
+  // A Continues subscription is used to get replaceable events by options.
   // Return a unsubribe number value, used to unsubscribe.
   On(options: FeedOptions) : number {
     let relayIndex = new Map<string, number>();
@@ -219,9 +262,14 @@ class RelaySubscription {
       let allEosed = [...relayIndex.values()].every((v) => v === 0);
 
       options.onEose?.(allEosed, relayUrl, minCreatedAt);
+      if(allEosed) {
+        state.closed = true;
+        options.onClose?.(0);
+        unsub?.();
+      }
     };
 
-    let unsub = getRelayPool().subscribe(options.filter, relays, onEvent, undefined, onEose, {
+    let unsub = getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
       allowDuplicateEvents: false,
       allowOlderEvents: false,
       logAllEvents: false,

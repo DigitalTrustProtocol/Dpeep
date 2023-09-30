@@ -33,45 +33,44 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const [reactionStatus, setReactionStatus] = useState<Status>('waiting');
 
   useEffect(() => {
-    relaySubscription.logging = true;
+    //relaySubscription.logging = true;
 
     setGraphStatus('loading');
 
     //graphNetwork.init(hexKey);
 
     //graphNetwork.whenReady(async () => {
-      setGraphStatus('done');
+    setGraphStatus('done');
 
-      setProfileStatus('loading');
-      //profileManager.subscribeMyself(); // Subscribe to my own profile
-      //await profileManager.loadAllProfiles();
-      setProfileStatus('done');
+    setProfileStatus('loading');
+    //profileManager.subscribeMyself(); // Subscribe to my own profile
+    //await profileManager.loadAllProfiles();
+    setProfileStatus('done');
 
-      setMuteStatus('waiting');
-      //muteManager.load();
-      setMuteStatus('done');
+    setMuteStatus('waiting');
+    //muteManager.load();
+    setMuteStatus('done');
 
-      setBlockStatus('loading');
-      //await blockManager.load();
-      setBlockStatus('done');
+    setBlockStatus('loading');
+    //await blockManager.load();
+    setBlockStatus('done');
 
-      setFollowStatus('loading');
-      followManager.load().then(() => {
+    setFollowStatus('loading');
+    followManager.load().then(() => {
       //followManager.subscribeToRelays(); // Subscribe to followers of my profile
-        setFollowStatus('done');
-      });
+      setFollowStatus('done');
+    });
 
-      // Reactions
-      setReactionStatus('loading');
-      //await reactionManager.load();
-      setReactionStatus('done');
+    // Reactions
+    setReactionStatus('loading');
+    //await reactionManager.load();
+    setReactionStatus('done');
 
-      // Now load the notes
-      setLatestNotes('loading');
-      //await noteManager.load();
-      setLatestNotes('done');
+    // Now load the notes
+    setLatestNotes('loading');
+    //await noteManager.load();
+    setLatestNotes('done');
     //});
-
 
     return () => {};
   }, []);

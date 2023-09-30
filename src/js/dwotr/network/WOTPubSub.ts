@@ -86,8 +86,8 @@ export type FeedOptions = {
   filterFn?: (event: Event) => boolean;
   onEvent?: OnEvent;
   onEose?: OnEoseCallback;
-  onClose?: () => void;
-  onDone?: () => void;
+  onClose?: (subId: number) => void;
+  onDone?: (subId: number) => void;
   maxDelayms?: number;
   eventProps?: any;
   mergeReposts?: boolean;

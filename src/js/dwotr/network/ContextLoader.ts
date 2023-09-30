@@ -53,7 +53,7 @@ export class ContextLoader {
       ...new Set(events.filter((e) => this.isLoadedProfile(ID(e.pubkey))).map((e) => e.pubkey)).values(),
     ];
 
-    console.log('loadProfiles dependencies', authors.length, authors);
+    //console.log('loadProfiles dependencies', authors.length, authors);
     if (authors.length == 0) return true;
 
     return await relaySubscription.getEventsByAuthor(authors, [0], undefined, 1);
@@ -68,7 +68,7 @@ export class ContextLoader {
     ];
     if (!ids || ids.length == 0) return items;
 
-    console.log('loadReposts dependencies', ids.length, ids);
+    //console.log('loadReposts dependencies', ids.length, ids);
 
     const cb = (e: Event) => {
       items.push(e);
@@ -88,7 +88,7 @@ export class ContextLoader {
     ];
     if (!ids || ids.length == 0) return items;
 
-    console.log('loadReplyingTo dependencies', ids.length, ids);
+    //console.log('loadReplyingTo dependencies', ids.length, ids);
 
     const cb = (e: Event) => {
       items.push(e);

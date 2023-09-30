@@ -1,26 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Event, Filter } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 
-import noteManager from '../NoteManager';
-import { set, throttle } from 'lodash';
-import { ContextFeedProvider } from '../network/ContextFeedProvider';
 import { FeedOptions } from '../network/WOTPubSub';
 import { FeedProvider } from '../network/FeedProvider';
-import { RelayEventCursor } from '../network/RelayEventCursor';
+import { CursorRelay } from '../network/CursorRelay';
 
-class EventFilter {
-  ids: Set<string> = new Set();
-  authors: Set<string> = new Set();
-  kinds: Set<number> = new Set();
-  filterFn?: (event: Event) => boolean;
+// class EventFilter {
+//   ids: Set<string> = new Set();
+//   authors: Set<string> = new Set();
+//   kinds: Set<number> = new Set();
+//   filterFn?: (event: Event) => boolean;
 
-  constructor(_filter?: Filter, _filterFn?: (event: Event) => boolean) {
-    this.ids = new Set(_filter?.ids);
-    this.authors = new Set(_filter?.authors);
-    this.kinds = new Set(_filter?.kinds);
-    this.filterFn = _filterFn;
-  }
-}
+//   constructor(_filter?: Filter, _filterFn?: (event: Event) => boolean) {
+//     this.ids = new Set(_filter?.ids);
+//     this.authors = new Set(_filter?.authors);
+//     this.kinds = new Set(_filter?.kinds);
+//     this.filterFn = _filterFn;
+//   }
+// }
 
 // class EventState {
 //   events: Event[] = [];
@@ -117,7 +114,7 @@ const useSubscribe = (ops: FeedOptions) => {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasRefresh, setHasRefresh] = useState<boolean>(true);
 
-  const feedProvider = useRef<FeedProvider>(new FeedProvider(new RelayEventCursor(ops, 100), 10));
+  const feedProvider = useRef<FeedProvider>(new FeedProvider(new CursorRelay(ops, 100), 10));
   const intervalRef = useRef<any>(undefined);
   const loading = useRef<boolean>(false);
 
@@ -142,11 +139,9 @@ const useSubscribe = (ops: FeedOptions) => {
       loading.current = false;
     });
 
-
+    // Check regularly for new events
     intervalRef.current = setInterval(() => {
-      feedProvider.current.peekNew().then((count) => {
-        setHasRefresh(count > 0);
-      });
+      setHasRefresh(feedProvider.current.hasNew());
     }, 3000);
 
     //eventState.current = new EventState(filter, filterFn);
@@ -199,14 +194,11 @@ const useSubscribe = (ops: FeedOptions) => {
 
   // Load events in front of the event list
   const refresh = useCallback(() => {
-    if(loading.current == true) return;
-    loading.current = true;
-    feedProvider.current.load().then((list) => {
-      setEvents(list);
-      setHasRefresh(feedProvider.current.hasNew());
-      setHasMore(feedProvider.current.hasMore());
-      loading.current = false;
-    });
+    if(!feedProvider.current.hasNew()) return;
+  
+    setEvents(feedProvider.current.mergeNew());
+    setHasRefresh(false);
+    setHasMore(feedProvider.current.hasMore());
   }, []);
 
   const loadAll = useCallback(() => {
