@@ -207,7 +207,7 @@ class RelaySubscription {
 
   // A Continues subscription is used to get events by options.
     // Return a unsubribe number value, used to unsubscribe.
-  Map(options: FeedOptions) : number {
+  map(options: FeedOptions) : number {
     let relayIndex = new Map<string, number>();
 
     let relays = Relays.enabledRelays();

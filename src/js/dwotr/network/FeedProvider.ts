@@ -72,9 +72,12 @@ export class FeedProvider {
     if(this.logging) console.log('FeedProvider:mapNew', ' - since:', since);
 
     let options = {
-      filter: { ...feedOptions.filter, since },
+      filter: { ...feedOptions.filter, since, until: undefined, limit: undefined },
       onEvent: (event: Event, afterEose: boolean, relayUrl: string) => {
         // The event has been added to eventHandler memory, but not yet to the buffer
+        if(this.seen.has(ID(event.id))) return; // Filter out events that have already been seen
+        this.seen.add(ID(event.id));
+
         if(this.logging) console.log('FeedProvider:mapNew:onEvent', event.id, event.kind, afterEose, relayUrl);
 
         if (feedOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
@@ -92,7 +95,7 @@ export class FeedProvider {
       },
     } as FeedOptions;
 
-    this.subNew = relaySubscription.Map(options);
+    this.subNew = relaySubscription.map(options);
   }
 
   offNew(): void {
