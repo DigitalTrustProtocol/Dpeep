@@ -13,6 +13,9 @@ export function getNostrTime(date: number = Date.now()) : number {
     return Math.floor(date / 1000);
 }
 
+export function toNostrUTCstring(nostrTime: number = Date.now()) : string {
+    return new Date(nostrTime*1000).toUTCString();
+}
 
 export function hexName(hexPub: string) {
   return hexPub.slice(0, 4) + '...' + hexPub.slice(-4);	

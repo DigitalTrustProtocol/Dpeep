@@ -3,7 +3,7 @@ import { Event } from 'nostr-tools';
 
 import { FeedOptions } from '../network/WOTPubSub';
 import { FeedProvider } from '../network/FeedProvider';
-import { CursorRelay } from '../network/CursorRelay';
+import { EventCursor } from '../network/CursorRelay';
 
 // class EventFilter {
 //   ids: Set<string> = new Set();
@@ -114,7 +114,7 @@ const useSubscribe = (ops: FeedOptions) => {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasRefresh, setHasRefresh] = useState<boolean>(true);
 
-  const feedProvider = useRef<FeedProvider>(new FeedProvider(new CursorRelay(ops, 100), 10));
+  const feedProvider = useRef<FeedProvider>(new FeedProvider(new EventCursor(ops, 100), 10));
   const intervalRef = useRef<any>(undefined);
   const loading = useRef<boolean>(false);
 
@@ -175,6 +175,7 @@ const useSubscribe = (ops: FeedOptions) => {
 
     return () => {
       //noteManager.onEvent.delete(subscribe);
+      feedProvider.current.unmount();
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [ops]);

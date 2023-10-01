@@ -26,7 +26,7 @@ class RelaySubscription {
   // Continuously subscribe to authors and most kinds of events.
   // This is used to keep the relay connection alive and constantly getting new events.
   // Used the for WoT context. Following and trusted authors are subscribed to.
-  OnAuthors(authorIds: Set<UID>, since: 0, kinds = [...StreamKinds, ...ReplaceableKinds], onEose?: OnEoseCallback,  onEvent?: OnEvent) : Array<number> {
+  mapAuthors(authorIds: Set<UID>, since: 0, kinds = [...StreamKinds, ...ReplaceableKinds], onEose?: OnEoseCallback,  onEvent?: OnEvent) : Array<number> {
     let authors: Array<string> = [];
 
     for (let id of authorIds) {
@@ -55,7 +55,7 @@ class RelaySubscription {
         onEose,
       } as FeedOptions;
 
-      subs.push(this.On(options));
+      subs.push(this.map(options));
     }
     return subs;
   }
@@ -223,12 +223,6 @@ class RelaySubscription {
       let allEosed = [...relayIndex.values()].every((v) => v === 0);
 
       options.onEose?.(allEosed, relayUrl, minCreatedAt);
-
-      if (allEosed) {
-        state.closed = true;
-        options.onClose?.(0);
-        unsub?.();
-      }
     };
 
     let unsub = getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
@@ -240,7 +234,15 @@ class RelaySubscription {
       //defaultRelays: string[]
     });
 
-    this.subs.set(++this.subCount, unsub);
+    let subId = ++this.subCount;
+
+    let userUnsub = () => {
+      state.closed = true;
+      options.onClose?.(subId);
+      unsub?.();
+    };
+
+    this.subs.set(subId, userUnsub);
     return this.subCount;
   }
 

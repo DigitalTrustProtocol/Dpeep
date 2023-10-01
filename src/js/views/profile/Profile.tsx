@@ -102,7 +102,7 @@ function Profile(props) {
         id: 'posts'+hexPub,
         name: t('posts'),
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
-        filterFn: (event) => !getEventReplyingTo(event) || !isRepost(event),
+        filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         eventProps: { showRepliedMsg: true },
       },
       {

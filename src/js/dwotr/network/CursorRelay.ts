@@ -10,11 +10,11 @@ import relaySubscription from './RelaySubscription';
 import { ICursor } from './ICursor';
 
 
-export class CursorRelay implements ICursor {
+export class EventCursor implements ICursor {
   limit = 50;
 
   //  An event matches a filter if since <= created_at <= until holds.
-  until = getNostrTime();
+  until = getNostrTime(); // - (60 * 60 * 4); // 4 hours ago
   delta = seconds(10, 'minute');
   since = this.until - this.delta;
 
