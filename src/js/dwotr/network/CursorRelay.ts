@@ -7,7 +7,7 @@ import { getNostrTime } from '../Utils';
 import { FeedOptions } from './WOTPubSub';
 import { EPOCH } from '../Utils/Nostr';
 import relaySubscription from './RelaySubscription';
-import { ICursor } from './ICursor';
+import { ICursor } from './types';
 
 
 export class EventCursor implements ICursor {

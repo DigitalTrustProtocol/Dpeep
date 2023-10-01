@@ -1,11 +1,10 @@
 import { Event } from 'nostr-tools';
-import { ICursor } from './ICursor';
+import { Events, ICursor, IEventProvider } from './types';
 import { ID, UID } from '@/utils/UniqueIds';
-import { ContextLoader } from './ContextLoader';
-import relaySubscription from './RelaySubscription';
+
 import { FeedOptions } from './WOTPubSub';
 import { getNostrTime, toNostrUTCstring } from '../Utils';
-import { EPOCH } from '../Utils/Nostr';
+import contextLoader from './ContextLoader';
 
 export class FeedProvider {
   logging = true;
@@ -16,26 +15,23 @@ export class FeedProvider {
   viewEnd: number = this.pageSize;
   view: Array<Event> = [];
 
-  peekBuffer: Array<Event> = [];
   buffer: Array<Event> = [];
   seen: Set<UID> = new Set<UID>();
 
   //peekCursor: ICursor;
   cursor: ICursor;
+  eventProvider: IEventProvider;
 
-  more: boolean = false;
   loading: boolean = false;
 
-  contextLoader = new ContextLoader();
-
-  subNew: number = -1;
-  peekUntil: number = 0;
-
-  constructor(_cursor: ICursor, size = 10) {
+  constructor(_cursor: ICursor, _eventProvider: IEventProvider, size = 10) {
     this.cursor = _cursor;
-    // this.peekCursor = _cursor.clone();
-    // this.peekCursor.until = undefined; // Ensure is that the new events are loaded
-    // this.peekCursor.since = _cursor.until!;
+    this.eventProvider = _eventProvider;
+
+    // const context = feedManager.getContext(this.cursor.feedOptions.id);
+    // this.buffer = context.list; // Use cache if available, no reason to load again
+    // this.cursor.until = context.until ?? this.cursor.until;
+    // this.cursor.since = context.since ?? this.cursor.since;
 
     this.pageSize = size;
   }
@@ -49,11 +45,10 @@ export class FeedProvider {
   }
 
   hasNew(): boolean {
-    return this.peekBuffer.length > 0;
+    return this.eventProvider.count() > 0;
   }
 
   async load() {
-    this.subNew = -1;
     this.viewStart = 0;
     this.viewEnd = 0;
 
@@ -65,54 +60,46 @@ export class FeedProvider {
   }
 
   mapNew() {
-    if(this.subNew != -1) return; // Already subscribed
-
     let feedOptions = this.cursor.feedOptions;
-    let since = (this.cursor.until || getNostrTime() - 1) + 1; // Ensure is that only the new events are loaded
+
+    let since = this.#getUntil(this.buffer) ?? this.cursor.until; // Ensure is that only the new events are loaded
+    if(!since)
+      since = getNostrTime(); // If no events are in the buffer, load the latest events
 
     let options = {
+      ...feedOptions,
       filter: { ...feedOptions.filter, since, until: undefined, limit: undefined },
-      onEvent: (event: Event, afterEose: boolean, relayUrl: string) => {
-        // The event has been added to eventHandler memory, but not yet to the buffer
-        if(this.seen.has(ID(event.id))) return; // Filter out events that have already been seen
+      filterFn: (event: Event) => {
+        if (!feedOptions.filterFn?.(event)) return false; // Filter out events that don't match the filterFn, undefined means match
+        if (this.seen.has(ID(event.id))) return false; // Filter out events that have already been seen
         this.seen.add(ID(event.id));
-
-        if(this.logging) console.log('FeedProvider:mapNew:onEvent:newEvent found', " - ID:", event.id, " - Kinds:", event.kind, " - afterEose:", afterEose, " - relayUrl:", relayUrl);
-
-        if (feedOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
-
-        this.contextLoader.loadDependencies([event]).then(() => {
-            if(this.logging) console.log('FeedProvider:mapNew:onEvent:peekBuffer.push', " - ID:", event.id, " - Kinds:", event.kind, " - afterEose:", afterEose, " - relayUrl:", relayUrl);    
-            this.peekBuffer.push(event);
-        });
-
-        feedOptions.onEvent?.(event, afterEose, relayUrl);
-      },
-      maxDelayms: 0,
-      onClose: (subId: number) => {
-        if(this.logging) console.log('FeedProvider:mapNew:onClose', subId);
-        feedOptions.onClose?.(subId);
+        return true;
       },
     } as FeedOptions;
 
-    if(this.logging) console.log('FeedProvider:mapNew', ' - Since:', toNostrUTCstring(since), ' - Options:', options);
+    if (this.logging)
+      console.log(
+        'FeedProvider:mapNew',
+        ' - Since:',
+        toNostrUTCstring(since),
+        ' - Options:',
+        options,
+      );
 
-
-    this.subNew = relaySubscription.map(options);
+    this.eventProvider.map(options);
   }
 
-  offNew(): void {
-    relaySubscription.off(this.subNew);
+  off(): void {
+    this.eventProvider.off();
   }
 
-  // Unsubscribe 
-  unmount() : void {
-    this.offNew();
+  // Unsubscribe
+  unmount(): void {
+    this.off();
   }
 
   mergeNew(): Array<Event> {
-    let events = this.peekBuffer;
-    this.peekBuffer = [];
+    let events = this.eventProvider.take(this.eventProvider.count());
 
     this.#sort(events);
 
@@ -154,10 +141,12 @@ export class FeedProvider {
 
     let neededLength = this.viewEnd + this.pageSize;
 
-    // Only load more if the buffer is running low
-    let deltaItems = await this.#loadToBuffer();
-
-    await this.contextLoader.loadDependencies(deltaItems);
+    let deltaItems: Array<Event> = [];
+    if (neededLength + this.pageSize > this.buffer.length && !this.cursor.done) {
+      // Only load more if the buffer is running low
+      deltaItems = await this.#loadToBuffer();
+      await contextLoader.loadDependencies(deltaItems);
+    }
 
     this.viewEnd = neededLength > this.buffer.length ? this.buffer.length : neededLength;
 
@@ -261,5 +250,15 @@ export class FeedProvider {
     items.push(deltaMin + ' minutes');
 
     return items;
+  }
+
+  #getSince(list: Events): number | undefined {
+    if (list.length == 0) return;
+    return list[list.length - 1].created_at;
+  }
+
+  #getUntil(list: Events): number | undefined {
+    if (list.length == 0) return;
+    return list[0].created_at;
   }
 }
