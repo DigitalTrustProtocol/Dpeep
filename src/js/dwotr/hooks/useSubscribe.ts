@@ -112,7 +112,7 @@ const useSubscribe = (ops: FeedOptions) => {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [hasRefresh, setHasRefresh] = useState<boolean>(true);
+  const [hasRefresh, setHasRefresh] = useState<boolean>(false);
 
   const feedProvider = useRef<FeedProvider>(new FeedProvider(new EventCursor(ops, 100), 10));
   const intervalRef = useRef<any>(undefined);
