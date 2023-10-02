@@ -3,14 +3,15 @@ import graphNetwork from '../GraphNetwork';
 import Key from '../../nostr/Key';
 import Modal from '@/components/modal/Modal';
 import { useKey } from '../hooks/useKey';
-import StatusIcon, { Status } from '../components/StatusIcon';
+import StatusIcon from '../components/StatusIcon';
 import profileManager from '../ProfileManager';
 import muteManager from '../MuteManager';
 import blockManager from '../BlockManager';
 import followManager from '../FollowManager';
 import reactionManager from '../ReactionManager';
 import noteManager from '../NoteManager';
-import relaySubscription from '../network/RelaySubscription';
+import { Event } from 'nostr-tools';
+import { getNostrTime } from '../Utils';
 
 type InitializeWoTProps = {
   path?: string;
@@ -24,66 +25,80 @@ type InitializeWoTProps = {
 const InitializeWoT = (props: InitializeWoTProps) => {
   const { hexKey } = useKey(Key.getPubKey());
 
-  const [graphStatus, setGraphStatus] = useState<Status>('waiting');
-  const [profileStatus, setProfileStatus] = useState<Status>('waiting');
-  const [muteStatus, setMuteStatus] = useState<Status>('waiting');
-  const [blockStatus, setBlockStatus] = useState<Status>('waiting');
-  const [followStatus, setFollowStatus] = useState<Status>('waiting');
-  const [latestNotes, setLatestNotes] = useState<Status>('waiting');
-  const [reactionStatus, setReactionStatus] = useState<Status>('waiting');
+  const [state, setState] = useState<any>({
+    dbStatus: 'waiting',
+    networkStatus: 'waiting',
+    subscribeStatus: 'waiting',
+  });
+
+  const loadDB = async () => {
+    setState((state: any) => ({ ...state, dbStatus: 'loading' }));
+
+    await graphNetwork.init(hexKey);
+    await profileManager.loadAllProfiles();
+    muteManager.load();
+    await blockManager.load();
+    await followManager.load();
+    await reactionManager.load();
+    await noteManager.load();
+
+    console.log('loadDB done');
+
+    setState((state: any) => ({ ...state, dbStatus: 'done' }));
+  };
+
+  const loadNetwork = async () => {
+    setState((state: any) => ({ ...state, networkStatus: 'loading' }));
+
+    let note = noteManager.notes.values().next().value as Event;
+
+    // Make sure we only load notes since the last note in the database
+    let since = note?.created_at || getNostrTime();
+    if (note)
+      console.log(
+        'Last note loaded from Database:',
+        new Date(note.created_at * 1000).toLocaleString(),
+      );
+    else console.log('No notes loaded from Database');
+
+    await profileManager.subscribeMyselfOnce(since);
+    await followManager.subscribeOnce(since);
+    await graphNetwork.subscribeOnce(since);
+
+    console.log('loadNetwork done');
+    //await graphNetwork.load();
+    setState((state: any) => ({ ...state, networkStatus: 'done' }));
+  };
+
+  const subscribe = () => {
+    setState((state: any) => ({ ...state, subscribeStatus: 'loading' }));
+
+    profileManager.subscribeMyself();
+    followManager.subscribeToRelays();
+    graphNetwork.subscribeMap();
+
+    console.log('subscribe done');
+
+    setState((state: any) => ({ ...state, subscribeStatus: 'done' }));
+  };
 
   useEffect(() => {
-    //relaySubscription.logging = true;
+    let load = async () => {
+      await loadDB();
+      await loadNetwork();
 
-    setGraphStatus('loading');
+      subscribe();
+    };
 
-    //graphNetwork.init(hexKey);
-
-    //graphNetwork.whenReady(async () => {
-    setGraphStatus('done');
-
-    setProfileStatus('loading');
-    //profileManager.subscribeMyself(); // Subscribe to my own profile
-    //await profileManager.loadAllProfiles();
-    setProfileStatus('done');
-
-    setMuteStatus('waiting');
-    //muteManager.load();
-    setMuteStatus('done');
-
-    setBlockStatus('loading');
-    //await blockManager.load();
-    setBlockStatus('done');
-
-    setFollowStatus('loading');
-    followManager.load().then(() => {
-      //followManager.subscribeToRelays(); // Subscribe to followers of my profile
-      setFollowStatus('done');
-    });
-
-    // Reactions
-    setReactionStatus('loading');
-    //await reactionManager.load();
-    setReactionStatus('done');
-
-    // Now load the notes
-    setLatestNotes('loading');
-    //await noteManager.load();
-    setLatestNotes('done');
-    //});
+    load();
 
     return () => {};
   }, []);
 
   if (
-    graphStatus === 'done' &&
-    profileStatus === 'done' &&
-    muteStatus === 'done' &&
-    blockStatus === 'done' &&
-    followStatus === 'done' &&
-    latestNotes === 'done' &&
-    reactionStatus === 'done' &&
-    latestNotes === 'done'
+    state.dbStatus === 'done' &&
+    state.networkStatus === 'done' &&
+    state.subscribeStatus === 'done'
   )
     props.setInitialized(true);
 
@@ -97,32 +112,16 @@ const InitializeWoT = (props: InitializeWoTProps) => {
       <h1>Initalizing Application Context</h1>
       <div className="flex flex-col space-y-2 text-base">
         <div className="flex items-center space-x-2">
-          <StatusIcon status={graphStatus} />
-          <span>WoT network</span>
+          <StatusIcon status={state.dbStatus} />
+          <span>Loading from local database</span>
         </div>
         <div className="flex items-center space-x-2">
-          <StatusIcon status={profileStatus} />
-          <span>Profiles</span>
+          <StatusIcon status={state.networkStatus} />
+          <span>Fetching data from relay servers</span>
         </div>
         <div className="flex items-center space-x-2">
-          <StatusIcon status={reactionStatus} />
-          <span>Reactions</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <StatusIcon status={muteStatus} />
-          <span>Mutes</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <StatusIcon status={blockStatus} />
-          <span>Blocks</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <StatusIcon status={followStatus} />
-          <span>Follows</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <StatusIcon status={latestNotes} />
-          <span>Notes</span>
+          <StatusIcon status={state.subscribeStatus} />
+          <span>Subscribing to relay servers</span>
         </div>
       </div>
     </Modal>

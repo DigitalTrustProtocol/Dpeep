@@ -8,6 +8,7 @@ import Header from '@/components/header/Header';
 import reactionManager from '../ReactionManager';
 import graphNetwork from '../GraphNetwork';
 import noteManager from '../NoteManager';
+import relaySubscription from '../network/RelaySubscription';
 
 type TestDataProps = {
   path?: string;
@@ -21,14 +22,17 @@ class Metrics {
   Relays: any = {};
   Reactions: any = {}; 
   Notes: any = {};
+  Subscriptions: any = {};
 }
 
 const useMetrics = (): { data: Metrics; time: number } => {
   const [data, setData] = useState<Metrics>(new Metrics());
+
   const intervalRef = useRef<any>(undefined);
 
   const initialData = useRef<Metrics>();
   const time = useRef<number>(Date.now());
+
 
   useEffect(() => {
     // Load data update every second
@@ -43,6 +47,7 @@ const useMetrics = (): { data: Metrics; time: number } => {
       d.Relays = wotPubSub.getMetrics();
       d.Reactions = reactionManager.getMetrics();
       d.Notes = noteManager.getMetrics();
+      d.Subscriptions = relaySubscription.getMetrics();
 
       return d;
     };
@@ -66,6 +71,7 @@ const useMetrics = (): { data: Metrics; time: number } => {
 
 const MetricsView = (props: TestDataProps) => {
   const { data, time } = useMetrics();
+
 
   let groups = Object.keys(data).map((key) => {
     let group = data[key];
@@ -100,6 +106,9 @@ const MetricsView = (props: TestDataProps) => {
 
     </>
   );
+
+
+
 
   return (
     <>

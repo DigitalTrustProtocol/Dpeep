@@ -10,6 +10,7 @@ import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
 import wotPubSub from './network/WOTPubSub';
 import storage from './Storage';
+import relaySubscription from './network/RelaySubscription';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -183,14 +184,14 @@ class GraphNetwork {
 
     if (this.processGraph) {
       // TODO: Make this async as it is slow
-      graphNetwork.subscribeToRelays();
+      graphNetwork.subscribeMap();
     }
 
     this.processGraph = false;
     this.processItems = {};
   }
 
-  subscribeToRelays() {
+  subscribeMap() {
     let vertices = this.g.getUnsubscribedVertices(this.maxDegree);
     if (vertices.length == 0) return; // Nothing to subscribe to
 
@@ -199,8 +200,22 @@ class GraphNetwork {
 
     this.metrics.SubscribedtoRelays += authors.length;
 
-    wotPubSub.subscribeAuthors(authors); // Subscribe to trust events
+    relaySubscription.mapAuthors(authors);
   }
+
+  // Fetching from the relays once
+  // Used for initial load of data from the relays
+  async subscribeOnce(since?: number, until?: number) {
+    let vertices = this.g.getUnsubscribedVertices(this.maxDegree);
+    if (vertices.length == 0) return; // Nothing to subscribe to
+
+    let authors = vertices.map((v) => v.id);
+
+    this.metrics.SubscribedtoRelays = authors.length;
+
+    await relaySubscription.onceAuthors(authors, since, until);
+  }
+
 
   async setTrust(props: any, isExternal: boolean): Promise<any> {
     let { edge, preVal, change } = await this.putEdge(props, isExternal);

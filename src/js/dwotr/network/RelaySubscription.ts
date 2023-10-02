@@ -1,6 +1,5 @@
 import { Event, Filter } from 'nostr-tools';
-import wotPubSub, {
-  OnEoseCallback,
+import {
   OnEvent,
   ReplaceableKinds,
   StreamKinds,
@@ -11,10 +10,15 @@ import getRelayPool from '@/nostr/relayPool';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import eventManager from '../EventManager';
 import Relays from '@/nostr/Relays';
+import { getNostrTime } from '../Utils';
+
 
 
 class RelaySubscription {
+  until = getNostrTime();
+
   subscribedAuthors = new Set<UID>();
+
 
   logging = false;
 
@@ -23,10 +27,24 @@ class RelaySubscription {
 
   #subCounter = 0;
 
+
+  metrics = {
+    Count: 0,
+    SubscribedAuthors: 0,
+    Subscriptions: 0,
+    Callbacks: 0,
+    Profiles: 0,
+    NoteEvents: 0,
+    ContactEvents: 0,
+    ReactionEvents: 0,
+    TrustEvents: 0,
+  };
+
+
   // Continuously subscribe to authors and most kinds of events.
   // This is used to keep the relay connection alive and constantly getting new events.
   // Used the for WoT context. Following and trusted authors are subscribed to.
-  mapAuthors(authorIds: Set<UID>, since: 0, kinds = [...StreamKinds, ...ReplaceableKinds], onEose?: OnEoseCallback,  onEvent?: OnEvent) : Array<number> {
+  mapAuthors(authorIds: Set<UID> | Array<UID>, since = this.until+1, kinds = [...StreamKinds, ...ReplaceableKinds]) : Array<number> {
     let authors: Array<string> = [];
 
     for (let id of authorIds) {
@@ -37,11 +55,13 @@ class RelaySubscription {
 
     if (authors.length === 0) return [];
 
+
     // Batch authors into chunks, so size limits are not hit.
     let batchs = this.#batchArray(authors, 100);
     let subs: Array<number> = [];
 
     for (let batch of batchs) {
+
       let filter = 
         {
           authors: batch,
@@ -50,14 +70,49 @@ class RelaySubscription {
         } as Filter;
 
       let options = {
-        filter,
-        onEvent,
-        onEose,
+        filter
       } as FeedOptions;
 
       subs.push(this.map(options));
     }
+
     return subs;
+  }
+
+
+  async onceAuthors(authorIds: Set<UID> | Array<UID>, since = 0, until = this.until, kinds = [...StreamKinds, ...ReplaceableKinds]) : Promise<boolean[]> {
+    let authors: Array<string> = [];
+    let timeOut = 30000;
+
+    for (let id of authorIds) {
+      authors.push(STR(id));
+    }
+
+    if (authors.length === 0) return Promise.resolve([]);
+
+    // Batch authors into chunks, so size limits are not hit.
+    let batchs = this.#batchArray(authors, 100);
+    let subs: Array<Promise<boolean>> = [];
+
+    for (let batch of batchs) {
+      let filter = 
+        {
+          authors: batch,
+          kinds,
+          since,
+          until,
+        } as Filter;
+
+      let options = {
+        filter
+      } as FeedOptions;
+
+      subs.push(this.Once(options, timeOut));
+    }
+
+    let results = await Promise.all(subs);
+
+    return results;
   }
 
 
@@ -162,7 +217,7 @@ class RelaySubscription {
 
       let tries = 0;
 
-      const onEvent = this.#createOnEvent(options.onEvent as OnEvent, state);
+      const onEvent = this.#createOnEvent(options?.onEvent);
 
       const onEose = (relayUrl: string, minCreatedAt: number) => {
        
@@ -216,7 +271,7 @@ class RelaySubscription {
       closed: false
     } 
 
-    const onEvent = this.#createOnEvent(options.onEvent as OnEvent, state);
+    const onEvent = this.#createOnEvent(options?.onEvent);
 
     const onEose = (relayUrl: string, minCreatedAt: number) => {
       relayIndex.set(relayUrl, 0);
@@ -257,7 +312,7 @@ class RelaySubscription {
       closed: false
     } 
 
-    const onEvent = this.#createOnEvent(options.onEvent as OnEvent, state);
+    const onEvent = this.#createOnEvent(options?.onEvent);
 
     const onEose = (relayUrl: string, minCreatedAt: number) => {
       relayIndex.set(relayUrl, 0);
@@ -308,7 +363,7 @@ class RelaySubscription {
   }
 
 
-  #createOnEvent(userOnEvent: OnEvent, state: any) {
+  #createOnEvent(userOnEvent?: OnEvent) {
 
     let subCounter = this.#subCounter;
 
@@ -317,6 +372,7 @@ class RelaySubscription {
       if(this.logging)
         console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
 
+      if(!event) return;
 
       let id = ID(event.id);
       if(eventManager.seen(id)) { // Skip verify and eventHandle on seen events
@@ -335,6 +391,14 @@ class RelaySubscription {
       });
     }
     return onEvent;
+  }
+
+  getMetrics() {
+    this.metrics.Count = Relays.enabledRelays().length;
+    this.metrics.SubscribedAuthors = this.subscribedAuthors.size;
+    this.metrics.Subscriptions = this.subs.size;
+
+    return this.metrics;
   }
 
 }

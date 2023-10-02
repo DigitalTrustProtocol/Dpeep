@@ -10,7 +10,7 @@ import relaySubscription from './RelaySubscription';
 import { ICursor } from './types';
 
 
-export class EventCursor implements ICursor {
+export class EventRelayCursor implements ICursor {
   limit = 50;
 
   //  An event matches a filter if since <= created_at <= until holds.
@@ -31,12 +31,6 @@ export class EventCursor implements ICursor {
     this.feedOptions = opts;
     this.limit = size;
   }
-
-  hasMore(): boolean {
-    return this.buffer.length > 0;
-  }
-
-
 
   async load(timeOut: number = 3000): Promise<number> {
     // If we're already loading, or we have enough buffered, do nothing

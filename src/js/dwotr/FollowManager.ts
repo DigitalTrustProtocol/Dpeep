@@ -13,6 +13,7 @@ import blockManager from './BlockManager';
 import Relays, { PublicRelaySettings } from '@/nostr/Relays';
 import EventDB from '@/nostr/EventDB';
 import { throttle } from 'lodash';
+import relaySubscription from './network/RelaySubscription';
 
 //const FOLLOW_STORE_KEY = 'myFollowList';
 const DegreeInfinit = 99;
@@ -28,6 +29,7 @@ export class FollowItem {
 }
 
 class FollowManager {
+  logging = false;
   filterEnabled = true;
   followSuggestionsSetting = undefined;
 
@@ -107,7 +109,7 @@ class FollowManager {
     let myId = ID(Key.getPubKey());
     let isMe = authorId === myId;
 
-    if (isMe) {
+    if (isMe && this.logging) {
       console.log('My own contact event', event);
     }
 
@@ -399,17 +401,18 @@ class FollowManager {
     localState.get('showFollowSuggestions').put(false);
   }
 
-  subscribeToRelays() {
+  async subscribeToRelays() {
     let authors = followManager.getFollows(ID(Key.getPubKey()));
 
     this.metrics.SubscribedToRelays += authors.size;
 
-    console.log(
-      'FollowManager - subscribeToRelays',
-      [...authors].map((id) => STR(id)),
-    );
+    await relaySubscription.mapAuthors(authors);
+  }
 
-    wotPubSub.subscribeAuthors(authors);
+  async subscribeOnce(since?: number, until?: number) {
+    let authors = followManager.getFollows(ID(Key.getPubKey()));
+    this.metrics.SubscribedToRelays += authors.size;
+    await relaySubscription.onceAuthors(authors, since, until);
   }
 
   subscribeContacts(id: UID, cb?: (event: Event) => void): any {

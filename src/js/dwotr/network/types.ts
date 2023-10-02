@@ -21,7 +21,7 @@ export interface ICursor {
     count(): number;
     peek(): Event | undefined;
     pop(): Event | undefined;
-    
+   
   }
 
   

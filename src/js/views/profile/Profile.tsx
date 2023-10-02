@@ -17,7 +17,9 @@ import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import blockManager from '@/dwotr/BlockManager.ts';
-import { ID } from '@/utils/UniqueIds.ts';
+import { ID, UID } from '@/utils/UniqueIds.ts';
+import followManager from '@/dwotr/FollowManager.ts';
+import { FeedOptions } from '@/dwotr/network/WOTPubSub.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -25,9 +27,15 @@ function getNpub(id: string) {
   return '';
 }
 
+function getSource(profileId: UID) {
+  if (profileId === ID(Key.getPubKey())) return 'memory'; // My profile
+  
+  return followManager.isAllowed(profileId) ? 'memory' : 'network';
+}
+
 function Profile(props) {
   const [npub, setNpub] = useState(getNpub(props.id));
-  const { hexKey: hexPub, bech32Key, isMe } = useKey(npub, false); //
+  const { hexKey: hexPub, bech32Key, uid, isMe } = useKey(npub, false); //
   const { profile } = useProfile(hexPub) as any;
 
   const [blocked, setBlocked] = useState(false);
@@ -96,6 +104,8 @@ function Profile(props) {
     };
   }, [npub]);
 
+  
+
   const filterOptions = useMemo(() => {
     return [
       {
@@ -104,18 +114,21 @@ function Profile(props) {
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
         filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         eventProps: { showRepliedMsg: true },
-      },
+        source: getSource(uid), // All non followed users are loaded from network
+      } as FeedOptions,
       {
         id: 'replies'+hexPub,
         name: t('posts_and_replies'),
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
         eventProps: { showRepliedMsg: true, fullWidth: false },
-      },
+        source: getSource(uid),
+      } as FeedOptions,
       {
         id: 'reposts'+hexPub,
         name: t('likes'),
         filter: { authors: [hexPub], kinds: [7], limit: 10 },
-      },
+        source: getSource(uid),
+      } as FeedOptions,
     ];
   }, [hexPub]);
 

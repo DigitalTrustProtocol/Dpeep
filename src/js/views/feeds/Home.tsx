@@ -24,6 +24,7 @@ const Home: React.FC<RouteProps> = () => {
         filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         mergeReposts: true,
         eventProps: { showRepliedMsg: true },
+        source: 'memory' // based on that all followed users are loaded in memory
       } as FeedOptions,
       {
         id: 'home-replies',
@@ -31,6 +32,7 @@ const Home: React.FC<RouteProps> = () => {
         filter: { kinds: [1, 6], authors: followedUsers, limit: 5 },
         mergeReposts: true,
         eventProps: { showRepliedMsg: true, fullWidth: false },
+        source: 'memory'
       } as FeedOptions,
     ],
     [followedUsers],

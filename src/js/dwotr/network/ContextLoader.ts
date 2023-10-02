@@ -1,14 +1,16 @@
 import { Event } from 'nostr-tools';
 import profileManager from '../ProfileManager';
-import { getNostrTime } from '../Utils';
 import { seconds } from 'hurdak';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from './RelaySubscription';
 import { getEventReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
+import noteManager from '../NoteManager';
 
 export class ContextLoader {
   time10minute: number = seconds(10, 'minute');
   timeout = 9000;
+
+  logging = true;
 
 
   async getEventsByIdWithContext(ids: Array<UID>): Promise<Array<Event>> {
@@ -50,45 +52,50 @@ export class ContextLoader {
 
   async loadProfiles(events: Array<Event>): Promise<boolean> {
     let authors = [
-      ...new Set(events.filter((e) => this.isLoadedProfile(ID(e.pubkey))).map((e) => e.pubkey)).values(),
+      ...new Set(events.filter((e) => !this.isDefaultProfile(ID(e.pubkey))).map((e) => e.pubkey)).values(),
     ];
 
-    //console.log('loadProfiles dependencies', authors.length, authors);
     if (authors.length == 0) return true;
+
+    if(this.logging)
+      console.log('ContextLoader:loadProfiles:authors', authors);
 
     return await relaySubscription.getEventsByAuthor(authors, [0], undefined, 1);
   }
 
   async loadReposts(events: Array<Event>): Promise<Array<Event>> {
     let items: Array<Event> = [];
-    let ids = [
-      ...new Set(
-        events.filter((e) => isRepost(e)).map((e) => getRepostedEventId(e) as string),
-      ).values(),
-    ];
+
+    let reposts = events.filter((e) => isRepost(e));
+    let repostKeys = reposts.map((e) => getRepostedEventId(e) as string);
+    let uniqueIds = [...new Set(repostKeys).values()];
+    let ids = uniqueIds.filter((id) => !noteManager.hasNode(ID(id))); // Filter out reposts that have already been loaded
+
     if (!ids || ids.length == 0) return items;
 
-    //console.log('loadReposts dependencies', ids.length, ids);
+    if(this.logging)
+      console.log('ContextLoader:loadReposts:ids', ids);
 
     const cb = (e: Event) => {
       items.push(e);
     };
 
-    await relaySubscription.getEventsById(ids, [1, 6], cb);
+    await relaySubscription.getEventsById(uniqueIds, [1, 6], cb);
     return items;
   }
 
   async loadReplyingTo(events: Array<Event>): Promise<Array<Event>> {
 
     let items: Array<Event> = [];
-    let ids = [
-      ...new Set(
-        events.map((e) => getEventReplyingTo(e) as string).filter((e) => e != undefined),
-      ).values(),
-    ];
+
+    let replies = events.map((e) => getEventReplyingTo(e) as string).filter((e) => e != undefined);
+    let uniqueIds = [...new Set(replies).values()];
+    let ids = uniqueIds.filter((id) => !noteManager.hasNode(ID(id))); // Filter out reposts that have already been loaded
+
     if (!ids || ids.length == 0) return items;
 
-    //console.log('loadReplyingTo dependencies', ids.length, ids);
+    if(this.logging)
+      console.log('ContextLoader:loadReplyingTo:ids', ids);
 
     const cb = (e: Event) => {
       items.push(e);
@@ -98,18 +105,14 @@ export class ContextLoader {
     return items;
   }
 
-  // async loadEventsById(events: Array<Event>) : Promise<boolean> {
-  //   if(events.length == 0) return true;
-  //   let ids = events.map((e) => e.id);
-  //   return await relaySubscription.getEventsById(ids, [1,6]);
-  // }
 
-  isLoadedProfile(authorId: UID): boolean {
-    let time = getNostrTime() - this.time10minute;
+  isDefaultProfile(authorId: UID): boolean {
+    //let time = getNostrTime() - this.time10minute;
     let profile = profileManager.getMemoryProfile(authorId);
-    if (!profile.isDefault && profile.created_at > time) return false;
+    //if (!profile.isDefault && profile.created_at > time) return false;
+    return !profile.isDefault;
 
-    return true;
+    //return true;
   }
 
   //   // This is a cursor as well, therefore we can load the last 10-50 events

@@ -1,7 +1,9 @@
 import { FeedProvider } from "./network/FeedProvider";
 import { FeedOptions } from "./network/WOTPubSub";
-import { EventCursor } from "./network/CursorRelay";
+import { EventRelayCursor } from "./network/EventRelayCursor";
 import { RelayEventProvider } from "./network/RelayEventProvider";
+import { ICursor } from "./network/types";
+import EventMemoryCursor from "./network/EventMemoryCursor";
 
 
 class FeedManager {
@@ -22,32 +24,18 @@ class FeedManager {
     }
 
     createProvider(opt: FeedOptions): FeedProvider {
-        return new FeedProvider(new EventCursor(opt, 100), new RelayEventProvider(opt));
+
+        return new FeedProvider(this.#createCursor(opt), new RelayEventProvider(opt));
     }
 
 
-    // getList(feedId: string | undefined): Events {
-    //     if(!feedId || feedId == 'default') return []; // No feedId, return empty list, and the list will not be stored
+    #createCursor(opt: FeedOptions): ICursor
+    {
+        if(opt.source == 'memory')
+            return new EventMemoryCursor(opt, 100);
 
-    //     let feed = this.lists.get(feedId!);
-    //     if(!feed) {
-    //         feed = [];
-    //         this.lists.set(feedId!, feed);
-    //     }
-    //     return feed;
-    // }
-
-    // getContext(feedId: string | undefined): FeedContext {
-    //     let list = this.getList(feedId) 
-    //     return {
-    //         list,
-    //         until: this.#getUntil(list),
-    //         since: this.#getSince(list),
-    //     }
-    // }
-
-
-
+        return new EventRelayCursor(opt, 100);
+    }
 }
 
 const feedManager = new FeedManager();

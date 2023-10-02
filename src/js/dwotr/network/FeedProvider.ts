@@ -7,7 +7,7 @@ import { getNostrTime, toNostrUTCstring } from '../Utils';
 import contextLoader from './ContextLoader';
 
 export class FeedProvider {
-  logging = true;
+  logging = false;
 
   pageSize = 10;
 
@@ -209,9 +209,9 @@ export class FeedProvider {
         this.seen.add(ID(event.id));
         filteredItems.push(event);
         remaning--;
-      }
+      } 
 
-      if (this.cursor.done && this.cursor.count() == 0) break;
+      if (this.cursor.done && this.cursor.count() == 0) break; // No more events to load and cursor is done.
     }
     this.loading = false;
 

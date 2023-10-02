@@ -7,7 +7,6 @@ import feedManager from '../FeedManager';
 
 
 const useSubscribe = (ops: FeedOptions) => {
-
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasRefresh, setHasRefresh] = useState<boolean>(false);
@@ -21,7 +20,7 @@ const useSubscribe = (ops: FeedOptions) => {
     loading.current = true;
     feedProvider.current.load().then((list) => {
 
-      console.log('useSubscribe:load', list.length, list.map(e => e.id + '- Kind: ' + e.kind));
+      //console.log('useSubscribe:load', list.length, list.map(e => e.id + '- Kind: ' + e.kind));
 
       setEvents(list);
       setHasMore(feedProvider.current.hasMore());

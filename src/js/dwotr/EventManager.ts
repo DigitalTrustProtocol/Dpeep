@@ -196,8 +196,8 @@ class EventManager {
   }
 
   async eventCallback(event: Event) {
-    
-    this.addSeen(ID(event.id));
+    if(!event) return false;
+    eventManager.addSeen(ID(event.id));
 
     // Use for now 
     EventDB.insert(event);

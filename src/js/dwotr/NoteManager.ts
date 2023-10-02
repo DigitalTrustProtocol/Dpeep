@@ -11,9 +11,6 @@ import eventManager from './EventManager';
 import followManager from './FollowManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventDB from '@/nostr/EventDB';
-import reactionManager from './ReactionManager';
-
-
 
 const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
   if (!a[1]) return 1;
@@ -27,6 +24,7 @@ export type EventCallback = (event: Event) => void;
 
 class NoteManager {
 
+  logging = false;
   notes: SortedMap<UID, Event> = new SortedMap([], sortCreated_at);
 
   deletedEvents: Set<UID> = new Set();
@@ -65,12 +63,21 @@ class NoteManager {
     });
   }, 1000);
 
+  hasNode(id: UID) {
+    return this.notes.has(id);
+  }
+
+  getNode(id: UID) {
+    return this.notes.get(id);
+  }
+
+
   handle(event: Event) {
     let authorId = ID(event.pubkey);
     let myId = ID(Key.getPubKey());
     let isMe = authorId === myId;
 
-    if (isMe) {
+    if (isMe && this.logging) {
       console.log('My own contact event', event);
     }
 

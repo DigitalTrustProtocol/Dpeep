@@ -78,6 +78,8 @@ export type OnEventCallback = (event: Event, afterEose: boolean, url: string | u
 export type EventCallback = (event: Event) => void;
 export type Unsubscribe = () => void;
 export type OnEoseCallback = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => void;
+export type OnClose = (subId: number) => void;
+export type OnDone = (subId: number) => void;
 
 export type FeedOptions = {
   id?: string;
@@ -86,11 +88,12 @@ export type FeedOptions = {
   filterFn?: (event: Event) => boolean;
   onEvent?: OnEvent;
   onEose?: OnEoseCallback;
-  onClose?: (subId: number) => void;
-  onDone?: (subId: number) => void;
+  onClose?: OnClose;
+  onDone?: OnDone;
   maxDelayms?: number;
   eventProps?: any;
   mergeReposts?: boolean;
+  source?: 'network' | 'memory' | undefined;
 };
 
 class WOTPubSub {

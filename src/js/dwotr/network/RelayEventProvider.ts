@@ -7,7 +7,7 @@ import { first } from 'hurdak';
 import { IEventProvider } from './types';
 
 export class RelayEventProvider implements IEventProvider {
-  logging = true;
+  logging = false;
 
   buffer: Array<Event> = [];
   subId: number = -1;
