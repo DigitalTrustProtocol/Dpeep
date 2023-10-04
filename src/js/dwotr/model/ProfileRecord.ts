@@ -30,6 +30,7 @@ export class ProfileMemory extends ProfileRecord {
     created_at: number = 0;
     
     isDefault: boolean = false;
+    syncronized: boolean = false; // true if the profile has been syncronized with the relay servers
 
     relayLastUpdate: number = 0;
 

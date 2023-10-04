@@ -17,12 +17,15 @@ import blockManager from './BlockManager';
 import followManager from './FollowManager';
 import wotPubSub from './network/WOTPubSub';
 import relaySubscription from './network/RelaySubscription';
+import { EPOCH } from './Utils/Nostr';
 
 class ProfileManager {
   loaded: boolean = false;
   #saveQueue = new Map<number, ProfileRecord>();
   #saving: boolean = false;
   history: { [key: string]: any } = {};
+
+  logging: boolean = true;
 
   metrics = {
     TableCount: 0,
@@ -57,6 +60,59 @@ class ProfileManager {
 
   async init() {
     this.loaded = true;
+  }
+
+
+  //--------------------------------------------------------------------------------
+  // Mapping profiles from relay server
+  mapProfiles(profileIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>) {
+    let latestSync: Array<UID> = []
+    let fullSync: Array<UID> = []; 
+    
+    for (const id of profileIds) {
+      if (!id) continue;
+      let profile = this.getMemoryProfile(id);
+
+      if(profile.syncronized) {
+        latestSync.push(id);
+      }
+      else {
+        fullSync.push(id);
+      }
+    }
+
+    if(fullSync.length > 0) {
+      if(this.logging)
+        console.log('Full sync of profiles:', this.#names(fullSync));
+
+      let fullSyncDone = false;
+      let onEose = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => {
+        if(!allEosed || fullSyncDone) return false;
+        for (const id of fullSync) {
+          let profile = this.getMemoryProfile(id);
+          profile.syncronized = true;
+          //profile.relayLastUpdate = minCreatedAt;
+          this.save(profile);
+        }        
+        fullSyncDone = true;
+      }
+      relaySubscription.mapAuthors(fullSync, EPOCH, kinds, undefined, onEose); // Full sync
+    }
+
+    if(latestSync.length > 0) {
+      if(this.logging)
+        console.log('Latest sync of profiles:', this.#names(latestSync));
+      relaySubscription.mapAuthors(latestSync, since, kinds); // Latest sync
+    }
+  }
+
+  #names(ids: Set<UID> | Array<UID>) : Array<string> {
+    let names: Array<string> = [];
+    for (const id of ids) {
+      let profile = this.getMemoryProfile(id);
+      names.push(profile.name);
+    }
+    return names;
   }
 
 
@@ -397,7 +453,7 @@ class ProfileManager {
 
   subscribeMyself() {
       const myPub = Key.getPubKey();
-      relaySubscription.mapAuthors([ID(myPub)]);
+      this.mapProfiles([ID(myPub)]);
       wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }]); // mentions, reactions, DMs
       wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4] }]); // dms for us
       wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4] }]); // dms by us

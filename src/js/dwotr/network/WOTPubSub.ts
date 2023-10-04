@@ -79,7 +79,7 @@ export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined
 export type OnEventCallback = (event: Event, afterEose: boolean, url: string | undefined) => void;
 export type EventCallback = (event: Event) => void;
 export type Unsubscribe = () => void;
-export type OnEoseCallback = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => void;
+export type OnEose = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => void;
 export type OnClose = (subId: number) => void;
 export type OnDone = (subId: number) => void;
 
@@ -89,7 +89,7 @@ export type FeedOptions = {
   filter: Filter;
   filterFn?: (event: Event) => boolean;
   onEvent?: OnEvent;
-  onEose?: OnEoseCallback;
+  onEose?: OnEose;
   onClose?: OnClose;
   onDone?: OnDone;
   maxDelayms?: number;

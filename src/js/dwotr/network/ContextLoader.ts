@@ -122,7 +122,6 @@ export class ContextLoader {
     if (this.authorIds.has(id)) return; // Already seen
 
     this.authorIds.add(id);
-    //this.kinds.add(MetadataKind)
   }
 
 

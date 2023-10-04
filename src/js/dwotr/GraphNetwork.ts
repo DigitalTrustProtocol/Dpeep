@@ -11,6 +11,7 @@ import blockManager from './BlockManager';
 import wotPubSub from './network/WOTPubSub';
 import storage from './Storage';
 import relaySubscription from './network/RelaySubscription';
+import profileManager from './ProfileManager';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -200,7 +201,7 @@ class GraphNetwork {
 
     this.metrics.SubscribedtoRelays += authors.length;
 
-    relaySubscription.mapAuthors(authors);
+    profileManager.mapProfiles(authors);
   }
 
   // Fetching from the relays once

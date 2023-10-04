@@ -401,12 +401,12 @@ class FollowManager {
     localState.get('showFollowSuggestions').put(false);
   }
 
-  async subscribeToRelays() {
+  subscribeToRelays() {
     let authors = followManager.getFollows(ID(Key.getPubKey()));
 
     this.metrics.SubscribedToRelays += authors.size;
 
-    await relaySubscription.mapAuthors(authors);
+    profileManager.mapProfiles(authors);
   }
 
   async subscribeOnce(since?: number, until?: number) {

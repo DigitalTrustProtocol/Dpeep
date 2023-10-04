@@ -4,6 +4,7 @@ import {
   ReplaceableKinds,
   StreamKinds,
   FeedOptions,
+  OnEose,
 } from './WOTPubSub';
 import getRelayPool from '@/nostr/relayPool';
 
@@ -45,7 +46,7 @@ class RelaySubscription {
   // Continuously subscribe to authors and most kinds of events.
   // This is used to keep the relay connection alive and constantly getting new events.
   // Used the for WoT context. Following and trusted authors are subscribed to.
-  mapAuthors(authorIds: Set<UID> | Array<UID>, since = this.until+1, kinds = [...StreamKinds, ...ReplaceableKinds]) : Array<number> {
+  mapAuthors(authorIds: Set<UID> | Array<UID>, since = this.until+1, kinds = [...StreamKinds, ...ReplaceableKinds], onEvent?: OnEvent, onEose?: OnEose) : Array<number> {
     let authors: Array<string> = [];
 
     for (let id of authorIds) {
@@ -55,7 +56,6 @@ class RelaySubscription {
     }
 
     if (authors.length === 0) return [];
-
 
     // Batch authors into chunks, so size limits are not hit.
     let batchs = this.#batchArray(authors, 100);
@@ -71,7 +71,9 @@ class RelaySubscription {
         } as Filter;
 
       let options = {
-        filter
+        filter,
+        onEvent,
+        onEose
       } as FeedOptions;
 
       subs.push(this.map(options));
