@@ -6,21 +6,23 @@ import { FeedProvider } from '../network/FeedProvider';
 import feedManager from '../FeedManager';
 
 
-const useSubscribe = (ops: FeedOptions) => {
+const useFeed = (opt: FeedOptions) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasRefresh, setHasRefresh] = useState<boolean>(false);
 
-  const feedProvider = useRef<FeedProvider>(feedManager.getProvider(ops)); // Make sure to get the same provider for the same feedId
+  const feedProvider = useRef<FeedProvider>(feedManager.getProvider(opt)); // Make sure to get the same provider for the same feedId
   const intervalRef = useRef<any>(undefined);
   const loading = useRef<boolean>(false);
 
   // Loading events from memory
   useEffect(() => {
+    // The options may change, so we need to get a new provider
+    if (feedProvider.current.id !== opt.id) 
+      feedProvider.current = feedManager.getProvider(opt); // Make sure to get the same provider for the same feedId
+
     loading.current = true;
     feedProvider.current.load().then((list) => {
-
-      //console.log('useSubscribe:load', list.length, list.map(e => e.id + '- Kind: ' + e.kind));
 
       setEvents(list);
       setHasMore(feedProvider.current.hasMore());
@@ -36,7 +38,7 @@ const useSubscribe = (ops: FeedOptions) => {
       feedProvider.current.unmount();
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [ops]);
+  }, [opt]);
 
   const loadMore = useCallback(() => {
     if(loading.current == true) return;
@@ -68,4 +70,4 @@ const useSubscribe = (ops: FeedOptions) => {
   return { events, hasMore, hasRefresh, loadMore, refresh, loadAll };
 };
 
-export default useSubscribe;
+export default useFeed;

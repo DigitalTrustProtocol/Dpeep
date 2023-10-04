@@ -24,15 +24,17 @@ class FeedManager {
     }
 
     createProvider(opt: FeedOptions): FeedProvider {
-
-        return new FeedProvider(this.#createCursor(opt), new RelayEventProvider(opt));
+        return new FeedProvider(opt.id ?? 'default', this.#createCursor(opt), new RelayEventProvider(opt));
     }
 
 
     #createCursor(opt: FeedOptions): ICursor
     {
-        if(opt.source == 'memory')
+        if(opt.cursor) return opt.cursor();
+
+        if(opt.source == 'memory') {
             return new EventMemoryCursor(opt, 100);
+        }
 
         return new EventRelayCursor(opt, 100);
     }

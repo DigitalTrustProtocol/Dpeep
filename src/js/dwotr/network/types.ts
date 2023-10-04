@@ -1,5 +1,7 @@
 import { Event } from 'nostr-tools';
 import { FeedOptions } from './WOTPubSub';
+import { UID } from '@/utils/UniqueIds';
+import { Reaction } from '../ReactionManager';
 
 export type Events = Array<Event>;
 export type FeedContext = {
@@ -9,12 +11,15 @@ export type FeedContext = {
 }
 
 
+export type ReactionEvent = Event & {
+    meta?: Reaction;
+}
+
 export interface ICursor {
     until?: number;
     delta: number;
     since: number;
     done: boolean;
-    feedOptions: FeedOptions;
 
     load(): Promise<number>;
     take(n: number): Event[];
@@ -24,6 +29,20 @@ export interface ICursor {
    
   }
 
+  // export interface ITCursor<T> extends ICursor {
+  //   until?: number;
+  //   delta: number;
+  //   since: number;
+  //   done: boolean;
+  //   feedOptions: FeedOptions;
+
+  //   load(): Promise<number>;
+  //   take(n: number): T[];
+  //   count(): number;
+  //   peek(): T | undefined;
+  //   pop(): T | undefined;
+   
+  // }
   
 export interface IEventProvider {
     logging: boolean;

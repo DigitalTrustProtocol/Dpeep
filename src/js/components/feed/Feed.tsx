@@ -10,7 +10,7 @@ import useHistoryState from '@/state/useHistoryState.ts';
 import Helpers from '@/utils/Helpers';
 
 import InfiniteScroll from 'react-infinite-scroll-component';
-import useSubscribe from '@/dwotr/hooks/useSubscribe';
+import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import ShowNewEvents from './ShowNewEvents';
@@ -44,7 +44,7 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
   const filterOption = filterOptions[filterOptionIndex];
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
-  const { events, hasMore, hasRefresh, loadMore, refresh } = useSubscribe(filterOption);
+  const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
 
   // const hiddenEvents = useMemo(() => {
   //   const hiddenEvents = new Set<string>();

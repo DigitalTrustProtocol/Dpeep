@@ -1,8 +1,7 @@
 // Source: https://github.com/coracle-social/coracle/blob/master/src/util/nostr.ts
 
-import { is, fromPairs, mergeLeft, last, identity, prop, flatten, uniq } from 'ramda';
+import {  fromPairs, last, identity, prop, flatten, uniq } from 'ramda';
 import { ensurePlural, mapVals, tryFunc, avg, first } from 'hurdak';
-import { ID, UID } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 
 export const noteKinds = [1, 30023, 1063, 9802, 1808];
@@ -13,8 +12,6 @@ export const EPOCH = 1635724800;
 
 
 
-export const isLike = (content: string) =>
-  ['', '+', '🤙', '👍', '❤️', '😎', '🏅'].includes(content);
 
 export class Tags {
   tags: any[];
@@ -152,22 +149,3 @@ export const isShareableRelay = (url: string) =>
   
   export const channelAttrs = ["name", "about", "picture"]
   
-  export const asDisplayEvent = (event: Event): DisplayEvent => ({
-    nId: ID(event.id),
-    authorId : ID(event.pubkey),
-    replies: [],
-    reactions: [],
-    zaps: [],
-    wot: undefined,
-    ...event,
-  })
-
-  export type DisplayEvent = Event & {
-    nId: UID,
-    authorId: UID,
-    zaps: Event[]
-    replies: DisplayEvent[]
-    reactions: Event[]
-    wot?: any;
-    matchesFilter?: boolean
-  }

@@ -1,4 +1,4 @@
-import { get, throttle } from 'lodash';
+import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID, UID } from '@/utils/UniqueIds';
@@ -8,7 +8,6 @@ import blockManager from './BlockManager';
 import Key from '@/nostr/Key';
 import { getNoteReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
 import eventManager from './EventManager';
-import followManager from './FollowManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventDB from '@/nostr/EventDB';
 
@@ -20,8 +19,6 @@ const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
 };
 
 
-export type EventCallback = (event: Event) => void;
-
 class NoteManager {
 
   logging = false;
@@ -29,10 +26,12 @@ class NoteManager {
 
   deletedEvents: Set<UID> = new Set();
   threadRepliesByMessageId: Map<string, Set<string>> = new Map();
-  repostsByMessageId: Map<string, Set<string>> = new Map();
+
+  // Index of all reposts of an specific events, 
+  reposts: Map<UID, Set<UID>> = new Map();
 
 
-  onEvent: Set<EventCallback> = new Set();
+  //onEvent: Set<EventCallback> = new Set();
 
   private metrics = {
     TableCount: 0,
@@ -73,7 +72,9 @@ class NoteManager {
 
 
   handle(event: Event) {
+    
     let authorId = ID(event.pubkey);
+        
     let myId = ID(Key.getPubKey());
     let isMe = authorId === myId;
 
@@ -83,8 +84,7 @@ class NoteManager {
 
     this.metrics.RelayEvents++;
 
-    // Ignore events from profiles that are blocked
-    if (blockManager.isBlocked(authorId)) return;
+
 
     this.#addNote(event);
 
@@ -104,7 +104,7 @@ class NoteManager {
     for (let note of notes) {
       eventManager.addSeen(ID(note.id));
 
-      if (this.#canAddNote(note)) {
+      if (this.#canAddLoadNote(note)) {
         this.#addNote(note);
       } else {
         deltaDelete.push(note.id);
@@ -140,27 +140,31 @@ class NoteManager {
     return event;
   }
 
-  requestNote(id: UID) {
-    if (this.notes.has(id)) return;
+  // requestNote(id: UID) {
+  //   if (this.notes.has(id)) return;
 
-    wotPubSub.getEvent(id, undefined, 1000);
-  }
+  //   wotPubSub.getEvent(id, undefined, 1000);
+  // }
 
 
   // ---- Private methods ----
 
-  #canAddNote = (note: Event): boolean => {
+  // #getEventRecord(event: Event) {
+  //   const { uId, authorId, ...safeProperties } = event;
+  //   return safeProperties;
+  // }
+
+  #canAddLoadNote(note: Event): boolean {
     let eventId = ID(note.id);
     let authorId = ID(note.pubkey);
 
     if (this.deletedEvents.has(eventId)) return false;
 
-    if (!followManager.isAllowed(authorId)) return false; // Not in network
-
     if (blockManager.isBlocked(authorId)) return false;
 
     return true;
   };
+
 
   #addNote(event: Event) {
     // TODO
@@ -188,26 +192,25 @@ class NoteManager {
 
     EventDB.insert(event);
     this.#insert(ID(event.id), event);
-    this.#dispatch(event);
+    //this.#dispatch(event);
   }
 
   #insert(id: UID, event: Event) {
     this.notes.set(id, event);
   }
 
-  #dispatch(event: Event) {
-    for (let callback of this.onEvent) {
-      callback(event);
-    }
-  }
+  // #dispatch(event: Event) {
+  //   for (let callback of this.onEvent) {
+  //     callback(event);
+  //   }
+  // }
 
   #addRepost(event: Event) {
-    const id = getRepostedEventId(event);
-    if (!id) return;
-    if (!this.repostsByMessageId.has(id)) {
-      this.repostsByMessageId.set(id, new Set());
-    }
-    this.repostsByMessageId.get(id)?.add(event.pubkey);
+    const key = getRepostedEventId(event);
+    if (!key) return;
+    let id = ID(key);
+    let repostSet = this.reposts.get(id) || this.reposts.set(id, new Set()).get(id);
+    repostSet!.add(ID(event.pubkey));
   }
 
   #addTreadReplies(id: string, eventId: string) {

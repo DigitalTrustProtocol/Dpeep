@@ -292,7 +292,7 @@ class FollowManager {
     this.loadLegacy();
 
     // Need to load my own event first, so we can set the follow list
-    let myEvent = await storage.follows.get(STR(myId)); // Load of my own follow event
+    let myEvent = await storage.follows.get(STR(myId) as string); // Load of my own follow event
     if (myEvent) this.#loadEvent(myId, myEvent); // Load my own follow event
 
     let list = await storage.follows.toArray(); // Very fast load of all follow events
@@ -420,7 +420,7 @@ class FollowManager {
       followManager.handle(event);
       cb && cb(event);
     };
-    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], authors: [STR(id)] }], callback);
+    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], authors: [STR(id) as string] }], callback);
   }
 
   subscribeFollowedBy(id: UID, cb?: (event: Event) => void): any {
@@ -428,7 +428,7 @@ class FollowManager {
       followManager.handle(event);
       cb && cb(event);
     };
-    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], '#p': [STR(id)] }], callback);
+    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], '#p': [STR(id) as string] }], callback);
   }
 
   getFollows(id: UID = ID(Key.getPubKey())): Set<UID> {

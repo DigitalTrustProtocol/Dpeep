@@ -7,36 +7,18 @@ import storage from './Storage';
 import followManager from './FollowManager';
 import Key from '@/nostr/Key';
 import blockManager from './BlockManager';
-import { EventMetadata, EventTag } from './Utils/EventParser';
 import eventManager from './EventManager';
 import noteManager from './NoteManager';
+import SortedMap from '@/utils/SortedMap/SortedMap';
+import { ReactionEvent } from './network/types';
 
 
 
-// class ETagReaction extends EventTag  {
+export const isLike = (content: string) =>
+  ['', '+', '🤙', '👍', '❤️', '😎', '🏅'].includes(content);
 
-//   id: UID = 0;
-//   value: number = 0;
-
-//   static parse(tag: Array<string>) : ETagReaction {
-//     let p = new ETagReaction();
-//     p.name = tag[0];
-//     p.source = tag;
-//     p.value = parseInt(tag[1]);
-//     return p;
-//   }
-// }
-// class ReactionMetadata extends EventMetadata {
-
-//   subjectId: UID = 0;
-//   value: number = 0;
-
-//   static parse(event: Event) : ReactionMetadata {
-//     let m = EventMetadata.parse(event);
-
-//     return m as ReactionMetadata;
-//   }
-// }
+export const isDownvote = (content: string) =>
+  ['-', 'downvote'].includes(content);
 
 export class ReactionRecord {
   id: string = '';
@@ -44,14 +26,55 @@ export class ReactionRecord {
   profileId: string = '';
   value: number = 0;
   created_at: number = 0;
+
+  getReaction() {
+    let r = {
+      id: ID(this.id),
+      subjectEventId: ID(this.eventId),
+      authorId: ID(this.profileId),
+      value: this.value,
+      created_at: this.created_at,
+    } as Reaction;
+    return r;
+    }
 }
+
+export type Reaction = {
+  id: UID; 
+  subjectEventId: UID;
+  subjectAuthorId?: UID;
+  authorId: UID;
+  value: number;
+  created_at: number;
+}
+
+type Container = {
+  likes?: Set<UID>;
+  downVotes?: Set<UID>;
+  reactions?: SortedMap<UID, Reaction>; // Key is event Id
+}
+
+export type ReactionMap = SortedMap<UID, Reaction>;
+
+
+const sortCreated_at = (a: [UID, Reaction], b: [UID, Reaction]) => {
+  if (!a[1]) return 1;
+  if (!b[1]) return -1;
+
+  return b[1].created_at - a[1].created_at;
+};
+
 
 // Blocks that are aggregated from multiple profiles
 class ReactionManager {
   //subscriptions = new Subscriptions(); // Callbacks to call when the mutes change
 
-  likes = new Map<UID, Set<number>>();
-  downVotes = new Map<UID, Set<number>>();
+  likes = new Map<UID, Set<UID>>();
+  downVotes = new Map<UID, Set<UID>>();
+
+  // Map Key is : AuthorId, SortedMap is eventId, created_at
+  authors: Map<UID, ReactionMap> = new Map();
+  //reactions: Map<UID, Reaction> = new Map();
 
   #saveQueue: Map<number, ReactionRecord> = new Map();
   #saving: boolean = false;
@@ -93,12 +116,16 @@ class ReactionManager {
   submitLike(subjectEventId: string, subjectEventPubKey: string, value: number = 1) {
     let myKey = Key.getPubKey();
     let myId = ID(myKey);
-
-    this.addValue(ID(subjectEventId), myId, value);
-
+    
     let time = getNostrTime();
 
     let event = this.createEvent(subjectEventId, subjectEventPubKey, value, time);
+
+    let reaction = this.#getReactionByEvent(event as Event);
+    if(!reaction) return;
+
+    this.addValue(reaction);
+
     wotPubSub.publish(event); // Publish the event to the network
 
     let record = {
@@ -112,40 +139,32 @@ class ReactionManager {
     this.save(record); // Save the event to the local database
   }
 
-  async handle(event: Event) {
+  async handle(event: ReactionEvent) {
     let authorId = ID(event.pubkey);
 
     // Ignore events from profiles that are blocked
     if (blockManager.isBlocked(authorId)) return;
 
-    let reverseTags = event.tags.reverse();
-    let e = reverseTags.find((tag) => tag[0] === 'e'); // Subject Event ID
-    if (!e) return;
+
+    let reaction = this.#getReactionByEvent(event);
+    if(!reaction) return;
 
     // let p = reverseTags.find((tag) => tag[0] === 'p'); // Subject Event owner pubkey
     // Notify the profile if its me!?
 
-    let targetEventKey = e[1];
-    if (!targetEventKey) return;
-
     this.metrics.Handle++;
 
-    let value = event.content == '+' ? 1 : event.content == '-' ? -1 : 0;
+    this.addValue(reaction);
 
-    let targetEventId = ID(targetEventKey);
-
-    this.addValue(targetEventId, authorId, value);
-
-    // This is not good puts a lot of load on the browser
-    noteManager.requestNote(targetEventId); // Request the notes for the event
+    event.meta = reaction; // Meta property is never saved to Database  
 
     // Only save the event if the profile is followed by our WoT
     if (followManager.isAllowed(authorId)) {
       let record = {
         id: event.id,
-        eventId: targetEventKey,
+        eventId: STR(reaction.subjectEventId),
         profileId: event.pubkey,
-        value,
+        value: reaction.value,
         created_at: event.created_at,
       } as ReactionRecord;
 
@@ -153,20 +172,24 @@ class ReactionManager {
     }
   }
 
-  addValue(targetId: UID, profileId, value: number) {
-    let likes = this.#getLikes(targetId);
-    let downVotes = this.#getDownVotes(targetId);
+  addValue(reaction: Reaction) {
+    const { id: eventId, subjectEventId: subjectId, authorId, value } = reaction;
+    let likes = this.#getLikes(subjectId);
+    let downVotes = this.#getDownVotes(subjectId);
+    let authorMap = this.getAuthor(authorId);
 
-    if (value == 1) {
-      likes.add(profileId);
-      downVotes.delete(profileId);
+    authorMap?.set(eventId, reaction);
+
+    if (reaction.value == 1) {
+      likes.add(authorId);
+      downVotes.delete(authorId);
     } else if (value == -1) {
-      likes.delete(profileId);
-      downVotes.add(profileId);
+      likes.delete(authorId);
+      downVotes.add(authorId);
     } else {
       // No votes given, remove any existing votes
-      likes.delete(profileId);
-      downVotes.delete(profileId);
+      likes.delete(authorId);
+      downVotes.delete(authorId);
     }
   }
 
@@ -188,21 +211,55 @@ class ReactionManager {
     return downVotes;
   }
 
+  #parseTags(event: Event) {
+    let reverseTags = event.tags.reverse();
+    let eTag = reverseTags.find((tag) => tag[0] === 'e'); // Subject Event ID
+    let pTag = reverseTags.find((tag) => tag[0] === 'p'); // Subject Event owner pubkey
+    let e = eTag ? eTag[1] : undefined;
+    let p = pTag ? pTag[1] : undefined;
+    return {e, p};
+  }
+
+  #getReactionByEvent(event: Event) : Reaction | undefined {
+    let {e, p} = this.#parseTags(event);
+    if(!e) return;
+
+    let value = isLike(event.content) ? 1 : isDownvote(event.content) ? -1 : 0;
+
+    let reaction = {
+      id: ID(event.id),
+      subjectEventId: ID(e),
+      subjectAuthorId: (p) ? ID(p) : undefined,
+      authorId: ID(event.pubkey),
+      value,
+      created_at: event.created_at,
+    } as Reaction;
+
+    return reaction;
+  }
+
   async load() {
-    let reactions = await storage.reactions.toArray();
-    this.metrics.Loaded = reactions.length;
+    let records = await storage.reactions.toArray();
+    this.metrics.Loaded = records.length;
 
     let deltaDelete: Array<string> = [];
 
-    for (let reaction of reactions) {
-      let profileId = ID(reaction.profileId);
+    for (let record of records) {
 
-      eventManager.addSeen(ID(reaction.id)); // No need to handle this event again from Relays
+      let reaction = {
+        id: ID(record.id),
+        subjectEventId: ID(record.eventId),
+        authorId: ID(record.profileId),
+        value: record.value,
+        created_at: record.created_at,
+      } as Reaction;
 
-      if (followManager.isAllowed(profileId)) {
-        this.addValue(ID(reaction.eventId), ID(reaction.profileId), reaction.value);
+      eventManager.addSeen(reaction.id); // No need to handle this event again from Relays
+
+      if (followManager.isAllowed(reaction.authorId)) {
+        this.addValue(reaction);
       } else {
-        deltaDelete.push(reaction.id);
+        deltaDelete.push(record.id);
       }
     }
 
@@ -221,6 +278,18 @@ class ReactionManager {
     reactionManager.handle(event);
   }
 
+  getAuthor(authorId: UID, create = true): ReactionMap | undefined {
+    let map = this.authors.get(authorId);
+    if (!map && create  ) {
+      map = new SortedMap<UID, Reaction>([], sortCreated_at) as ReactionMap;
+      this.authors.set(authorId, map);
+    }
+    return map;
+
+  }
+
+
+
   subscribeRelays(eventId: string, cb: any, since: number = 0, limit: number = 1000) {
     let filters = [
       {
@@ -237,11 +306,23 @@ class ReactionManager {
     return wotPubSub.subscribeFilter(filters, cbInstance);
   }
 
+
+  getEvent(reaction: Reaction) : Event | undefined {
+    let event = this.createEvent(STR(reaction.subjectEventId), STR(reaction.subjectAuthorId), reaction.value, reaction.created_at, false);
+
+    event.id = STR(reaction.id);
+    event.created_at = reaction.created_at;
+    event.pubkey = STR(reaction.authorId);
+
+    return event as Event;
+  }
+
   createEvent(
-    eventId: string,
-    eventPubKey: string,
+    subjectEventId: string | undefined,
+    subjectAuthorPubKey?: string | undefined,
     value: number = 1,
     time = getNostrTime(),
+    sign = true
   ): Partial<Event> {
     let content = value == 1 ? '+' : value == -1 ? '-' : '';
 
@@ -250,15 +331,18 @@ class ReactionManager {
       content,
       created_at: time,
       tags: [
-        ['e', eventId], // Event ID
-        ['p', eventPubKey], // Profile ID
+        ['e', subjectEventId], // 
+        ['p', subjectAuthorPubKey], // Profile ID
       ],
-    };
+    } as Partial<Event>;
 
-    wotPubSub.sign(event);
+    if (sign)
+      wotPubSub.sign(event);
 
     return event;
   }
+
+
 
   getMetrics() {
     this.metrics.TotalMemory = this.likes.size + this.downVotes.size;

@@ -7,6 +7,8 @@ import getRelayPool from '@/nostr/relayPool';
 import eventManager from '../EventManager';
 import { STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
+import { ICursor } from './types';
+import { FeedProvider } from './FeedProvider';
 
 
 // Wot Custom
@@ -94,6 +96,7 @@ export type FeedOptions = {
   eventProps?: any;
   mergeReposts?: boolean;
   source?: 'network' | 'memory' | undefined;
+  cursor?: () => ICursor;
 };
 
 class WOTPubSub {
@@ -129,7 +132,7 @@ class WOTPubSub {
     };
 
     let unSub = this.subscribeFilter(
-      [{ ids: [STR(evnetId)], kinds: [1, 6], limit: 1 }],
+      [{ ids: [STR(evnetId) as string], kinds: [1, 6], limit: 1 }],
       callback,
       delay,
     );
@@ -144,7 +147,7 @@ class WOTPubSub {
     };
 
     let unSub = this.subscribeFilter(
-      [{ authors: [STR(authorId)], kinds, limit: 1 }],
+      [{ authors: [STR(authorId) as string], kinds, limit: 1 }],
       callback,
       delay,
     );
@@ -161,7 +164,7 @@ class WOTPubSub {
     for (let id of authorIDs) {
       if (this.subscribedAuthors.has(id)) continue;
       this.subscribedAuthors.add(id);
-      authors.push(STR(id));
+      authors.push(STR(id) as string);
     }
 
     if (authors.length === 0) return;

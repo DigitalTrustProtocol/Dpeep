@@ -16,8 +16,6 @@ import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
 import wotPubSub from './network/WOTPubSub';
-import EventDB from '@/nostr/EventDB';
-import relayManager from './RelayManager';
 import relaySubscription from './network/RelaySubscription';
 
 class ProfileManager {
@@ -311,11 +309,15 @@ class ProfileManager {
   //   return this.createDefaultProfile(STR(id));
   // }
 
+  hasProfile(id: number) {
+    return SocialNetwork.profiles.has(id);
+  }
+
   getMemoryProfile(id: number): ProfileMemory {
     const profile = SocialNetwork.profiles.get(id);
     ProfileMemory.setID(profile); // Make sure the profile has an ID
     if (profile) return profile;
-    return this.createDefaultProfile(STR(id));
+    return this.createDefaultProfile(STR(id) as string);
   }
 
   isProfileNewer(profile: ProfileMemory): boolean {

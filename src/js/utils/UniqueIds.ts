@@ -26,7 +26,8 @@ export class UniqueIds {
     return newId;
   }
 
-  static str(id: UID): string {
+  static str(id?: UID): string | undefined {
+    if(!id) return undefined;
     const pub = UniqueIds.uniqueIdToStr.get(id);
     if (!pub) {
       throw new Error('pub: invalid id ' + id);

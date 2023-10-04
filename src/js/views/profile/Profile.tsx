@@ -20,6 +20,9 @@ import blockManager from '@/dwotr/BlockManager.ts';
 import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub.ts';
+import { FeedProvider } from '@/dwotr/network/FeedProvider.ts';
+import { ReactionMemoryCursor } from '@/dwotr/network/ReactionMemoryCursor.ts';
+import { RelayEventProvider } from '@/dwotr/network/RelayEventProvider.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -124,10 +127,11 @@ function Profile(props) {
         source: getSource(uid),
       } as FeedOptions,
       {
-        id: 'reposts'+hexPub,
+        id: 'reactions'+hexPub,
         name: t('likes'),
         filter: { authors: [hexPub], kinds: [7], limit: 10 },
         source: getSource(uid),
+        cursor: () => new ReactionMemoryCursor(uid),
       } as FeedOptions,
     ];
   }, [hexPub]);

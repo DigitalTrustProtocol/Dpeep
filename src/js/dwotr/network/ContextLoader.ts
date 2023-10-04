@@ -1,10 +1,13 @@
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import profileManager from '../ProfileManager';
 import { seconds } from 'hurdak';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from './RelaySubscription';
 import { getEventReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
 import noteManager from '../NoteManager';
+import { MetadataKind, ReactionKind, RepostKind, TextKind } from './WOTPubSub';
+import { Events, ReactionEvent } from './types';
+import eventManager from '../EventManager';
 
 export class ContextLoader {
   time10minute: number = seconds(10, 'minute');
@@ -12,121 +15,188 @@ export class ContextLoader {
 
   logging = true;
 
+  eventIds: Set<UID> = new Set();
+  authorIds: Set<UID> = new Set();
+  kinds: Set<number> = new Set();
+  items: Events = [];
 
   async getEventsByIdWithContext(ids: Array<UID>): Promise<Array<Event>> {
-    let events = await relaySubscription.getEventsById(ids.map((id) => STR(id)));
+    let list = ids.map((id) => STR(id) as string);
+    let events = await relaySubscription.getEventsById(list);
     await this.loadDependencies(events);
     return events;
   }
+
+  // Profiles
+  // Replies
+  // Reactions
+  // Reposts
+  // Zaps
 
   async loadDependencies(events: Array<Event>): Promise<void> {
     if (events.length == 0) return;
     // The number of events should not be more than between 10-50, so we can load all context in one go
     if (events.length > 50) throw new Error('Too many events to load context for');
 
-    // Load
-    // Profiles
-    // Replies
-    // Reactions
-    // Zaps
-    //let r = events.map(asDisplayEvent);
+    // Clear previous
+    this.clear();
 
-    // for(let i = 0; i < 3; i++) {
+    this.items = events;
 
-    let repostEvents = await this.loadReposts(events);
-
-    events = events.concat(repostEvents);
-
-    let replyEvents = await this.loadReplyingTo(events);
-
-    events = events.concat(replyEvents);
-
-    // No more events to load
-    //   if(repostEvents.length == 0 && replyEvents.length == 0) break;
-    // }
-    
-    await this.loadProfiles(events.concat(events));
+    await this.loadContext();
   }
 
+  async loadContext(): Promise<void> {
+    // Run mutiple times to load all dependencies as they can be nested
+    for (let i = 0; i < 3; i++) {
+     
+      this.doItems();
+
+      if(this.logging)
+        console.log('ContextLoader:loadContext:Load dependencies:', " - Events:", this.eventIds.size, [...this.eventIds.values()].map((id) => STR(id)), " - Profiles:", this.authorIds.size, [...this.authorIds.values()].map((id) => STR(id)));
 
 
-  async loadProfiles(events: Array<Event>): Promise<boolean> {
-    let authors = [
-      ...new Set(events.filter((e) => !this.isDefaultProfile(ID(e.pubkey))).map((e) => e.pubkey)).values(),
-    ];
+      if (!this.eventIds.size && !this.authorIds.size) break; // Nothing to load
 
-    if (authors.length == 0) return true;
+      // Loading missing, can generate more items
+      await this.loadFromRelays();
+    }
 
-    if(this.logging)
-      console.log('ContextLoader:loadProfiles:authors', authors);
-
-    return await relaySubscription.getEventsByAuthor(authors, [0], undefined, 1);
+    if(this.eventIds.size > 0) {
+      if(this.logging)
+        console.log('ContextLoader:loadContext:Missing not loaded!', this.eventIds.size, this.eventIds);
+    }
   }
 
-  async loadReposts(events: Array<Event>): Promise<Array<Event>> {
-    let items: Array<Event> = [];
+  async loadFromRelays() {
 
-    let reposts = events.filter((e) => isRepost(e));
-    let repostKeys = reposts.map((e) => getRepostedEventId(e) as string);
-    let uniqueIds = [...new Set(repostKeys).values()];
-    let ids = uniqueIds.filter((id) => !noteManager.hasNode(ID(id))); // Filter out reposts that have already been loaded
+    let filter = { kinds: [] } as Filter;
+    if (this.eventIds.size > 0) {
+       filter.ids = [...this.eventIds.values()].map((id) => STR(id) as string);
+       filter.kinds?.push(...this.kinds.values());
+    }
+    if (this.authorIds.size > 0) {
+      filter.authors = [...this.authorIds.values()].map((id) => STR(id) as string);
+      filter.kinds?.push(MetadataKind);
+    } 
 
-    if (!ids || ids.length == 0) return items;
-
-    if(this.logging)
-      console.log('ContextLoader:loadReposts:ids', ids);
-
-    const cb = (e: Event) => {
-      items.push(e);
+    const cb = (event: Event, afterEose: boolean, url: string | undefined) => {
+      this.items.push(event);
     };
 
-    await relaySubscription.getEventsById(uniqueIds, [1, 6], cb);
-    return items;
+    await relaySubscription.getEventsByFilters(filter, cb);
   }
 
-  async loadReplyingTo(events: Array<Event>): Promise<Array<Event>> {
+  doItems() {
+    this.eventIds.clear();
+    this.authorIds.clear();
+    this.kinds.clear();
 
-    let items: Array<Event> = [];
+    for (const event of this.items) {
 
-    let replies = events.map((e) => getEventReplyingTo(e) as string).filter((e) => e != undefined);
-    let uniqueIds = [...new Set(replies).values()];
-    let ids = uniqueIds.filter((id) => !noteManager.hasNode(ID(id))); // Filter out reposts that have already been loaded
+      // Load profiles from every event pubKey
+      this.doProfile(event);
 
-    if (!ids || ids.length == 0) return items;
+      switch (event.kind) {
+        case MetadataKind:
+          // Nothing to do
+          break;
+        case TextKind:
+          this.doReply(event); // Can be a reply
+          this.doRepost(event); // Can be a repost
+          break;
 
-    if(this.logging)
-      console.log('ContextLoader:loadReplyingTo:ids', ids);
+        case RepostKind:
+          this.doRepost(event);
+          break;
+        case ReactionKind:
+          this.doReactions(event as ReactionEvent);
+          break;
+      }
+    }
 
-    const cb = (e: Event) => {
-      items.push(e);
-    };
+    this.items = [];
+  }
 
-    await relaySubscription.getEventsById(ids, [1, 6], cb);
-    return items;
+  addAuthor(id: UID) {
+    if (this.authorIds.has(id)) return; // Already seen
+
+    this.authorIds.add(id);
+    //this.kinds.add(MetadataKind)
   }
 
 
-  isDefaultProfile(authorId: UID): boolean {
-    //let time = getNostrTime() - this.time10minute;
+  addEvent(id: UID, kind: number) {
+    if (eventManager.seen(id)) return; // Already seen
+
+    this.eventIds.add(id);
+    this.kinds.add(kind);
+    if (kind == TextKind) this.kinds.add(RepostKind);
+  }
+
+
+  doProfile(event: Event) {
+    let id = ID(event.pubkey);
+    this.#addProfile(id);
+  }
+
+  doText(event: Event) {
+    // Check content for mentions of profiles
+  }
+
+  doReactions(event: ReactionEvent) {
+    let meta = event.meta;
+    if (!meta || !meta.subjectEventId) return;
+    if (noteManager.hasNode(meta.subjectEventId)) return;
+    this.addEvent(meta.subjectEventId, TextKind);
+
+    if (!meta.subjectAuthorId) return;
+    if (!this.#hasProfile(meta.subjectAuthorId)) return;
+
+    this.#addProfile(meta.subjectAuthorId);
+  }
+
+  doRepost(event: Event) {
+    if (!isRepost(event)) return;
+
+    let eventId = getRepostedEventId(event);
+    if (!eventId) return;
+
+    if (noteManager.hasNode(ID(eventId))) return;
+
+    this.addEvent(ID(eventId), TextKind);
+  }
+
+  async doReply(event: Event) {
+    let eventId = getEventReplyingTo(event);
+    if (!eventId) return;
+
+    if (noteManager.hasNode(ID(eventId))) return;
+
+    this.addEvent(ID(eventId), TextKind);
+  }
+
+  clear() {
+    this.eventIds.clear();
+    this.authorIds.clear();
+    this.kinds.clear();
+    this.items = [];
+  }
+
+
+  #hasProfile(authorId: UID): boolean {
+    if(!profileManager.hasProfile(authorId)) return false;
     let profile = profileManager.getMemoryProfile(authorId);
-    //if (!profile.isDefault && profile.created_at > time) return false;
     return !profile.isDefault;
-
-    //return true;
   }
 
-  //   // This is a cursor as well, therefore we can load the last 10-50 events
-  //   loadReplies(events: Array<DisplayEvent>) {
 
-  //     // getThreadRepliesCount(id: string, cb?: (threadReplyCount: number) => void): Unsubscribe {
-  //     //     const callback = () => {
-  //     //       cb?.(this.threadRepliesByMessageId.get(id)?.size ?? 0);
-  //     //     };
-  //     //     callback();
-  //     //     return PubSub.subscribe({ '#e': [id], kinds: [1] }, callback, false);
-  //     //   },
+  #addProfile(uid: UID) {
+    if (this.#hasProfile(uid)) return;
 
-  //   }
+    this.addAuthor(uid);
+  }
+
 }
 
 const contextLoader = new ContextLoader();

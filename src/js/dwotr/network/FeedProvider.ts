@@ -7,6 +7,8 @@ import { getNostrTime, toNostrUTCstring } from '../Utils';
 import contextLoader from './ContextLoader';
 
 export class FeedProvider {
+  id: string = 'default';
+
   logging = false;
 
   pageSize = 10;
@@ -24,15 +26,10 @@ export class FeedProvider {
 
   loading: boolean = false;
 
-  constructor(_cursor: ICursor, _eventProvider: IEventProvider, size = 10) {
+  constructor(_id:string, _cursor: ICursor, _eventProvider: IEventProvider, size = 10) {
+    this.id = _id;
     this.cursor = _cursor;
     this.eventProvider = _eventProvider;
-
-    // const context = feedManager.getContext(this.cursor.feedOptions.id);
-    // this.buffer = context.list; // Use cache if available, no reason to load again
-    // this.cursor.until = context.until ?? this.cursor.until;
-    // this.cursor.since = context.since ?? this.cursor.since;
-
     this.pageSize = size;
   }
 
@@ -60,7 +57,7 @@ export class FeedProvider {
   }
 
   mapNew() {
-    let feedOptions = this.cursor.feedOptions;
+    let feedOptions = this.eventProvider.feedOptions;
 
     let since = this.#getUntil(this.buffer) ?? this.cursor.until; // Ensure is that only the new events are loaded
     if(!since)
@@ -70,7 +67,7 @@ export class FeedProvider {
       ...feedOptions,
       filter: { ...feedOptions.filter, since, until: undefined, limit: undefined },
       filterFn: (event: Event) => {
-        if (!feedOptions.filterFn?.(event)) return false; // Filter out events that don't match the filterFn, undefined means match
+        if (feedOptions?.filterFn && !feedOptions.filterFn?.(event)) return false; // Filter out events that don't match the filterFn, undefined means match
         if (this.seen.has(ID(event.id))) return false; // Filter out events that have already been seen
         this.seen.add(ID(event.id));
         return true;

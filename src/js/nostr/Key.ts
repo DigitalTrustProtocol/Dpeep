@@ -223,7 +223,7 @@ export default {
       return false;
     }
   },
-  toNostrBech32Address: function (address: string, prefix: string) {
+  toNostrBech32Address: function (address: string | undefined, prefix: string) {
     if (!address) {
       return null;
     }

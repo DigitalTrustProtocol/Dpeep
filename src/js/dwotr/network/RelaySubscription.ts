@@ -11,6 +11,7 @@ import { ID, STR, UID } from '@/utils/UniqueIds';
 import eventManager from '../EventManager';
 import Relays from '@/nostr/Relays';
 import { getNostrTime } from '../Utils';
+import blockManager from '../BlockManager';
 
 
 
@@ -50,7 +51,7 @@ class RelaySubscription {
     for (let id of authorIds) {
       if (this.subscribedAuthors.has(id)) continue;
       this.subscribedAuthors.add(id);
-      authors.push(STR(id));
+      authors.push(STR(id) as string);
     }
 
     if (authors.length === 0) return [];
@@ -85,7 +86,7 @@ class RelaySubscription {
     let timeOut = 30000;
 
     for (let id of authorIds) {
-      authors.push(STR(id));
+      authors.push(STR(id) as string);
     }
 
     if (authors.length === 0) return Promise.resolve([]);
@@ -373,6 +374,9 @@ class RelaySubscription {
         console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
 
       if(!event) return;
+
+      let authorId = ID(event.pubkey);
+      if (blockManager.isBlocked(authorId)) return;
 
       let id = ID(event.id);
       if(eventManager.seen(id)) { // Skip verify and eventHandle on seen events

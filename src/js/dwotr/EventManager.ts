@@ -243,6 +243,7 @@ class EventManager {
     return true;
   }
 
+
   async trustEvent(event: Event) {
     let authorId = ID(event.pubkey);
     if (blockManager.isBlocked(authorId)) return;
