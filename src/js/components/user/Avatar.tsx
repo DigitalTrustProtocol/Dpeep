@@ -32,9 +32,9 @@ function getProfileState(profile: any, hasError: boolean, props: Props) {
 
 // MyAvatar - A component to display an avatar
 const MyAvatar: React.FC<Props> = (props) => {
-  const { hexKey } = useKey(props.str);
+  const { uid } = useKey(props.str);
   const [hasError, setHasError] = useState<boolean>(false);
-  const { profile } = useProfile(hexKey);
+  const { profile } = useProfile(uid);
   const [state, setState] = useState<any>(null); // Will be set in useEffect
 
   useEffect(() => {

@@ -16,7 +16,7 @@ import Repost from './Repost';
 import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
-import contextLoader from '@/dwotr/network/ContextLoader';
+import contextLoader from '@/dwotr/network/DependencyLoader';
 
 declare global {
   interface Window {

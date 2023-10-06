@@ -38,8 +38,8 @@ export default class EventCallbacks {
   dispatch(key: UID, value: any) {
     if (!this.callbacks.has(key)) return;
 
-    let set = this.callbacks.get(key)!;
-    for (const callback of set) {
+    let list = this.callbacks.get(key)!;
+    for (const callback of list) {
       callback(value);
     }
   }

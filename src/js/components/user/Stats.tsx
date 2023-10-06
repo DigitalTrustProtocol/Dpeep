@@ -99,7 +99,7 @@ const useProfileFollows = (profileId: UID, myId: UID, loadGlobal: boolean) => {
           if(!followManager.isFollowing(id, myId)) continue;
           if(!graphNetwork.isTrusted(id)) continue;
 
-          list.push(STR(id));
+          list.push(STR(id) as string);
         }
 
         setKnownFollowers(list);

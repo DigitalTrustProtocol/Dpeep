@@ -20,9 +20,7 @@ import blockManager from '@/dwotr/BlockManager.ts';
 import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub.ts';
-import { FeedProvider } from '@/dwotr/network/FeedProvider.ts';
 import { ReactionMemoryCursor } from '@/dwotr/network/ReactionMemoryCursor.ts';
-import { RelayEventProvider } from '@/dwotr/network/RelayEventProvider.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -39,7 +37,7 @@ function getSource(profileId: UID) {
 function Profile(props) {
   const [npub, setNpub] = useState(getNpub(props.id));
   const { hexKey: hexPub, bech32Key, uid, isMe } = useKey(npub, false); //
-  const { profile } = useProfile(hexPub) as any;
+  const { profile } = useProfile(uid) as any;
 
   const [blocked, setBlocked] = useState(false);
   const [bannerModalOpen, setBannerModalOpen] = useState(false);

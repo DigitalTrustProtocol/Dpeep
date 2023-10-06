@@ -14,22 +14,12 @@ import PubSub from './PubSub';
 import Relays from './Relays';
 import SocialNetwork from './SocialNetwork';
 
-try {
-  localStorage.setItem('gunPeers', JSON.stringify({})); // quick fix to not connect gun
-} catch (e) {
-  // ignore
-}
 
 let loggedIn = false;
 
 const Session = {
   async logOut() {
     route('/');
-    /*
-    if (electron) {
-      electron.get('user').put(null);
-    }
-    */
     // TODO: remove subscription from your channels
     if (navigator.serviceWorker) {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -64,16 +54,9 @@ const Session = {
   //   });
   // },
   onLoggedIn() {
-    if (loggedIn) {
-      return;
-    }
+    if (loggedIn) return;
     loggedIn = true;
-    const myPub = Key.getPubKey();
-    const myId = ID(myPub);
-    //SocialNetwork.followDistanceByUser.set(myId, 0);
-    //SocialNetwork.followersByUser.set(myId, new Set());
-    //SocialNetwork.usersByFollowDistance.set(0, new Set([myId]));
-    //this.loadMyFollowList();
+
     localState.get('globalFilter').once((globalFilter) => {
       if (!globalFilter) {
         localState.get('globalFilter').put(Events.DEFAULT_GLOBAL_FILTER);
@@ -136,9 +119,9 @@ const Session = {
     //   PubSub.subscribe({ authors: [myPub], kinds: [4] }, undefined, false, false); // dms by us
     //   Events.subscribeGroups();
     // }, 500);
-    setInterval(() => {
-      Events.handledMsgsPerSecond = 0;
-    }, 1000);
+    // setInterval(() => {
+    //   Events.handledMsgsPerSecond = 0;
+    // }, 1000);
   },
   init: function (options: any) {
     Key.getOrCreate(options);

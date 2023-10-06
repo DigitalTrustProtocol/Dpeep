@@ -11,9 +11,10 @@ import Events from '../nostr/Events';
 import Key from '../nostr/Key';
 import { useProfile } from '../dwotr/hooks/useProfile';
 import useCachedFetch from '@/utils/useCachedFetch';
+import { ID } from '@/utils/UniqueIds.ts';
 
 const SuggestionProfile = memo(({ pubkey }: { pubkey: string }) => {
-  const { profile } = useProfile(pubkey) as any;
+  const { profile } = useProfile(ID(pubkey || Key.getPubKey())) as any;
 
   if(!profile) return null; // Will not render before profile is ready
 

@@ -308,7 +308,7 @@ export default {
     verifyNip05 = false,
   ): Unsubscribe {
     const id = ID(address);
-    const hexPub = STR(id);
+    const hexPub = STR(id) as string;
     const callback = () => {
       cb?.(this.profiles.get(id), address);
     };

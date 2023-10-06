@@ -3,6 +3,7 @@ import { ID } from '../../utils/UniqueIds.ts';
 import Badge from './Badge';
 import useVerticeMonitor from '../../dwotr/hooks/useVerticeMonitor';
 import { useProfile } from '../../dwotr/hooks/useProfile';
+import Key from '@/nostr/Key.ts';
 
 type Props = {
   pub: string;
@@ -13,7 +14,8 @@ type Props = {
 
 
 const Name = (props: Props) => {
-  const { profile } = useProfile(props.pub);
+  const id = ID(props.pub || props.hexKey || Key.getPubKey());
+  const { profile } = useProfile(id);
 
   const wot = useVerticeMonitor(ID(props.pub), ['badName', 'neutralName', 'goodName'], '');
 

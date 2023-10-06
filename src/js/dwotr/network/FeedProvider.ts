@@ -4,7 +4,7 @@ import { ID, UID } from '@/utils/UniqueIds';
 
 import { FeedOptions } from './WOTPubSub';
 import { getNostrTime, toNostrUTCstring } from '../Utils';
-import contextLoader from './ContextLoader';
+import contextLoader from './DependencyLoader';
 
 export class FeedProvider {
   id: string = 'default';
@@ -142,7 +142,7 @@ export class FeedProvider {
     if (neededLength + this.pageSize > this.buffer.length && !this.cursor.done) {
       // Only load more if the buffer is running low
       deltaItems = await this.#loadToBuffer();
-      await contextLoader.loadDependencies(deltaItems);
+      await contextLoader.resolve(deltaItems);
     }
 
     this.viewEnd = neededLength > this.buffer.length ? this.buffer.length : neededLength;

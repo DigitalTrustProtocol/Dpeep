@@ -110,7 +110,7 @@ class RelaySubscription {
         filter
       } as FeedOptions;
 
-      subs.push(this.Once(options, timeOut));
+      subs.push(this.once(options, timeOut));
     }
 
     let results = await Promise.all(subs);
@@ -139,7 +139,7 @@ class RelaySubscription {
       } as Filter;
     
 
-    return this.getEventsByFilters(filter, onEvent);
+    return this.getEventsByFilter(filter, onEvent);
   }
 
 
@@ -169,12 +169,12 @@ class RelaySubscription {
       onEvent?.(event, afterEose, url);
     };
 
-    await this.getEventsByFilters(filter, cb);
+    await this.getEventsByFilter(filter, cb);
 
     return events;
   }
 
-  async getEventsByFilters(
+  async getEventsByFilter(
     filter: Filter,
     cb?: OnEvent,
   ): Promise<boolean> {
@@ -183,13 +183,13 @@ class RelaySubscription {
       onEvent: cb,
     } as FeedOptions;
 
-    return this.Once(options);
+    return this.once(options);
   }
 
 
   // A Once subscription is used to get events by options.
   // Return a true value when done and false if timed out.
-  async Once(options: FeedOptions, timeOut: number = 3000): Promise<boolean> {
+  async once(options: FeedOptions, timeOut: number = 3000): Promise<boolean> {
 
     let timer: NodeJS.Timeout;
     let stopWatch = Date.now();
@@ -233,7 +233,7 @@ class RelaySubscription {
        if(this.logging)
           console.log('RelaySubscription:Once:onEose', relayUrl, `${tries}/${relays.length}`, " - Sub:", subCounter);
         
-        let allEosed = tries === relays.length;
+        let allEosed = tries >= relays.length;
         options.onEose?.(allEosed, relayUrl, minCreatedAt);
 
         if (allEosed) {
@@ -306,7 +306,7 @@ class RelaySubscription {
 
   // A Continues subscription is used to get replaceable events by options.
   // Return a unsubribe number value, used to unsubscribe.
-  On(options: FeedOptions) : number {
+  on(options: FeedOptions) : number {
     let relayIndex = new Map<string, number>();
 
     let relays = Relays.enabledRelays();
@@ -322,6 +322,7 @@ class RelaySubscription {
       let allEosed = [...relayIndex.values()].every((v) => v === 0);
 
       options.onEose?.(allEosed, relayUrl, minCreatedAt);
+      
       if(allEosed) {
         state.closed = true;
         options.onClose?.(0);
@@ -392,7 +393,6 @@ class RelaySubscription {
       if(!eventManager.verify(event)) return; // Skip events that are not valid.
 
       eventManager.eventCallback(event).then((_) => {
-        //if(!state?.closed)
           userOnEvent?.(event, afterEose, url);
       });
     }

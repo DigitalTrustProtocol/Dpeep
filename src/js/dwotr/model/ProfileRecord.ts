@@ -24,6 +24,7 @@ export class ProfileMemory extends ProfileRecord {
     website: string | undefined;
     email: string | undefined;
 
+
     lud16: string | undefined;
     lud06: string | undefined;
     about: string | undefined;
@@ -33,6 +34,8 @@ export class ProfileMemory extends ProfileRecord {
     syncronized: boolean = false; // true if the profile has been syncronized with the relay servers
 
     relayLastUpdate: number = 0;
+
+    nip05valid: boolean = false;
 
 
 

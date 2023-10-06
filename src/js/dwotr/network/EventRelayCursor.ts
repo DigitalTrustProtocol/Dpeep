@@ -78,7 +78,7 @@ export class EventRelayCursor implements ICursor {
       },
     } as FeedOptions;
 
-    await relaySubscription.Once(options, timeOut);
+    await relaySubscription.once(options, timeOut);
 
     return this.buffer.length;
   }

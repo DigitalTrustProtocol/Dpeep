@@ -40,12 +40,14 @@ const ProfileDropdown = ({ hexPub, npub, rawDataJson, isMyProfile }) => {
         <button className="btn btn-sm" onClick={() => setShowQrCode(true)}>
           {t('show_qr_code')}
         </button>
-        <Copy
-          className="btn btn-sm"
-          key={`${hexPub}copyData`}
-          text={t('copy_raw_data')}
-          copyStr={rawDataJson}
-        />
+        <Show when={rawDataJson}>
+          <Copy
+            className="btn btn-sm"
+            key={`${hexPub}copyData`}
+            text={t('copy_raw_data')}
+            copyStr={rawDataJson}
+          />
+        </Show>
         <Show when={!isMyProfile && !Key.getPrivKey()}>
           <button className="btn btn-sm" onClick={viewAs}>
             {t('view_as') + ' '}
@@ -54,7 +56,6 @@ const ProfileDropdown = ({ hexPub, npub, rawDataJson, isMyProfile }) => {
         </Show>
         <Show when={!isMyProfile}>
           <>
-            
             <Block className="btn btn-sm" id={hexPub} />
             <Trust className="btn btn-sm" id={hexPub} />
             <Distrust className="btn btn-sm" id={hexPub} />

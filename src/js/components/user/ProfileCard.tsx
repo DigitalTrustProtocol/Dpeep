@@ -1,16 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Event } from 'nostr-tools';
+import { useEffect, useState } from 'react';
 import { route } from 'preact-router';
 
-import EventDB from '@/nostr/EventDB';
-
-import Key from '../../nostr/Key';
-import PubSub from '../../nostr/PubSub';
-import SocialNetwork from '../../nostr/SocialNetwork';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import Helpers from '../../utils/Helpers';
-import { ID } from '../../utils/UniqueIds';
 import Follow from '../buttons/Follow';
 import Show from '../helpers/Show';
 import HyperText from '../HyperText';
@@ -22,120 +15,51 @@ import ProfilePicture from './ProfilePicture';
 import TrustProfileButtons from '../../dwotr/components/TrustProfileButtons';
 import Stats from './Stats';
 import blockManager from '@/dwotr/BlockManager.ts';
+import { useKey } from '@/dwotr/hooks/useKey.tsx';
+import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 
+type ProfileCardProps = {
+  hexPub: string;
+  npub: string;
+};
 
-const ProfileCard = (props: { hexPub: string; npub: string }) => {
+const ProfileCard = (props: ProfileCardProps) => {
   const { hexPub, npub } = props;
-  const [profile, setProfile] = useState<any>(SocialNetwork.profiles.get(ID(hexPub)) || {});
-  const [lightning, setLightning] = useState<string>(getLightning(profile));
-  const [website, setWebsite] = useState<string>(getWebsite(profile.website));
+  const { uid, isMe } = useKey(hexPub);
+  const { profile } = useProfile(uid, true);
+
+  const [lightning, setLightning] = useState<string>();
+  const [website, setWebsite] = useState<string>('');
   const [loggedIn, setLoggedIn] = useState<boolean>(false);
   const [nostrAddress, setNostrAddress] = useState<string>('');
   const [rawDataJson, setRawDataJson] = useState<string>('');
   const [isMyProfile, setIsMyProfile] = useState<boolean>(false);
   const [blocked, setBlocked] = useState<boolean>(false);
 
-  const getNostrProfile = useCallback((address, nostrAddress) => {
-    const subscriptions = [] as any[];
-    subscriptions.push(
-      PubSub.subscribe(
-        {
-          authors: [address],
-          kinds: [0, 3],
-        },
-        undefined,
-        false,
-        false,
-      ),
-    );
-
-    subscriptions.push(
-      SocialNetwork.getProfile(
-        address,
-        (profile) => {
-          if (!profile) {
-            return;
-          }
-          const isIrisAddress = nostrAddress && nostrAddress.endsWith('@iris.to');
-          if (!isIrisAddress && profile.nip05 && profile.nip05valid) {
-            // replace url and history entry with iris.to/${profile.nip05} or if nip is user@iris.to, just iris.to/${user}
-            // TODO don't replace if at /likes or /replies
-            const nip05 = profile.nip05;
-            const nip05Parts = nip05.split('@');
-            const nip05User = nip05Parts[0];
-            const nip05Domain = nip05Parts[1];
-            let newUrl;
-            if (nip05Domain === 'iris.to') {
-              if (nip05User === '_') {
-                newUrl = 'iris';
-              } else {
-                newUrl = nip05User;
-              }
-            } else {
-              if (nip05User === '_') {
-                newUrl = nip05Domain;
-              } else {
-                newUrl = nip05;
-              }
-            }
-            setNostrAddress(newUrl);
-            // replace part before first slash with new url
-            newUrl = window.location.pathname.replace(/[^/]+/, newUrl);
-            const previousState = window.history.state;
-            window.history.replaceState(previousState, '', newUrl);
-          }
-
-          setLightning(getLightning(profile));
-          setWebsite(getWebsite(profile.website));
-
-          setProfile(profile);
-        },
-        true,
-      ),
-    );
-    return () => {
-      subscriptions.forEach((unsub) => unsub());
-    };
-  }, []);
 
   useEffect(() => {
-    const rawDataArray = [] as Event[];
-    const profileEvent = EventDB.findOne({
-      kinds: [0],
-      authors: [hexPub],
-    });
-    const followEvent = EventDB.findOne({
-      kinds: [3],
-      authors: [hexPub],
-    });
-    if (profileEvent) {
-      rawDataArray.push(profileEvent);
-    }
-    if (followEvent) {
-      rawDataArray.push(followEvent);
-    }
-    setRawDataJson(JSON.stringify(rawDataArray, null, 2));
-    setIsMyProfile(Key.isMine(hexPub));
-    getNostrProfile(hexPub, nostrAddress);
+    setIsMyProfile(isMe);
+    setBlocked(blockManager.isBlocked(uid));
+
     const unsubLoggedIn = localState.get('loggedIn').on((loggedIn) => {
       setLoggedIn(loggedIn);
     });
 
-    setBlocked(blockManager.isBlocked(ID(hexPub)));
-    // const unsubBlocked = SocialNetwork.getBlockedUsers((blockedUsers) => {
-    //   setBlocked(blockedUsers.has(hexPub));
-    // });
-
     return () => {
-      //unsubBlocked();
       unsubLoggedIn();
     };
   }, [hexPub]);
 
+  useEffect(() => {
+    if (!profile) return;
+    setLightning(getLightning(profile));
+    setWebsite(getWebsite(profile?.website));
+  }, [profile]);
+
   const profilePicture = !blocked ? (
     <ProfilePicture
       key={`${hexPub}picture`}
-      picture={profile.picture}
+      picture={profile?.picture}
       onError={() => /* Handle error here */ null}
     />
   ) : (
@@ -189,16 +113,16 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
             </span>
             <small
               className={`inline-block text-iris-green ${
-                profile.nip05 && profile.nip05valid ? 'visible' : 'invisible'
+                profile?.nip05 && profile?.nip05valid ? 'visible' : 'invisible'
               }`}
             >
-              {profile.nip05?.replace(/^_@/, '')}
+              {profile?.nip05?.replace(/^_@/, '')}
             </small>
           </div>
           <Stats address={hexPub} />
           <div className="py-2">
             <p className="text-sm">
-              <HyperText textOnly={true}>{profile.about?.slice(0, 500)}</HyperText>
+              <HyperText textOnly={true}>{profile?.about?.slice(0, 500) || ''}</HyperText>
             </p>
             <div className="flex flex-1 flex-row align-center justify-center mt-4">
               <Show when={!isMyProfile}>
@@ -232,7 +156,8 @@ const ProfileCard = (props: { hexPub: string; npub: string }) => {
 
 export default ProfileCard;
 
-function getWebsite(websiteProfile: string) {
+function getWebsite(websiteProfile?: string) {
+  if (!websiteProfile) return '';
   try {
     const tempWebsite = websiteProfile.match(/^https?:\/\//)
       ? websiteProfile
@@ -242,7 +167,7 @@ function getWebsite(websiteProfile: string) {
   } catch (e) {
     return '';
   }
-};
+}
 
 function getLightning(profile: any) {
   let lightning = profile.lud16 || profile.lud06;
@@ -250,4 +175,4 @@ function getLightning(profile: any) {
     lightning = 'lightning:' + lightning;
   }
   return lightning;
-};
+}

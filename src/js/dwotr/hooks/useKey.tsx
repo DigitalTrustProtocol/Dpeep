@@ -41,7 +41,7 @@ function createKeyData(str: string | undefined, defaultToMe: boolean = true, pre
   const myPubKey = Key.getPubKey();
   const myId = ID(myPubKey);
   const uid = ID(str || myPubKey);
-  const hexKey = STR(uid);
+  const hexKey = STR(uid) as string;
   const bech32Key = BECH32(uid, prefix);
   return {
     key: str,

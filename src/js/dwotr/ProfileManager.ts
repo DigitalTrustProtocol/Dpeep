@@ -1,6 +1,5 @@
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import Events from '../nostr/Events';
-import IndexedDB from '../nostr/IndexedDB';
 import SocialNetwork from '../nostr/SocialNetwork';
 import Key from '../nostr/Key';
 import { throttle } from 'lodash';
@@ -15,9 +14,11 @@ import EventCallbacks from './model/EventCallbacks';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
-import wotPubSub from './network/WOTPubSub';
+import wotPubSub, { FeedOptions } from './network/WOTPubSub';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
+
+type OnProfile = (profile: ProfileMemory, state: any) => void;
 
 class ProfileManager {
   loaded: boolean = false;
@@ -27,13 +28,19 @@ class ProfileManager {
 
   logging: boolean = true;
 
+  // Limits the relay requests to one per profile
+  relayProfileRequest = new Set<UID>();
+  
+  // Controls the callbacks for when a profile is updated
+  onEvent: EventCallbacks = new EventCallbacks();
+ 
+
   metrics = {
     TableCount: 0,
     TotalMemory: 0,
     Loaded: 0,
     Saved: 0,
-  }
-    
+  };
 
   //--------------------------------------------------------------------------------
   // Saves profile(s) to IndexedDB
@@ -50,63 +57,57 @@ class ProfileManager {
     this.#saveQueue = new Map<number, ProfileRecord>();
 
     this.metrics.Saved += queue.length;
-        
+
     storage.profiles.bulkPut(queue).finally(() => {
       this.#saving = false;
     });
   }, 500);
 
-
-
   async init() {
     this.loaded = true;
   }
 
-
   //--------------------------------------------------------------------------------
   // Mapping profiles from relay server
   mapProfiles(profileIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>) {
-    let latestSync: Array<UID> = []
-    let fullSync: Array<UID> = []; 
-    
+    let latestSync: Array<UID> = [];
+    let fullSync: Array<UID> = [];
+
     for (const id of profileIds) {
       if (!id) continue;
       let profile = this.getMemoryProfile(id);
 
-      if(profile.syncronized) {
+      if (profile.syncronized) {
         latestSync.push(id);
-      }
-      else {
+      } else {
         fullSync.push(id);
       }
     }
 
-    if(fullSync.length > 0) {
-      if(this.logging)
-        console.log('Full sync of profiles:', this.#names(fullSync));
+    if (fullSync.length > 0) {
+      if (this.logging) console.log('Full sync of profiles:', this.#names(fullSync));
 
       let fullSyncDone = false;
       let onEose = (allEosed: boolean, relayUrl: string, minCreatedAt: number) => {
-        if(!allEosed || fullSyncDone) return false;
+        if (!allEosed || fullSyncDone) return false;
         for (const id of fullSync) {
           let profile = this.getMemoryProfile(id);
           profile.syncronized = true;
           //profile.relayLastUpdate = minCreatedAt;
           this.save(profile);
-        }        
+        }
         fullSyncDone = true;
-      }
+      };
       relaySubscription.mapAuthors(fullSync, EPOCH, kinds, undefined, onEose); // Full sync
     }
 
-    if(latestSync.length > 0) {
-      if(this.logging)
-        console.log('Latest sync of profiles:', this.#names(latestSync));
+    if (latestSync.length > 0) {
+      if (this.logging) console.log('Latest sync of profiles:', this.#names(latestSync));
       relaySubscription.mapAuthors(latestSync, since, kinds); // Latest sync
     }
   }
 
-  #names(ids: Set<UID> | Array<UID>) : Array<string> {
+  #names(ids: Set<UID> | Array<UID>): Array<string> {
     let names: Array<string> = [];
     for (const id of ids) {
       let profile = this.getMemoryProfile(id);
@@ -115,6 +116,32 @@ class ProfileManager {
     return names;
   }
 
+  // ---------------------------------------------------------------------------------------------
+
+
+  //--------------------------------------------------------------------------------
+  // Requests a profile from the API
+  //--------------------------------------------------------------------------------
+  once(profileId: UID) {
+    if(this.relayProfileRequest.has(profileId)) return; // Already requested
+    this.relayProfileRequest.add(profileId);
+    
+    let onClose = () => {
+      if (this.logging) console.log('ProfileManager:profileRequest:close', STR(profileId));
+      this.relayProfileRequest.delete(profileId); // Cleanup
+    };
+
+    let options = {
+      filter: {
+        authors: [STR(profileId)],
+        kinds: [0],
+        since: EPOCH,
+      } as Filter,
+      onClose,
+    } as FeedOptions;
+
+    relaySubscription.once(options, 3000);
+  }
 
   //--------------------------------------------------------------------------------
   // Validates a profile object
@@ -123,10 +150,9 @@ class ProfileManager {
   //--------------------------------------------------------------------------------
   validateProfile(profile: any) {
     if (!profile) return false;
-    
+
     return true;
   }
-
 
   //--------------------------------------------------------------------------------
   // Fetches a profile from the API
@@ -165,7 +191,7 @@ class ProfileManager {
     const fetch = async (key: string) => {
       const profile = await this.fetchProfile(key);
       if (!profile) return;
-      if(profileManager.validateProfile(profile)) {
+      if (profileManager.validateProfile(profile)) {
         Events.handle(profile);
         cb(profile);
       }
@@ -177,10 +203,13 @@ class ProfileManager {
   }
 
   //--------------------------------------------------------------------------------
-  // Loading profiles from IndexedDB 
+  // Loading profiles from IndexedDB
   //--------------------------------------------------------------------------------
   async loadProfiles(addresses: Set<string>): Promise<ProfileMemory[]> {
-    let list = await storage.profiles.where('key').anyOf(Array.from(addresses)).toArray() as ProfileMemory[];
+    let list = (await storage.profiles
+      .where('key')
+      .anyOf(Array.from(addresses))
+      .toArray()) as ProfileMemory[];
     return ProfileMemory.setIDs(list);
   }
 
@@ -189,7 +218,7 @@ class ProfileManager {
   //--------------------------------------------------------------------------------
   async loadProfile(hexPub: string): Promise<ProfileMemory | undefined> {
     let profile = await OneCallQueue<ProfileMemory>(`loadProfile${hexPub}`, async () => {
-      return ProfileMemory.setID(await storage.profiles.get({ key: hexPub }) as ProfileMemory);
+      return ProfileMemory.setID((await storage.profiles.get({ key: hexPub })) as ProfileMemory);
     });
 
     if (profile?.isDefault) {
@@ -282,9 +311,8 @@ class ProfileManager {
   }
 
   async loadAllProfiles() {
-
     //console.time('Loading profiles - list');
-    const list = await storage.profiles.toArray() as ProfileMemory[];
+    const list = (await storage.profiles.toArray()) as ProfileMemory[];
 
     this.metrics.Loaded += list.length;
 
@@ -333,12 +361,13 @@ class ProfileManager {
       isDefault: false,
     } as ProfileMemory;
 
-    if(isBlocked) { // If blocked, then remove all personal info
+    if (isBlocked) {
+      // If blocked, then remove all personal info
       profile = new ProfileMemory(ID(hexPub));
       profile.key = hexPub;
       profile.name = name;
       profile.display_name = display_name;
-    } 
+    }
 
     return profile;
   }
@@ -420,7 +449,7 @@ class ProfileManager {
     } catch (e) {
       // Remove the event from IndexedDB if it has an id wich means it was saved there
       if (event.id) {
-        IndexedDB.db.events.delete(event.id);
+        storage.profiles.delete(event.id);
       }
       console.error(e);
       return undefined;
@@ -448,16 +477,14 @@ class ProfileManager {
   // ---- New system ----
 
   callbacks = new EventCallbacks();
-  
-
 
   subscribeMyself() {
-      const myPub = Key.getPubKey();
-      this.mapProfiles([ID(myPub)]);
-      wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }]); // mentions, reactions, DMs
-      wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4] }]); // dms for us
-      wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4] }]); // dms by us
-      //Events.subscribeGroups();
+    const myPub = Key.getPubKey();
+    this.mapProfiles([ID(myPub)]);
+    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }]); // mentions, reactions, DMs
+    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4] }]); // dms for us
+    wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4] }]); // dms by us
+    //Events.subscribeGroups();
   }
 
   async subscribeMyselfOnce(since?: number, until?: number) {
@@ -469,22 +496,24 @@ class ProfileManager {
     // //Events.subscribeGroups();
 
     return true;
-}
-
+  }
 
   // Get the latest profile
-  
-  subscribeProfile(profileId: UID, cb: (profile: ProfileMemory) => void, kinds = [0], delay = 1000) {
 
+  subscribeProfile(
+    profileId: UID,
+    cb: (profile: ProfileMemory) => void,
+    kinds = [0],
+    delay = 1000,
+  ) {
     this.callbacks.add(profileId, cb);
 
     const handleEvent = (event: Event) => {
       // At this point the profile should be loaded into memory from the event
       let profile = profileManager.getMemoryProfile(profileId);
 
-      this.callbacks.dispatch(profileId, profile);      
-    }
-
+      this.callbacks.dispatch(profileId, profile);
+    };
 
     wotPubSub.getAuthorEvent(profileId, kinds, handleEvent, delay); // delay 1 sec
   }
@@ -515,11 +544,11 @@ class ProfileManager {
   //         });
   //       }
   //     });
-  //   } 
+  //   }
 
   //   // Instantly send the profile to the callback
   //   this.subscribeCallback(profile, cb);
-    
+
   //   // If not already subscribed to updates
   //   if (!this.subscriptions.hasUnsubscribe(id)) {
   //     // Then subscribe to updates via nostr relays, but only once per address
@@ -529,7 +558,7 @@ class ProfileManager {
   //       false,
   //     );
   //     this.subscriptions.addUnsubscribe(id, unsub);
-  //   } 
+  //   }
   //   return () => {
   //     this.subscriptions.remove(id, subsciptionIndex);
   //   }
@@ -542,10 +571,9 @@ class ProfileManager {
     if (this.isProfileNewer(profile)) this.addProfileToMemory(profile);
 
     let mem = ProfileMemory.fromRecord(profile);
-    
+
     cb(new ProfileEvent(mem));
   }
-
 
   dispatchProfile(profile: ProfileMemory) {
     if (!profile) return;
@@ -561,22 +589,20 @@ class ProfileManager {
 
   // ---- Pet names ----
   // TODO: sourceId is used for storing information about who set the pet name
-  setPetNames(sourceId, petNames: Array<{id:number, name:string}>) {
-
-    for(const item of petNames) {
+  setPetNames(sourceId, petNames: Array<{ id: number; name: string }>) {
+    for (const item of petNames) {
       let profile = this.getMemoryProfile(item.id);
       profile.petName = item.name;
     }
   }
 
-
   async verifyNip05Profile(profile: ProfileMemory, pubkey: string) {
-   if (!profile.nip05) return false;
+    if (!profile.nip05) return false;
     // TODO verify NIP05 address
-    let isValid = Key.verifyNip05Address(profile.nip05, pubkey);
+    let isValid = await Key.verifyNip05Address(profile.nip05, pubkey);
 
-      //console.log('NIP05 address is valid?', isValid, profile.nip05, pubkey);
-    profile["nip05valid"] = isValid;
+    //console.log('NIP05 address is valid?', isValid, profile.nip05, pubkey);
+    profile.nip05valid = isValid;
     return isValid;
   }
 
@@ -584,10 +610,13 @@ class ProfileManager {
     return await storage.profiles.count();
   }
 
-
   handle(event: Event) {
-    let isBlocked = blockManager.isBlocked(ID(event.pubkey)); // Limit the profile if its blocked
-    this.addProfileEvent(event, isBlocked);
+    let authorId = ID(event.pubkey);
+    let isBlocked = blockManager.isBlocked(authorId); // Limit the profile if its blocked
+    let profile = this.addProfileEvent(event, isBlocked);
+    if(profile) {
+      this.onEvent.dispatch(authorId, profile); // Notify subscribers
+    }
   }
 
   setMetadata(data: any) {
@@ -598,8 +627,7 @@ class ProfileManager {
     Events.publish(event);
   }
 
-  getMetrics() : any {
-
+  getMetrics(): any {
     this.tableCount().then((count) => {
       this.metrics.TableCount = count;
     });
@@ -607,8 +635,6 @@ class ProfileManager {
 
     return this.metrics;
   }
-
-
 }
 
 const profileManager = new ProfileManager();

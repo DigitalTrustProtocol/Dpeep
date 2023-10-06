@@ -1,6 +1,6 @@
 import { Event } from 'nostr-tools';
 import { getNostrTime, toNostrUTCstring } from '../Utils';
-import contextLoader from './ContextLoader';
+import contextLoader from './DependencyLoader';
 import { FeedOptions } from './WOTPubSub';
 import relaySubscription from './RelaySubscription';
 import { first } from 'hurdak';
@@ -50,7 +50,7 @@ export class RelayEventProvider implements IEventProvider {
 
         if (this.feedOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
 
-        contextLoader.loadDependencies([event]).then(() => {
+        contextLoader.resolve([event]).then(() => {
           if (this.logging)
             console.log(
               'RelayEventProvider:map:onEvent:peekBuffer.push',

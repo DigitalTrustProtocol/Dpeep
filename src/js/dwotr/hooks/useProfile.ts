@@ -1,45 +1,39 @@
 import { useEffect, useState } from 'react';
 import profileManager from '../ProfileManager';
 import { ProfileMemory } from '../model/ProfileRecord';
-import { ID } from '@/utils/UniqueIds';
+import { UID } from '@/utils/UniqueIds';
 import { useIsMounted } from './useIsMounted';
-import { getNostrTime } from '../Utils';
-import Key from '@/nostr/Key';
 
-// Address can be of type hex of BECH32
-export const useProfile = (address: string, kinds = [0], delay = 1000 ) => {
 
-  const isMounted = useIsMounted();
-  
+export const useProfile = (profileId: UID, loadOnDefault = false) => {
   const [profile, setProfile] = useState<ProfileMemory>();
-  const [updatedFromRelays, setUpdatedFromRelays] = useState(false);
+  const isMounted = useIsMounted();
+
 
   useEffect(() => {
+    let profile = profileManager.getMemoryProfile(profileId);
 
-    let authorId = address ? ID(address) : ID(Key.getPubKey());
+    setProfile(profile);
 
-    // const handleEvent = (e: any) => {
-    //   if(!isMounted()) return; // ignore events after unmount, however should not happen
+    let onEvent = (profile: ProfileMemory) => {
+      if(!isMounted()) return;
 
-    //   // At this point the profile should be loaded into memory from the event
-    //   let p = profileManager.getMemoryProfile(authorId);
+      setProfile({...profile});
+    }
 
-    //   p.relayLastUpdate = getNostrTime();
+    // Subscribe to profile updates
+    profileManager.onEvent.add(profileId, onEvent);
 
-    //   if (profile && p.created_at <= profile.created_at) return; // ignore older events
+    if(profile.isDefault && loadOnDefault) 
+      profileManager.once(profileId); // Load from relay
+    
 
-    //   setProfile({ ...p }); // Make sure to copy the object, otherwise React may not re-render
-    //   setUpdatedFromRelays(true);
-    // };
+    return () => {
+      // Unsubscribe from profile updates
+      profileManager.onEvent.remove(profileId, onEvent);
+    }
 
-    let mem = profileManager.getMemoryProfile(authorId);
-    setProfile(mem);
+  }, [profileId, loadOnDefault]);
 
-    //wotPubSub.getAuthorEvent(authorId, kinds, handleEvent, delay); // delay 1 sec
-
-  }, [address, profile, kinds, delay]);
-
-  return { profile, updatedFromRelays };
+  return { profile };
 };
-
-
