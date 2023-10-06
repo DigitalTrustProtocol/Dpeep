@@ -3,7 +3,7 @@ import { useState, useEffect } from 'preact/hooks';
 import throttle from 'lodash/throttle';
 import { Link } from 'preact-router';
 
-import { STR, UID } from '@/utils/UniqueIds.ts';
+import { ID, STR, UID } from '@/utils/UniqueIds.ts';
 
 import Key from '../../nostr/Key';
 import { translate as t } from '../../translations/Translation.mjs';
@@ -11,11 +11,15 @@ import Show from '../helpers/Show';
 
 import Name from './Name';
 import ProfileScoreLinks from '../../dwotr/components/ProfileScoreLinks';
-import followManager from '@/dwotr/FollowManager';
+import followManager, { FollowItem } from '@/dwotr/FollowManager';
 import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 import Globe from '@/dwotr/components/buttons/Globe';
 import { useKey } from '@/dwotr/hooks/useKey';
 import graphNetwork from '@/dwotr/GraphNetwork';
+import { Event } from 'nostr-tools';
+import { ContactsKind } from '@/dwotr/network/WOTPubSub';
+import relayManager from '@/dwotr/RelayManager';
+import relaySubscription from '@/dwotr/network/RelaySubscription';
 
 const ProfileStats = ({ address }) => {
   const { uid: profileId, myId, bech32Key, hexKey, isMe } = useKey(address);
@@ -39,7 +43,12 @@ const ProfileStats = ({ address }) => {
           <span className="text-neutral-500"> {t('known_followers')}</span>
         </Link>
         <ProfileScoreLinks str={hexKey} />
-        <Globe size={24} onClick={setLoadGlobal} alt="Load global followers events" className="flex justify-end" />
+        <Globe
+          size={24}
+          onClick={setLoadGlobal}
+          alt="Load global followers events"
+          className="flex justify-end"
+        />
       </div>
       <Show when={!isMe && knownFollowers.length > 0}>
         <div className="text-neutral-500">
@@ -87,17 +96,17 @@ const useProfileFollows = (profileId: UID, myId: UID, loadGlobal: boolean) => {
     const followedByCallback = throttle(
       () => {
         if (!isMounted()) return;
-        let item = followManager.getItem(profileId);
-        if (!item) return;
+
+        const item = followManager.getItem(profileId);
+        if (followedByCount === item?.followedBy.size) return;
 
         setFollowedByCount(item?.followedBy.size || 0);
 
-
         let list: Array<string> = [];
-        for(const id of item?.followedBy) {
-          if(id == myId) continue;
-          if(!followManager.isFollowing(id, myId)) continue;
-          if(!graphNetwork.isTrusted(id)) continue;
+        for (const id of item?.followedBy) {
+          if (id == myId) continue;
+          if (!followManager.isFollowing(id, myId)) continue;
+          if (!graphNetwork.isTrusted(id)) continue;
 
           list.push(STR(id) as string);
         }
@@ -108,32 +117,27 @@ const useProfileFollows = (profileId: UID, myId: UID, loadGlobal: boolean) => {
       { leading: true },
     );
 
-    const contactsCallback = throttle(
-      () => {
-        if (!isMounted()) return;
-        let item = followManager.getItem(profileId);
-        if (!item) return;
+    const contactsCallback = (item: FollowItem) => {
+      if (!isMounted()) return;
 
-        setContactsCount(item?.follows.size || 0);
-      },
-      500,
-      { leading: true },
-    );
+      setContactsCount(item?.follows.size || 0);
+    };
 
-    contactsCallback();
+    let item = followManager.getItem(profileId);
+    contactsCallback(item);
     followedByCallback();
 
+    followManager.onEvent.addListener(profileId, contactsCallback);
+
     if (!loadGlobal) return;
-    let sub1 = followManager.subscribeContacts(profileId, contactsCallback);
-    let sub2 = followManager.subscribeFollowedBy(profileId, followedByCallback);
+    followManager.onceContacts(profileId);
+    let unsubID = followManager.mapFollowedBy(profileId, followedByCallback);
 
     return () => {
-      sub1?.();
-      sub2?.();
+      followManager.onEvent.removeListener(profileId, contactsCallback);
+      relaySubscription.off(unsubID);
     };
   }, [profileId, loadGlobal]);
 
   return { contactsCount, followedByCount, knownFollowers };
 };
-
-

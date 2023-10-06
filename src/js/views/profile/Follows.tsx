@@ -14,7 +14,8 @@ import { translate as t } from '../../translations/Translation.mjs';
 import { STR, UID } from '../../utils/UniqueIds.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import { useIsMounted } from '@/dwotr/hooks/useIsMounted.tsx';
-import followManager from '@/dwotr/FollowManager.ts';
+import followManager, { FollowItem } from '@/dwotr/FollowManager.ts';
+import { Event } from 'nostr-tools';
 
 const FollowedUser = memo(({ id }: { id: UID }) => {
   const hexKey = STR(id);
@@ -106,7 +107,7 @@ const Follows: React.FC<Props> = (props) => {
 
     const callback = throttle(() => {
       if (!isMounted()) return;
-      let item = followManager.getItem(uid);
+      let item = followManager.getItem(uid)
 
       if(props.followers) {
         setItems([...item?.followedBy]);
@@ -118,15 +119,16 @@ const Follows: React.FC<Props> = (props) => {
 
     callback();
 
-    let unsub: any = undefined;
+    followManager.onEvent.addListener(uid, callback);
+
     if(props.followers) {
-      unsub = followManager.subscribeFollowedBy(uid, callback);
+      followManager.mapFollowedBy(uid);
     } else {
-      unsub = followManager.subscribeContacts(uid, callback);
+      followManager.onceContacts(uid);
     }
 
     return () => {
-      unsub?.();
+      followManager.onEvent.removeListener(uid, callback);
     }
   }, [props.id, props.followers]);
 

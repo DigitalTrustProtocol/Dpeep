@@ -11,7 +11,7 @@ export default class EventCallbacks {
   }
 
   // Add a callback to the list of callbacks for the given key.
-  add(key: UID, callback: Function) {
+  addListener(key: UID, callback: Function) {
     if (!this.callbacks.has(key)) {
       this.callbacks.set(key, new Set());
     }
@@ -21,8 +21,10 @@ export default class EventCallbacks {
 
 
   // Remove a callback from the list of callbacks for the given key.
-  remove(key: UID, callback: Function) {
+  removeListener(key: UID, callback: Function) {
     this.callbacks.get(key)?.delete(callback);
+    if (this.callbacks.get(key)?.size === 0) 
+      this.callbacks.delete(key);
   }
 
 

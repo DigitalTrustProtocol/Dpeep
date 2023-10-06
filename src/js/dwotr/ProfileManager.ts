@@ -506,7 +506,7 @@ class ProfileManager {
     kinds = [0],
     delay = 1000,
   ) {
-    this.callbacks.add(profileId, cb);
+    this.callbacks.addListener(profileId, cb);
 
     const handleEvent = (event: Event) => {
       // At this point the profile should be loaded into memory from the event

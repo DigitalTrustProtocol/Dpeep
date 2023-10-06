@@ -1,7 +1,7 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import Key from '@/nostr/Key';
-import wotPubSub, { ContactsKind } from './network/WOTPubSub';
+import wotPubSub, { ContactsKind, FeedOptions, OnEvent } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
 import EventCallbacks from './model/EventCallbacks';
@@ -35,7 +35,8 @@ class FollowManager {
 
   items = new Map<UID, FollowItem>();
 
-  callbacks = new EventCallbacks(); // Callbacks to call when the follower change
+  onEvent = new EventCallbacks(); // Callbacks to call when the follower change
+
 
   subsQueue = new Set<UID>(); // A queue of profiles to subscribe to
   unsubQueue = new Set<UID>(); // A queue of profiles to unsubscribe from
@@ -107,11 +108,6 @@ class FollowManager {
   handle(event: Event) {
     let authorId = ID(event.pubkey);
     let myId = ID(Key.getPubKey());
-    let isMe = authorId === myId;
-
-    if (isMe && this.logging) {
-      console.log('My own contact event', event);
-    }
 
     // Ignore events from profiles that are blocked
     if (blockManager.isBlocked(authorId)) return;
@@ -130,11 +126,13 @@ class FollowManager {
     let metadata = this.addEvent(event, item);
     
     // This is async
-    if (item.degree < 3) {
+    if (item.degree < this.filterDegree) {
       // Only save events from profiles that are followed or trusted
       this.#eventEffects(item, metadata);
       this.save(event);
     }
+
+    this.onEvent.dispatch(authorId, item);
   }
 
   updateNetwork() {
@@ -372,11 +370,11 @@ class FollowManager {
     return event;
   }
 
-  dispatchAll() {
-    for (const id of this.callbacks.keys()) {
-      this.callbacks.dispatch(id, this.isFollowed(id));
-    }
-  }
+  // dispatchAll() {
+  //   for (const id of this.onEvent.keys()) {
+  //     this.onEvent.dispatch(id, this.isFollowed(id));
+  //   }
+  // }
 
   updateFollowSuggestionsSetting(): void {
     if (this.followSuggestionsSetting === true) {
@@ -415,20 +413,34 @@ class FollowManager {
     await relaySubscription.onceAuthors(authors, since, until);
   }
 
-  subscribeContacts(id: UID, cb?: (event: Event) => void): any {
-    const callback = (event: Event) => {
-      followManager.handle(event);
-      cb && cb(event);
-    };
-    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], authors: [STR(id) as string] }], callback);
+
+  relayContactsRequests = new Set<UID>();
+
+  onceContacts(id: UID) : void {
+    if (this.relayContactsRequests.has(id)) return; // Already requested
+    this.relayContactsRequests.add(id);
+
+    let opt = {
+      filter: { kinds: [ContactsKind], authors: [STR(id) as string] } as Filter,
+      onClose: () => this.relayContactsRequests.delete(id)
+    } as FeedOptions;
+
+    relaySubscription.once(opt);
   }
 
-  subscribeFollowedBy(id: UID, cb?: (event: Event) => void): any {
-    const callback = (event: Event) => {
-      followManager.handle(event);
-      cb && cb(event);
-    };
-    return wotPubSub.subscribeFilter([{ kinds: [ContactsKind], '#p': [STR(id) as string] }], callback);
+  relayFollowedByRequests = new Set<UID>();
+
+  mapFollowedBy(id: UID, onEvent?: OnEvent): number {
+    if (this.relayFollowedByRequests.has(id)) return -1; // Already requested
+    this.relayFollowedByRequests.add(id);
+
+    let opt = {
+      filter: { kinds: [ContactsKind], '#p': [STR(id) as string] } as Filter,
+      onClose: () => this.relayFollowedByRequests.delete(id),
+      onEvent
+    } as FeedOptions;
+
+    return relaySubscription.map(opt);
   }
 
   getFollows(id: UID = ID(Key.getPubKey())): Set<UID> {
@@ -451,7 +463,7 @@ class FollowManager {
     });
 
     this.metrics.Authors = this.items.size;
-    this.metrics.UICallbacks = this.callbacks.sizeAll();
+    this.metrics.UICallbacks = this.onEvent.sizeAll();
 
     return this.metrics;
   }
