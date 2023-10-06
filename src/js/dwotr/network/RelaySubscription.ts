@@ -145,7 +145,7 @@ class RelaySubscription {
 
   // A Once subscription is used to get a batch of events by ids.
   // Return a true value when done and false if timed out.
-  async getEventsById(
+  async getEventByIds(
     ids: Array<string>,
     kinds?: Array<number>,
     onEvent?: OnEvent,

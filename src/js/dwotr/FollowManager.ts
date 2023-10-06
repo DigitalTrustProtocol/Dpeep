@@ -252,8 +252,6 @@ class FollowManager {
       }
     }
 
-    //   this.UISubs.dispatch(profileId, isFollowed);
-
     let event = this.createEvent();
 
     this.save(event);

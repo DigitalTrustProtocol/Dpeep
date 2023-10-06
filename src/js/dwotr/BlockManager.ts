@@ -8,6 +8,7 @@ import Key from '@/nostr/Key';
 import wotPubSub, { BlockKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import EventCallbacks from './model/EventCallbacks';
+import { as } from 'vitest/dist/reporters-2ff87305.js';
 
 class BlockVertice extends Vertice {
   blocks?: Set<UID>;
@@ -143,7 +144,7 @@ class BlockManager {
     IndexedDB.saveEvent(event as Event & { id: string });
   }
 
-  async createEvent(sourceV: BlockVertice): Promise<Partial<Event>> {
+  async createEvent(sourceV: BlockVertice): Promise<Event> {
     let pTags = Array.from(sourceV.blocks || []).map((id) => ['p', STR(id)]);
 
     let content = '';
@@ -160,7 +161,7 @@ class BlockManager {
       tags: [
         ...pTags, // Public list of blocked profiles
       ],
-    };
+    } as Event;
     return event;
   }
 }

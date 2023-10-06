@@ -1,7 +1,7 @@
 import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
-import { ID, UID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
 import wotPubSub, { TextKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
@@ -9,7 +9,9 @@ import Key from '@/nostr/Key';
 import { getNoteReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
 import eventManager from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
-import EventDB from '@/nostr/EventDB';
+import EventCallbacks from './model/EventCallbacks';
+import relayManager from './RelayManager';
+import relaySubscription from './network/RelaySubscription';
 
 const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
   if (!a[1]) return 1;
@@ -31,7 +33,7 @@ class NoteManager {
   reposts: Map<UID, Set<UID>> = new Map();
 
 
-  //onEvent: Set<EventCallback> = new Set();
+  onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
   private metrics = {
     TableCount: 0,
@@ -84,12 +86,12 @@ class NoteManager {
 
     this.metrics.RelayEvents++;
 
-
-
     this.#addNote(event);
 
     //if (followManager.isAllowed(authorId) || reactionManager.) 
     this.save(event); // Save all for now
+
+    this.onEvent.dispatch(authorId, event);
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
@@ -140,6 +142,15 @@ class NoteManager {
     return event;
   }
 
+  async onceNote(id: UID) {
+    if (this.notes.has(id)) return;
+
+    let eventId = STR(id) as string;
+
+    let events = await relaySubscription.getEventByIds([eventId], [TextKind]);
+
+    return events?.[0];
+  }
   // requestNote(id: UID) {
   //   if (this.notes.has(id)) return;
 
@@ -190,7 +201,6 @@ class NoteManager {
 
     if (eventIsRepost) this.#addRepost(event);
 
-    EventDB.insert(event);
     this.#insert(ID(event.id), event);
     //this.#dispatch(event);
   }

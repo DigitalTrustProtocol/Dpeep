@@ -22,7 +22,7 @@ export class DependencyLoader {
 
   async getEventsByIdWithContext(ids: Array<UID>): Promise<Array<Event>> {
     let list = ids.map((id) => STR(id) as string);
-    let events = await relaySubscription.getEventsById(list);
+    let events = await relaySubscription.getEventByIds(list);
     await this.resolve(events);
     return events;
   }

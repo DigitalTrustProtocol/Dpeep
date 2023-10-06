@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import EventComponent from '@/components/events/EventComponent';
-import DisplaySelector from '@/components/feed/DisplaySelector';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
-import ImageGrid from '@/components/feed/ImageGrid';
 
 import Show from '@/components/helpers/Show';
 import useHistoryState from '@/state/useHistoryState.ts';
@@ -117,7 +115,7 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
           }}
         />
       </Show>
-      <Show when={showDisplayAs !== false}>
+      {/* <Show when={showDisplayAs !== false}>
         <DisplaySelector
           onDisplayChange={(displayAs) => {
             setDisplayAs(displayAs);
@@ -125,13 +123,13 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
           }}
           activeDisplay={displayAs}
         />
-      </Show>
+      </Show> */}
       {/* <Show when={showEmptyMessage}>
         <div className="m-2 md:mx-4">{emptyMessage || t('no_posts_yet')}</div>
       </Show> */}
-      <Show when={displayAs === 'grid'}>
+      {/* <Show when={displayAs === 'grid'}>
         <ImageGrid key={infiniteScrollKeyString} events={events} loadMore={loadMore} />
-      </Show>
+      </Show> */}
 
       <hr className="opacity-10" />
       <Show when={hasRefresh}>

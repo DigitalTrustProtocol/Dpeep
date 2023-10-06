@@ -145,26 +145,6 @@ class EventManager {
     return { p, e, context, d, v, val, note, pubKey, timestamp };
   }
 
-  // TODO: return Unsubscribe
-  async getEventById(id: string) {
-    const event = EventDB.get(id);
-    if (event) return event;
-
-    let res = await fetch(`https://api.iris.to/event/${id}`);
-
-    if (res.status === 200) {
-      let data = await res.json();
-      // TODO verify sig
-      if (data) {
-        Events.handle(data, true);
-      }
-      return data;
-    }
-
-    return undefined;
-  }
-
-
   seen(eventId: UID) {
     return this.seenRelayEvents.has(eventId);
   }

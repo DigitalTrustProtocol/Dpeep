@@ -12,8 +12,8 @@ import { Link } from 'preact-router';
 import { useIsMounted } from '../hooks/useIsMounted';
 import Key from '../../nostr/Key';
 import { filterNodes } from './VisGraph';
-import eventManager from '../EventManager';
 import { BECH32, ID, STR } from '@/utils/UniqueIds';
+import noteManager from '../NoteManager';
 
 const defaultOptions = {
   layout: {
@@ -83,11 +83,17 @@ export function loadKeyVertice(vertice: Vertice, nodes: DataSetNodes) {
 
 
 export async function loadItemVertice(vertice: Vertice, nodes: DataSetNodes) {
-  let key = STR(vertice.id);
+  let id = vertice.id;
 
-  let event = await eventManager.getEventById(key); 
+  //let event = await eventManager.getEventById(key); 
+  let event = noteManager.getNode(id);
+  if(!event) {
+    // Load note from relay
+    event = await noteManager.onceNote(id);
+  }
+  if(!event) return undefined;
 
-  let profile = await profileManager.getProfile(event?.pubkey);
+  let profile = profileManager.getMemoryProfile(id);
 
   let author = (profile?.name || '').trim().slice(0, 25);
   let shortId = event.id.slice(0, 4);
