@@ -1,5 +1,4 @@
 import EventDB from '@/nostr/EventDB';
-import Events from '@/nostr/Events';
 import { ID, UID } from '@/utils/UniqueIds';
 import { Event, validateEvent, verifySignature } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
@@ -8,12 +7,14 @@ import {
   BlockKind,
   ContactsKind,
   EntityItem,
+  EventDeletionKind,
   MetadataKind,
   MuteKind,
   ReactionKind,
   RepostKind,
   TextKind,
   Trust1Kind,
+  ZapKind,
 } from './network/WOTPubSub';
 import muteManager from './MuteManager';
 import { EventParser } from './Utils/EventParser';
@@ -24,12 +25,14 @@ import profileManager from './ProfileManager';
 import reactionManager from './ReactionManager';
 import noteManager from './NoteManager';
 import { throttle } from 'lodash';
+import zapManager from './ZapManager';
+import EventDeletionManager from './EventDeletionManager';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
   requestedEvents: Set<UID> = new Set();
 
-  items: Map<UID, Event> = new Map();
+  eventIndex: Map<UID, Event> = new Map();
 
 
 
@@ -179,6 +182,8 @@ class EventManager {
     if(!event) return false;
     eventManager.addSeen(ID(event.id));
 
+    if(EventDeletionManager.deleted.has(ID(event.id))) return false;
+
     // Use for now 
     EventDB.insert(event);
 
@@ -196,8 +201,12 @@ class EventManager {
         noteManager.handle(event);
         break;
 
-      case ContactsKind: // Follow Kind 3
+      case ContactsKind: 
         followManager.handle(event);
+        break;
+
+      case EventDeletionKind:
+        EventDeletionManager.handle(event);
         break;
 
       case ReactionKind:
@@ -214,8 +223,11 @@ class EventManager {
         await blockManager.handle(event);
         break;
 
+      case ZapKind:
+        zapManager.handle(event);
+        break;
       default:
-        Events.handle(event, false, true);
+        //Events.handle(event, false, true); 
         break;
 
     }

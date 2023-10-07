@@ -17,9 +17,8 @@ import { throttle } from 'lodash';
 import { ID, UID } from '@/utils/UniqueIds';
 import reactionManager from '@/dwotr/ReactionManager';
 import Events from '@/nostr/Events';
-import { decodeInvoice, formatAmount } from '@/utils/Lightning';
-import { getZappingUser } from '@/nostr/utils';
-import EventDB from '@/nostr/EventDB';
+import { useZaps } from '@/dwotr/hooks/useZaps';
+
 
 let settings: any = {};
 localState.get('settings').on((s) => (settings = s));
@@ -110,55 +109,6 @@ const useLikes = (messageId: string, author: string, loadGlobal: boolean) => {
   return { likes, onLike };
 };
 
-const useZaps = (messageId: string, loadGlobal: boolean) => {
-  const [zapAmountByUser, setZapAmountByUser] = useState(new Map<string, number>());
-  const [formattedZapAmount, setFormattedZapAmount] = useState('');
-
-  const isMounted = useIsMounted();
-
-  useEffect(() => {
-    const handleZaps = (zaps) => {
-      if (!isMounted()) return;
-
-      const zapData = new Map<string, number>();
-      let totalZapAmount = 0;
-      const zapEvents = Array.from(zaps?.values()).map((eventId) => EventDB.get(eventId));
-      zapEvents.forEach((zapEvent) => {
-        const bolt11 = zapEvent?.tags.find((tag) => tag[0] === 'bolt11')?.[1];
-        if (!bolt11) {
-          console.log('Invalid zap, missing bolt11 tag');
-          return;
-        }
-        const decoded = decodeInvoice(bolt11);
-        const amount = (decoded?.amount || 0) / 1000;
-        totalZapAmount += amount;
-        const zapper = getZappingUser(zapEvent);
-        if (zapper) {
-          const existing = zapData.get(zapper) || 0;
-          zapData.set(zapper, existing + amount);
-        }
-      });
-
-      setZapAmountByUser(zapData);
-      setFormattedZapAmount(totalZapAmount > 0 ? formatAmount(totalZapAmount) : '');
-    };
-
-    // Set initial zaps
-    // TODO: This is not working, need to fix
-
-    if (!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
-
-    // Subscribe
-    let unsub = Events.getZaps(messageId, handleZaps);
-
-    // Return cleanup function
-    return () => {
-      unsub?.();
-    };
-  }, [messageId, loadGlobal]);
-
-  return { zapAmountByUser, formattedZapAmount };
-};
 
 const useReposts = (messageId: string, loadGlobal: boolean) => {
   const [reposts, setReposts] = useState(new Set<string>());

@@ -3,35 +3,27 @@ import { BoltIcon } from '@heroicons/react/24/solid';
 import { Event } from 'nostr-tools';
 import { route } from 'preact-router';
 
-import EventDB from '@/nostr/EventDB';
-import { getEventReplyingTo, getZappingUser } from '@/nostr/utils';
+import { getZappingUser } from '@/nostr/utils';
+import zapManager, { Zap as ZapClass } from '@/dwotr/ZapManager';
 
-import Events from '../../nostr/Events';
 import Key from '../../nostr/Key';
 import Name from '../user/Name';
 
 import EventComponent from './EventComponent';
+import noteManager from '@/dwotr/NoteManager';
+import { ID } from '@/utils/UniqueIds';
 
 interface Props {
   event: Event;
 }
 
-const messageClicked = (e: MouseEvent, zappedId: string) => {
-  const target = e.target as HTMLElement;
-  if (['A', 'BUTTON', 'TEXTAREA', 'IMG', 'INPUT'].find((tag) => target.closest(tag))) {
-    return;
-  }
-  if (window.getSelection()?.toString()) {
-    return;
-  }
-  e.stopPropagation();
-  route(`/${Key.toNostrBech32Address(zappedId, 'note')}`);
-};
-
 export default function Zap(props: Props) {
   const [allZaps, setAllZaps] = useState<string[]>([]);
-  const zappedId = getEventReplyingTo(props.event);
-  const zappedEvent = EventDB.get(zappedId);
+  const zappedId = ZapClass.decodeEventId(props.event);
+  if (!zappedId) {
+    return null;
+  }
+  const zappedEvent = noteManager.notes.get(ID(zappedId));
   if (!zappedEvent) {
     return null;
   }
@@ -44,11 +36,9 @@ export default function Zap(props: Props) {
     : 'zapped a note';
 
   useEffect(() => {
-    return zappedId
-      ? Events.getZaps(zappedId, (zappedBy: any) => {
-          setAllZaps(Array.from(zappedBy.values()));
-        })
-      : () => null;
+    const item = zapManager.zaps.get(ID(zappedId));
+    if (!item) return;
+    setAllZaps([...item.amountPerUser.keys()]);
   }, [zappedId]);
 
   if (!zappedId) {
@@ -78,8 +68,25 @@ export default function Zap(props: Props) {
             {allZaps.length > 1 && <span> and {allZaps.length - 1} others </span>} {zappedText}
           </div>
         </div>
-        <EventComponent key={zappedId + props.event.id} id={zappedId} fullWidth={false} event={props.event} />
+        <EventComponent
+          key={zappedId + props.event.id}
+          id={zappedId}
+          fullWidth={false}
+          event={props.event}
+        />
       </div>
     </div>
   );
 }
+
+const messageClicked = (e: MouseEvent, zappedId: string) => {
+  const target = e.target as HTMLElement;
+  if (['A', 'BUTTON', 'TEXTAREA', 'IMG', 'INPUT'].find((tag) => target.closest(tag))) {
+    return;
+  }
+  if (window.getSelection()?.toString()) {
+    return;
+  }
+  e.stopPropagation();
+  route(`/${Key.toNostrBech32Address(zappedId, 'note')}`);
+};

@@ -12,6 +12,7 @@ import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';
 import relayManager from './RelayManager';
 import relaySubscription from './network/RelaySubscription';
+import eventDeletionManager from './EventDeletionManager';
 
 const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
   if (!a[1]) return 1;
@@ -86,7 +87,7 @@ class NoteManager {
 
     this.metrics.RelayEvents++;
 
-    this.#addNote(event);
+    this.#addEvent(event);
 
     //if (followManager.isAllowed(authorId) || reactionManager.) 
     this.save(event); // Save all for now
@@ -106,8 +107,8 @@ class NoteManager {
     for (let note of notes) {
       eventManager.addSeen(ID(note.id));
 
-      if (this.#canAddLoadNote(note)) {
-        this.#addNote(note);
+      if (this.#canAdd(note)) {
+        this.#addEvent(note);
       } else {
         deltaDelete.push(note.id);
       }
@@ -124,23 +125,21 @@ class NoteManager {
     this.saveBulk(); // Save to IndexedDB in bulk by throttling
   }
 
-  createEvent() {
-    let content = 'test';
+  // createEvent() {
+  //   const event = {
+  //     kind: TextKind,
+  //     content: '',
+  //     created_at: getNostrTime(),
+  //     // tags: [
+  //     //   ['e', eventId], // Event ID
+  //     //   ['p', eventPubKey], // Profile ID
+  //     // ],
+  //   };
 
-    const event = {
-      kind: TextKind,
-      content,
-      created_at: getNostrTime(),
-      // tags: [
-      //   ['e', eventId], // Event ID
-      //   ['p', eventPubKey], // Profile ID
-      // ],
-    };
+  //   wotPubSub.sign(event);
 
-    wotPubSub.sign(event);
-
-    return event;
-  }
+  //   return event;
+  // }
 
   async onceNote(id: UID) {
     if (this.notes.has(id)) return;
@@ -165,11 +164,11 @@ class NoteManager {
   //   return safeProperties;
   // }
 
-  #canAddLoadNote(note: Event): boolean {
+  #canAdd(note: Event): boolean {
     let eventId = ID(note.id);
     let authorId = ID(note.pubkey);
 
-    if (this.deletedEvents.has(eventId)) return false;
+    if (eventDeletionManager.deleted.has(eventId)) return false;
 
     if (blockManager.isBlocked(authorId)) return false;
 
@@ -177,7 +176,7 @@ class NoteManager {
   };
 
 
-  #addNote(event: Event) {
+  #addEvent(event: Event) {
     // TODO
     const eventIsRepost = isRepost(event);
     const replyingTo = !eventIsRepost && getNoteReplyingTo(event);
@@ -201,19 +200,10 @@ class NoteManager {
 
     if (eventIsRepost) this.#addRepost(event);
 
-    this.#insert(ID(event.id), event);
-    //this.#dispatch(event);
+    eventManager.eventIndex.set(ID(event.id), event);
+    this.notes.set(ID(event.id), event);
   }
 
-  #insert(id: UID, event: Event) {
-    this.notes.set(id, event);
-  }
-
-  // #dispatch(event: Event) {
-  //   for (let callback of this.onEvent) {
-  //     callback(event);
-  //   }
-  // }
 
   #addRepost(event: Event) {
     const key = getRepostedEventId(event);

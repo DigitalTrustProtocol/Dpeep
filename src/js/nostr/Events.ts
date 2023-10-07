@@ -2,8 +2,8 @@ import debounce from 'lodash/debounce';
 import {
   Event,
   getEventHash,
-  getPublicKey,
-  nip04,
+  // getPublicKey,
+  // nip04,
   validateEvent,
   verifySignature,
 } from 'nostr-tools';
@@ -11,13 +11,13 @@ import { EventTemplate } from 'nostr-tools';
 
 import EventDB from '@/nostr/EventDB';
 import {
-  getEventReplyingTo,
-  getEventRoot,
-  getLikedEventId,
-  getNoteReplyingTo,
+  // getEventReplyingTo,
+  // getEventRoot,
+  // getLikedEventId,
+  // getNoteReplyingTo,
   getOriginalPostEventId,
-  getRepostedEventId,
-  isRepost,
+  // getRepostedEventId,
+  // isRepost,
 } from '@/nostr/utils';
 import { ID, STR, UniqueIds } from '@/utils/UniqueIds';
 
@@ -27,10 +27,10 @@ import { DecryptedEvent } from '../views/chat/ChatMessages';
 import { addGroup, setGroupNameByInvite } from '../views/chat/NewChat';
 
 import EventMetaStore from './EventsMeta';
-import IndexedDB from './IndexedDB';
+//import IndexedDB from './IndexedDB';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
-import SocialNetwork from './SocialNetwork';
+//import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
 import muteManager from '@/dwotr/MuteManager.ts';
 import blockManager from '@/dwotr/BlockManager.ts';
@@ -240,27 +240,27 @@ const Events = {
   //   }
   //   return false;
   // },
-  handleDelete(event: Event) {
-    const id = event.tags?.find((tag) => tag[0] === 'e')?.[1];
-    const myPub = Key.getPubKey();
-    if (id) {
-      const deletedEvent = EventDB.get(id);
-      // only we or the author can delete
-      if (deletedEvent && [event.pubkey, myPub].includes(deletedEvent.pubkey)) {
-        EventDB.remove(id);
-      }
-    }
-  },
-  handleZap(event) {
-    const zappedNote = event.tags?.find((tag) => tag[0] === 'e')?.[1];
-    if (!zappedNote) {
-      return; // TODO you can also zap profiles
-    }
-    if (!this.zapsByNote.has(zappedNote)) {
-      this.zapsByNote.set(zappedNote, new SortedLimitedEventSet(MAX_ZAPS_BY_NOTE));
-    }
-    this.zapsByNote.get(zappedNote)?.add(event);
-  },
+  // handleDelete(event: Event) {
+  //   const id = event.tags?.find((tag) => tag[0] === 'e')?.[1];
+  //   const myPub = Key.getPubKey();
+  //   if (id) {
+  //     const deletedEvent = EventDB.get(id);
+  //     // only we or the author can delete
+  //     if (deletedEvent && [event.pubkey, myPub].includes(deletedEvent.pubkey)) {
+  //       EventDB.remove(id);
+  //     }
+  //   }
+  // },
+  // handleZap(event) {
+  //   const zappedNote = event.tags?.find((tag) => tag[0] === 'e')?.[1];
+  //   if (!zappedNote) {
+  //     return; // TODO you can also zap profiles
+  //   }
+  //   if (!this.zapsByNote.has(zappedNote)) {
+  //     this.zapsByNote.set(zappedNote, new SortedLimitedEventSet(MAX_ZAPS_BY_NOTE));
+  //   }
+  //   this.zapsByNote.get(zappedNote)?.add(event);
+  // },
   async saveDMToLocalState(event: DecryptedEvent, chatNode: Node) {
     const latest = chatNode.get('latest');
     const e = await latest.once(undefined, true);
@@ -318,39 +318,39 @@ const Events = {
       this.saveDMToLocalState(event, localState.get('chats').get(chatId));
     }
   },
-  getEventFromText(text) {
-    try {
-      const maybeJson = text.slice(text.indexOf('{'));
-      const e = JSON.parse(maybeJson);
-      if (validateEvent(e) && verifySignature(e)) {
-        return e;
-      }
-    } catch (e) {
-      // ignore
-    }
-  },
-  subscribeGroups() {
-    localState.get('groups').map((data, groupId) => {
-      if (data.key) {
-        const pubKey = getPublicKey(data.key);
-        if (pubKey) {
-          PubSub.subscribe({ authors: [pubKey], kinds: [4], '#p': [pubKey] }, async (event) => {
-            const decrypted = await nip04.decrypt(data.key, pubKey, event.content);
-            const innerEvent = this.getEventFromText(decrypted);
-            if (
-              innerEvent &&
-              innerEvent.tags.length === 1 &&
-              innerEvent.tags[0][0] === 'p' &&
-              innerEvent.tags[0][1] === pubKey
-            ) {
-              innerEvent.text = innerEvent.content;
-              this.saveDMToLocalState(innerEvent, localState.get('groups').get(groupId));
-            }
-          });
-        }
-      }
-    });
-  },
+  // getEventFromText(text) {
+  //   try {
+  //     const maybeJson = text.slice(text.indexOf('{'));
+  //     const e = JSON.parse(maybeJson);
+  //     if (validateEvent(e) && verifySignature(e)) {
+  //       return e;
+  //     }
+  //   } catch (e) {
+  //     // ignore
+  //   }
+  // },
+  // subscribeGroups() {
+  //   localState.get('groups').map((data, groupId) => {
+  //     if (data.key) {
+  //       const pubKey = getPublicKey(data.key);
+  //       if (pubKey) {
+  //         PubSub.subscribe({ authors: [pubKey], kinds: [4], '#p': [pubKey] }, async (event) => {
+  //           const decrypted = await nip04.decrypt(data.key, pubKey, event.content);
+  //           const innerEvent = this.getEventFromText(decrypted);
+  //           if (
+  //             innerEvent &&
+  //             innerEvent.tags.length === 1 &&
+  //             innerEvent.tags[0][0] === 'p' &&
+  //             innerEvent.tags[0][1] === pubKey
+  //           ) {
+  //             innerEvent.text = innerEvent.content;
+  //             this.saveDMToLocalState(innerEvent, localState.get('groups').get(groupId));
+  //           }
+  //         });
+  //       }
+  //     }
+  //   });
+  // },
   handleKeyValue(event: Event) {
     if (!Key.isMine(event.pubkey)) {
       return;
@@ -445,27 +445,27 @@ const Events = {
     // They might spam with 1 MB events and keep changing their name or something.
     // CK: if event.kind === 0 but is blocked, then we only get the name and ignore the rest. This enables us to show the name of the blocked user in the Graph.
     // CK: if event.kind === 0 one could check for size of content, maybe only let the first event in, and ignore all others.
-    if (blockManager.isBlocked(publisherId) && event.kind !== 0) {
-      return false;
-    }
-    if (this.deletedEvents.has(event.id)) {
-      return false;
-    }
+    // if (blockManager.isBlocked(publisherId) && event.kind !== 0) {
+    //   return false;
+    // }
+    // if (this.deletedEvents.has(event.id)) {
+    //   return false;
+    // }
     // move out of this fn?
-    if (event.created_at > Date.now() / 1000) {
-      this.futureEventIds.add(event);
-      if (this.futureEventIds.has(event.id)) {
-        EventDB.insert(event); // TODO should limit stored future events
-      }
-      if (this.futureEventIds.first() === event.id) {
-        this.handleNextFutureEvent();
-      }
-      return false;
-    }
+    // if (event.created_at > Date.now() / 1000) {
+    //   this.futureEventIds.add(event);
+    //   if (this.futureEventIds.has(event.id)) {
+    //     EventDB.insert(event); // TODO should limit stored future events
+    //   }
+    //   if (this.futureEventIds.first() === event.id) {
+    //     this.handleNextFutureEvent();
+    //   }
+    //   return false;
+    // }
 
     this.handledMsgsPerSecond++;
 
-    PubSub.subscribedEventIds.delete(event.id);
+    //PubSub.subscribedEventIds.delete(event.id);
     //console.log('WOT: handling event', event);
 
     switch (event.kind) {
@@ -481,9 +481,9 @@ const Events = {
       case 4:
         this.handleDirectMessage(event);
         break;
-      case 5:
-        this.handleDelete(event);
-        break;
+      // case 5:
+      //   this.handleDelete(event);
+      //   break;
       //case 3: { // Follow
         // const foundEvent = EventDB.findOne({ kinds: [3], authors: [event.pubkey] });
         // if (foundEvent && foundEvent.created_at >= event.created_at) {
@@ -507,10 +507,10 @@ const Events = {
       //   this.maybeAddNotification(event);
       //   this.handleReaction(event);
       //   break;
-      case 9735:
+      //case 9735:
         //this.maybeAddNotification(event);
-        this.handleZap(event);
-        break;
+        // this.handleZap(event);
+        // break;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       // case 16462:
@@ -548,7 +548,7 @@ const Events = {
     // }
 
     // should the whole method be moved to PubSub?
-    PubSub.handle(event);
+    //PubSub.handle(event);
     return true;
   },
   // metadata for an event: e.g. on which relays event was found on.
@@ -578,9 +578,9 @@ const Events = {
       (nextEvent.created_at - Date.now() / 1000) * 1000,
     );
   },
-  isMuted(event: Event) {
-    return muteManager.isMuted(ID(event.pubkey));
-  },
+  // isMuted(event: Event) {
+  //   return muteManager.isMuted(ID(event.pubkey));
+  // },
   // maybeAddNotification(event: Event) {
   //   // if we're mentioned in tags, add to notifications
   //   if (event.kind !== 3 && event.tags?.filter((tag) => tag[0] === 'p').length > 10) {
@@ -691,50 +691,50 @@ const Events = {
     return PubSub.subscribe({ '#e': [id], kinds: [1, 6] }, callback, false);
   },
 
-  getZaps(id: string, cb?: (zaps: Set<string> | SortedLimitedEventSet) => void): Unsubscribe {
-    const callback = () => {
-      cb?.(this.zapsByNote.get(id) ?? new Set());
-    };
-    callback();
-    return PubSub.subscribe({ '#e': [id], kinds: [9735] }, callback, false);
-  },
+  // getZaps(id: string, cb?: (zaps: Set<string> | SortedLimitedEventSet) => void): Unsubscribe {
+  //   const callback = () => {
+  //     cb?.(this.zapsByNote.get(id) ?? new Set());
+  //   };
+  //   callback();
+  //   return PubSub.subscribe({ '#e': [id], kinds: [9735] }, callback, false);
+  // },
 
-  // TODO: return Unsubscribe
-  getEventById(id: string, proxyFirst = false, cb?: (event: Event) => void) {
-    let calledBack = false;
-    const callback = (event: Event) => {
-      if (!calledBack) {
-        calledBack = true;
-        cb?.(event);
-      }
-    };
-    const event = EventDB.get(id);
-    if (event) {
-      callback(event);
-      return;
-    }
+  // // TODO: return Unsubscribe
+  // getEventById(id: string, proxyFirst = false, cb?: (event: Event) => void) {
+  //   let calledBack = false;
+  //   const callback = (event: Event) => {
+  //     if (!calledBack) {
+  //       calledBack = true;
+  //       cb?.(event);
+  //     }
+  //   };
+  //   const event = EventDB.get(id);
+  //   if (event) {
+  //     callback(event);
+  //     return;
+  //   }
 
-    if (proxyFirst) {
-      // give proxy 300 ms to respond, then ask ws
-      const askRelaysTimeout = setTimeout(() => {
-        PubSub.subscribe({ ids: [id] }, (event) => callback(event));
-      }, 300);
-      fetch(`https://api.iris.to/event/${id}`).then((res) => {
-        if (res.status === 200) {
-          res.json().then((event) => {
-            // TODO verify sig
-            if (event && event.id === id) {
-              clearTimeout(askRelaysTimeout);
-              Events.handle(event, true);
-              callback(event);
-            }
-          });
-        }
-      });
-    } else {
-      PubSub.subscribe({ ids: [id] }, callback, false);
-    }
-  },
+  //   if (proxyFirst) {
+  //     // give proxy 300 ms to respond, then ask ws
+  //     const askRelaysTimeout = setTimeout(() => {
+  //       PubSub.subscribe({ ids: [id] }, (event) => callback(event));
+  //     }, 300);
+  //     fetch(`https://api.iris.to/event/${id}`).then((res) => {
+  //       if (res.status === 200) {
+  //         res.json().then((event) => {
+  //           // TODO verify sig
+  //           if (event && event.id === id) {
+  //             clearTimeout(askRelaysTimeout);
+  //             Events.handle(event, true);
+  //             callback(event);
+  //           }
+  //         });
+  //       }
+  //     });
+  //   } else {
+  //     PubSub.subscribe({ ids: [id] }, callback, false);
+  //   }
+  // },
 };
 
 export default Events;

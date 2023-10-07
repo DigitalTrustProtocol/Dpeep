@@ -113,15 +113,9 @@ class MuteManager {
       content: content,
       created_at: getNostrTime(),
       tags: [...pTags, ...eTags],
-    };
+    } as Event;
     return event;
   }
-
-  // dispatchAll() {
-  //   for (const id of this.callbacks.keys()) {
-  //     this.callbacks.dispatch(id, this.isMuted(id));
-  //   }
-  // }
 
 }
 

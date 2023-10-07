@@ -199,9 +199,8 @@ const VisPath = ({ props }: ViewComponentProps) => {
 
     let vertices = Object.values(verticeIndex) as Vertice[];
 
-    let addresses = vertices.map((v) => STR(v.id));
-
-    await profileManager.getProfiles(addresses); // Load all profiles in memory first
+    //let addresses = vertices.map((v) => STR(v.id));
+    //await profileManager.getProfiles(addresses); // Load all profiles in memory first
     if (!isMounted()) return; // Check if component is still mounted
 
     // Readd the current vertice if its not a key

@@ -49,7 +49,7 @@ export default function Like(props: Props) {
       // return Events.getLikes(likedId, (likedBy: Set<string>) => {
       //   setAllLikes(Array.from(likedBy));
       // });
-      setAllLikes([...reactionManager.getLikes(ID(likedId))].map((id) => STR(id)));
+      setAllLikes([...reactionManager.getLikes(ID(likedId))].map((id) => STR(id) as string));
     }
   }, [likedId]);
 

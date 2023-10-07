@@ -6,7 +6,6 @@ import { isRepost } from '@/nostr/utils.ts';
 import { EventID } from '@/utils/Hex/Hex.ts';
 
 import { Event } from 'nostr-tools';
-import { translate as t } from '../../translations/Translation.mjs';
 import Icons from '../../utils/Icons';
 
 import Note from './note/Note';

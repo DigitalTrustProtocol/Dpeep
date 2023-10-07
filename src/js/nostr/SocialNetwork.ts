@@ -1,13 +1,12 @@
-import EventDB from '@/nostr/EventDB';
+//import EventDB from '@/nostr/EventDB';
 
-import localState from '../state/LocalState.ts';
+//import localState from '../state/LocalState.ts';
 import { ID, STR, UID } from '../utils/UniqueIds';
 
 import Events from './Events';
 import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
 import profileManager from '../dwotr/ProfileManager';
-import blockManager from '@/dwotr/BlockManager.ts';
 
 export default {
   //followDistanceByUser: new Map<UID, number>(),

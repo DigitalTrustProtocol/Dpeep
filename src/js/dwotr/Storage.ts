@@ -24,6 +24,14 @@ class Storage {
   get notes() {
     return this.db.notes;
   }
+
+  get zaps() {
+    return this.db.zaps;
+  }
+
+  get eventDeletions() {
+    return this.db.eventDeletions;
+  }
   
   get db(): DWoTRDexie {
     if (!this.#db) {

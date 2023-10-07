@@ -16,11 +16,13 @@ export class DWoTRDexie extends Dexie {
   follows!: Table<Event>;
   reactions!: Table<ReactionRecord>;
   notes!: Table<Event>;
+  zaps!: Table<Event>;
+  eventDeletions!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(8).stores({
+    this.version(9).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
