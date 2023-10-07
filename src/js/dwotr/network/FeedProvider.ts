@@ -149,16 +149,16 @@ export class FeedProvider {
 
     this.view = this.buffer.slice(this.viewStart, this.viewEnd);
 
-    this.test = new Map<string, number>();
-    for (const e of this.view) {
-      let t = this.test.get(e.id);
+    // this.test = new Map<string, number>();
+    // for (const e of this.view) {
+    //   let t = this.test.get(e.id);
 
-      if (t && t > 1) {
-        console.error('FeedProvider:load:DUPLICATED FOUND:', e.id, e.kind, t);
-      }
-      if (t) this.test.set(e.id, t + 1);
-      else this.test.set(e.id, 1);
-    }
+    //   if (t && t > 1) {
+    //     console.error('FeedProvider:load:DUPLICATED FOUND:', e.id, e.kind, t);
+    //   }
+    //   if (t) this.test.set(e.id, t + 1);
+    //   else this.test.set(e.id, 1);
+    // }
 
     if (this.logging)
       console.log(

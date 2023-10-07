@@ -3,7 +3,6 @@ import classNames from 'classnames';
 import { Filter } from 'nostr-tools';
 import { Link, route } from 'preact-router';
 
-import InfiniteScroll from '@/components/helpers/InfiniteScroll';
 import useSubscribe from '@/nostr/hooks/useSubscribe.ts';
 import { getEventRoot, getNoteReplyingTo } from '@/nostr/utils';
 
@@ -17,6 +16,7 @@ import Content from './Content';
 
 import useVerticeMonitor from '../../../dwotr/hooks/useVerticeMonitor';
 import { ID } from '@/utils/UniqueIds';
+import { RepliesFeed } from '../RepliesFeed';
 
 
 interface NoteProps {
@@ -130,6 +130,8 @@ const Note: React.FC<NoteProps> = ({
     </Show>
   );
 
+  const showRepliesFeed = !!showReplies && standalone;
+
   return (
     <>
       {repliedMsg}
@@ -161,18 +163,9 @@ const Note: React.FC<NoteProps> = ({
       <Show when={!(computedIsQuote || asInlineQuote)}>
         <hr className="opacity-10" />
       </Show>
-      <InfiniteScroll>
-        {replies.slice(0, showReplies).map((r) => (
-          <EventComponent
-            key={r.id}
-            id={r.id}
-            isReply={true}
-            isQuoting={!standalone}
-            showReplies={1}
-            event={event}
-          />
-        ))}
-      </InfiniteScroll>
+      <Show when={showRepliesFeed}>
+        <RepliesFeed eventId={event.id} showReplies={showReplies} standalone={standalone} />
+      </Show>
     </>
   );
 };

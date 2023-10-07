@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import classNames from 'classnames';
+//import classNames from 'classnames';
 
 import EventDB from '@/nostr/EventDB';
 import { isRepost } from '@/nostr/utils.ts';
@@ -67,9 +67,9 @@ const EventComponent = (props: EventComponentProps) => {
     // };
   
     //console.log('EventComponent init'); // this gets called more than displayCount - unnecessary?
-    if (props.standalone && (event || retrievingTimeout.current)) {
-      window.prerenderReady = true;
-    }
+    // if (props.standalone && (event || retrievingTimeout.current)) {
+    //   window.prerenderReady = true;
+    // }
     if (!event) {
 
       let e = EventDB.get(hex);
@@ -87,10 +87,10 @@ const EventComponent = (props: EventComponentProps) => {
     };
   }, [props.id]);
 
-  const loadingClass = classNames('m-2 md:mx-4 flex items-center', {
-    'opacity-100': retrieving,
-    'opacity-0': !retrieving,
-  });
+  // const loadingClass = classNames('m-2 md:mx-4 flex items-center', {
+  //   'opacity-100': retrieving,
+  //   'opacity-0': !retrieving,
+  // });
 
   if(!event) return null;
   // if (!event) {

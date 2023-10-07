@@ -2,15 +2,13 @@ import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import wotPubSub, { TextKind } from './network/WOTPubSub';
-import { getNostrTime } from './Utils';
+import { TextKind } from './network/WOTPubSub';
 import blockManager from './BlockManager';
 import Key from '@/nostr/Key';
 import { getNoteReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
 import eventManager from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';
-import relayManager from './RelayManager';
 import relaySubscription from './network/RelaySubscription';
 import eventDeletionManager from './EventDeletionManager';
 
@@ -28,10 +26,11 @@ class NoteManager {
   notes: SortedMap<UID, Event> = new SortedMap([], sortCreated_at);
 
   deletedEvents: Set<UID> = new Set();
-  threadRepliesByMessageId: Map<string, Set<string>> = new Map();
+  replies: Map<UID, Set<UID>> = new Map(); // Index of all replies of an specific events, the parent event may not have been loaded yet
 
   // Index of all reposts of an specific events, 
   reposts: Map<UID, Set<UID>> = new Map();
+  //replies: Map<UID, Set<Event>> = new Map();
 
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
@@ -177,47 +176,46 @@ class NoteManager {
 
 
   #addEvent(event: Event) {
-    // TODO
-    const eventIsRepost = isRepost(event);
-    const replyingTo = !eventIsRepost && getNoteReplyingTo(event);
 
-    if (replyingTo && !eventIsRepost) {
+    let eventId = ID(event.id);
+
+    eventManager.eventIndex.set(eventId, event);
+    this.notes.set(eventId, event);
+
+    // TODO: Not sure that this is the correct implementation of Nip
+    const eventIsRepost = isRepost(event);
+    if (eventIsRepost) {
+      this.#addRepost(event);
+      return;
+    }
+
+    // TODO: Not sure that this is the correct implementation of Nip
+    const replyingTo = getNoteReplyingTo(event);
+    if (replyingTo) {
       const repliedMsgs = event.tags
         .filter((tag) => tag[0] === 'e')
         .map((tag) => tag[1])
         .slice(0, 2);
-      for (const id of repliedMsgs) {
-        // if (
-        //   event.created_at > startTime ||
-        //   event.pubkey === myPub ||
-        //   SocialNetwork.isFollowing(myPub, event.pubkey)
-        // ) {
-        //   //Events.getEventById(id); // generates lots of subscriptions
-        // }
-        this.#addTreadReplies(id, event.id);
+      for (const parent of repliedMsgs) {
+        this.#addReply(ID(parent), eventId);
       }
     }
-
-    if (eventIsRepost) this.#addRepost(event);
-
-    eventManager.eventIndex.set(ID(event.id), event);
-    this.notes.set(ID(event.id), event);
   }
 
 
   #addRepost(event: Event) {
-    const key = getRepostedEventId(event);
-    if (!key) return;
-    let id = ID(key);
-    let repostSet = this.reposts.get(id) || this.reposts.set(id, new Set()).get(id);
+    const repostkey = getRepostedEventId(event);
+    if (!repostkey) return;
+    let repostId = ID(repostkey);
+    let repostSet = this.reposts.get(repostId) || this.reposts.set(repostId, new Set()).get(repostId);
     repostSet!.add(ID(event.pubkey));
   }
 
-  #addTreadReplies(id: string, eventId: string) {
-    if (!this.threadRepliesByMessageId.has(id)) {
-      this.threadRepliesByMessageId.set(id, new Set<string>());
+  #addReply(id: UID, parentId: UID) {
+    if (!this.replies.has(id)) {
+      this.replies.set(id, new Set<UID>());
     }
-    this.threadRepliesByMessageId.get(id)?.add(eventId);
+    this.replies.get(id)?.add(parentId);
   }
 
   async tableCount() {

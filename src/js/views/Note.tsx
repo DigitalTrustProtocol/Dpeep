@@ -4,9 +4,7 @@ import { route } from 'preact-router';
 import { EventID } from '@/utils/Hex/Hex.ts';
 import View from '@/views/View.tsx';
 
-import CreateNoteForm from '../components/create/CreateNoteForm';
 import EventComponent from '../components/events/EventComponent';
-import { translate as t } from '../translations/Translation.mjs';
 
 const Note = (props) => {
   useEffect(() => {
@@ -17,32 +15,41 @@ const Note = (props) => {
     }
   }, [props.id]);
 
-  let content;
-  if (props.id === 'new') {
-    content = (
-      <div className="m-2">
-        <CreateNoteForm
-          placeholder={t('whats_on_your_mind')}
-          forceAutoFocusMobile={true}
-          autofocus={true}
-          onSubmit={() => route('/')}
-        />
-      </div>
-    );
-  } else {
-    content = (
-      <EventComponent
-        id={props.id}
-        key={props.id}
-        standalone={true}
-        showRepliedMsg={true}
-        showReplies={Infinity}
-      />
-    );
-  }
+  // let content;
+  // if (props.id === 'new') {
+  //   content = (
+  //     <div className="m-2">
+  //       <CreateNoteForm
+  //         placeholder={t('whats_on_your_mind')}
+  //         forceAutoFocusMobile={true}
+  //         autofocus={true}
+  //         onSubmit={() => route('/')}
+  //       />
+  //     </div>
+  //   );
+  // } else {
+  //   content = (
+  //     <EventComponent
+  //       id={props.id}
+  //       key={props.id}
+  //       standalone={true}
+  //       showRepliedMsg={true}
+  //       showReplies={Infinity}
+  //     />
+  //   );
+  // }
   return (
     <View>
-      <div className="w-full">{content}</div>
+      <div className="w-full">
+        {' '}
+        <EventComponent
+          id={props.id}
+          key={props.id}
+          standalone={true}
+          showRepliedMsg={true}
+          showReplies={Infinity}
+        />
+      </div>
     </View>
   );
 };

@@ -37,6 +37,7 @@ import View32010 from './dwotr/views/View32010.tsx';
 import View16463 from './dwotr/views/View16463.tsx';
 import InitializeWoT from './dwotr/views/InitializeWoT.tsx';
 import MetricsView from './dwotr/views/Metrics.tsx';
+import NoteNew from './views/NoteNew.tsx';
 
 
 const Main = () => {
@@ -115,6 +116,7 @@ const Main = () => {
               path="/chat/:id?"
               getComponent={() => import('./views/chat/Chat').then((module) => module.default)}
             />
+            <NoteNew path="/post/new" />
             <Note path="/post/:id+" />
             <About path="/about" />
             <AsyncRoute
