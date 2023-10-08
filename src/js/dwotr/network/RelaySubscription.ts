@@ -24,7 +24,7 @@ class RelaySubscription {
   subscribedAuthors = new Set<UID>();
 
 
-  logging = true;
+  logging = false;
 
   subCount = 0;
   subs = new Map<number, () => void>();

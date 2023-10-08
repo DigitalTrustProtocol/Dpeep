@@ -12,7 +12,7 @@ export class RelayMetadata {
 // Handles the relays in the context of Dpeep
 class RelayManager {
 
-    logging = true;
+    logging = false;
 
     relays: Map<string, RelayMetadata> = new Map();
 

@@ -1,6 +1,5 @@
 import { Event, Filter } from 'nostr-tools';
 import profileManager from '../ProfileManager';
-import { seconds } from 'hurdak';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from './RelaySubscription';
 import { getEventReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
@@ -10,10 +9,8 @@ import { Events, ReactionEvent } from './types';
 import eventManager from '../EventManager';
 
 export class DependencyLoader {
-  time10minute: number = seconds(10, 'minute');
-  timeout = 9000;
-
-  logging = true;
+  
+  logging = false;
 
   eventIds: Set<UID> = new Set();
   authorIds: Set<UID> = new Set();
