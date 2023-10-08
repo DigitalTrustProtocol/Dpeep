@@ -21,7 +21,7 @@ export class EventRelayCursor implements ICursor {
   loading = false;
   done = false;
 
-  timeout = 3000;
+  timeout = 1000;
 
   feedOptions: FeedOptions;
 
@@ -32,7 +32,7 @@ export class EventRelayCursor implements ICursor {
     this.limit = size;
   }
 
-  async load(timeOut: number = 3000): Promise<number> {
+  async load(timeOut: number = 1000): Promise<number> {
     // If we're already loading, or we have enough buffered, do nothing
     if (this.done) {
       return 0;
@@ -57,17 +57,21 @@ export class EventRelayCursor implements ICursor {
 
         // Relays can't be relied upon to return events in descending order, do exponential
         // windowing to ensure we get the most recent stuff on first load, but eventually find it all
-
         let factor = 10;
-        //let factor = Math.floor(this.limit / this.buffer.length + 1);
-        if(this.buffer.length < 10) 
-          this.delta *= factor;
 
         if (this.since <= EPOCH) {
+          
           this.done = true;
-        }
 
-        this.since -= this.delta;
+        } else {
+          this.since -= this.delta;
+          //let factor = Math.floor(this.limit / this.buffer.length + 1);
+          if(this.buffer.length < 10) {
+            this.delta *= factor;
+            if(this.timeout < 3000) 
+              this.timeout += 1000; // Increase timeout if we're not getting events
+          }
+        }
 
         onClose?.(subId);
 

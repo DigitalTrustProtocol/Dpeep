@@ -79,7 +79,7 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
       loadMore(); // Auto load more to fill the screen
       return;
     }
-  }, [events, hasRefresh, hasMore]);
+  }, [events.length, hasRefresh, hasMore]);
 
   const refreshClick = (e) => {
     if (feedTopRef.current) {

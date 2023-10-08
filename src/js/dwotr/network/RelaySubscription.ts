@@ -13,6 +13,8 @@ import eventManager from '../EventManager';
 import Relays from '@/nostr/Relays';
 import { getNostrTime } from '../Utils';
 import blockManager from '../BlockManager';
+import { DebouncedFunc, debounce } from 'lodash';
+import relayManager from '../RelayManager';
 
 
 
@@ -22,7 +24,7 @@ class RelaySubscription {
   subscribedAuthors = new Set<UID>();
 
 
-  logging = false;
+  logging = true;
 
   subCount = 0;
   subs = new Map<number, () => void>();
@@ -189,14 +191,13 @@ class RelaySubscription {
 
   // A Once subscription is used to get events by options.
   // Return a true value when done and false if timed out.
-  async once(options: FeedOptions, timeOut: number = 3000): Promise<boolean> {
-
-    let timer: NodeJS.Timeout;
+  async once(options: FeedOptions, timeOut: number = 1000): Promise<boolean> {
     let stopWatch = Date.now();
 
     let subCounter = ++this.#subCounter;
-    let relays = Relays.enabledRelays();
+    let relays = relayManager.enabledRelays();
     let slowRelays = new Set<string>(relays);
+
 
     if(this.logging)
       console.log("RelaySubscription:Once:Called", " - Sub:", subCounter);
@@ -204,23 +205,28 @@ class RelaySubscription {
 
     let promise = new Promise<boolean>((resolve, _) => {
 
-      let state ={
-        closed: false
-      } 
-
-      timer = setTimeout(() => {
-        state.closed = true;
+      let close = () => {
+        relayCallback?.cancel();
         options.onClose?.(subCounter);
-        if(this.logging) 
-          console.log('RelaySubscription:Once:Timeout', relays.length, 'relays', Date.now() - stopWatch, 'ms', " - Slow Relays:", slowRelays.size, slowRelays, " - Sub:", subCounter);
-
         unsub?.();
         resolve(false);
-      }, timeOut);
+      }
 
+      let relayCallback: DebouncedFunc<any> = debounce(()=> {
+        if(this.logging)
+          console.log('RelaySubscription:Once:Debounced(3sec timout)', ' - Relays: ', relays.length, " - Slow Relays:", slowRelays.size, slowRelays, Date.now() - stopWatch, 'ms');
+  
+          for(const relayUrl of slowRelays) {
+            //slowRelays.delete(relayUrl);
+            relayManager.removeActiveRelay(relayUrl);
+          }
+          
+          close(); // Close the promise
+      }, 3000, {leading: false, trailing: true});
+  
       let tries = 0;
 
-      const onEvent = this.#createOnEvent(options?.onEvent);
+      const onEvent = this.#createOnEvent(options?.onEvent, relayCallback);
 
       const onEose = (relayUrl: string, minCreatedAt: number) => {
        
@@ -240,13 +246,11 @@ class RelaySubscription {
           if(this.logging) 
             console.log('RelaySubscription:Once:Done', relays.length, 'relays', Date.now() - stopWatch, 'ms', " - Sub:", subCounter);
 
-          state.closed = true;
-          clearTimeout(timer);
-          options.onClose?.(subCounter);
-          unsub?.();
-          resolve(true);
+            close();
         }
       };
+
+      relayCallback?.(); // Call once to start the timer
 
       let unsub = getRelayPool().subscribe([options.filter], relays, onEvent, undefined, onEose, {
         allowDuplicateEvents: false,
@@ -268,7 +272,7 @@ class RelaySubscription {
   map(options: FeedOptions) : number {
     let relayIndex = new Map<string, number>();
 
-    let relays = Relays.enabledRelays();
+    let relays = relayManager.enabledRelays();
 
     let state ={
       closed: false
@@ -309,7 +313,8 @@ class RelaySubscription {
   on(options: FeedOptions) : number {
     let relayIndex = new Map<string, number>();
 
-    let relays = Relays.enabledRelays();
+    let relays = relayManager.enabledRelays();
+
 
     let state ={
       closed: false
@@ -367,16 +372,17 @@ class RelaySubscription {
   }
 
 
-  #createOnEvent(userOnEvent?: OnEvent) {
+  #createOnEvent(userOnEvent?: OnEvent, internalFastCall?: OnEvent) {
 
     let subCounter = this.#subCounter;
 
     const onEvent = (event: Event, afterEose: boolean, url: string | undefined) => {
 
-      if(this.logging)
-        console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
+      // if(this.logging)
+      //   console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
 
       if(!event) return;
+      internalFastCall?.(event, afterEose, url);
 
       let authorId = ID(event.pubkey);
       if (blockManager.isBlocked(authorId)) return;

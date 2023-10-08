@@ -5,7 +5,6 @@ import { FeedOptions } from '../network/WOTPubSub';
 import { FeedProvider } from '../network/FeedProvider';
 import feedManager from '../FeedManager';
 
-
 const useFeed = (opt: FeedOptions | undefined) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -17,19 +16,16 @@ const useFeed = (opt: FeedOptions | undefined) => {
 
   // Loading events from memory
   useEffect(() => {
-    if(!opt) return; // The options may not be ready yet
-    
+    if (!opt) return; // The options may not be ready yet
+
     // The options may change, so we need to get a new provider
-    //if (feedProvider.current.id !== opt.id) 
-      feedProvider.current = feedManager.getProvider(opt); // Make sure to get the same provider for the same feedId
+    feedProvider.current = feedManager.getProvider(opt); // Make sure to get the same provider for the same feedId
 
-    loading.current = true;
-    feedProvider.current.load().then((list) => {
-
-      setEvents(list);
-      setHasMore(feedProvider.current?.hasMore()|| false);
-      loading.current = false;
-    });
+    let list = feedProvider.current.load();
+    setEvents(list);
+    setHasMore(feedProvider.current?.hasMore() || false);
+    if(list.length < feedProvider.current.pageSize) 
+      loadMore(); // Load more events if we don't have enough after memory load
 
     // Check regularly for new events
     intervalRef.current = setInterval(() => {
@@ -43,8 +39,8 @@ const useFeed = (opt: FeedOptions | undefined) => {
   }, [opt]);
 
   const loadMore = useCallback(() => {
-    if(loading.current == true) return;
-    loading.current = true;
+    if (loading.current == true) return;
+    loading.current = true; // Prevent multiple loads from happening at once
 
     feedProvider.current?.nextPage().then((list) => {
       setEvents(list);
@@ -52,13 +48,12 @@ const useFeed = (opt: FeedOptions | undefined) => {
       loading.current = false;
     });
 
-    // setHasMore(eventState.current.more.length > 0);
   }, []);
 
   // Load events in front of the event list
   const refresh = useCallback(() => {
-    if(!feedProvider.current?.hasNew()) return;
-  
+    if (!feedProvider.current?.hasNew()) return;
+
     setEvents(feedProvider.current.mergeNew());
     setHasRefresh(false);
     setHasMore(feedProvider.current.hasMore());

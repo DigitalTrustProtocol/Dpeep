@@ -37,6 +37,7 @@
     "preact-async-route": "^2.2.1",
     "preact-router": "^4.1.2",
     "ramda": "^0.29.0",
+    "react-cool-virtual": "^0.7.0",
     "react-helmet": "^6.1.0",
     "react-infinite-scroll-component": "^6.1.0",
     "react-memorystats": "^1.1.0",

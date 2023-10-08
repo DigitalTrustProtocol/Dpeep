@@ -1,24 +1,23 @@
 import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
 
-import Events from '../../../nostr/Events';
 import Key from '../../../nostr/Key';
-import useStateThrottle from '@/dwotr/hooks/useStateThrottle';
+import { ID } from '@/utils/UniqueIds';
+import noteManager from '@/dwotr/NoteManager';
 
-const Reply = (props) => {
-  // useStateThrottle: Make sure only to update UI once per second
-  const [replyCount, setReplyCount] = useStateThrottle(
-    Events.threadRepliesByMessageId.get(props.event.id)?.size || 0,
-  );
+type ReplyProps = {
+  event: any; // Define the proper type
+  standalone?: boolean;
+};
+
+const Reply = (props: ReplyProps) => {
+  const [replyCount, setReplyCount] = useState<number>(0);
 
   useEffect(() => {
-    return Events.getThreadRepliesCount(props.event.id, handleThreadReplyCount);
+  let count = noteManager.replies.get(ID(props.event.id))?.size || 0;
+    setReplyCount(count);
   }, [props.event]);
-
-  const handleThreadReplyCount = (threadReplyCount) => {
-    setReplyCount(threadReplyCount);
-  };
 
   function replyBtnClicked() {
     if (props.standalone) {

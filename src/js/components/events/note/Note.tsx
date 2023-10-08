@@ -164,7 +164,7 @@ const Note: React.FC<NoteProps> = ({
         <hr className="opacity-10" />
       </Show>
       <Show when={showRepliesFeed}>
-        <RepliesFeed eventId={event.id} showReplies={showReplies} standalone={standalone} />
+        <RepliesFeed event={event} showReplies={showReplies} standalone={standalone} />
       </Show>
     </>
   );

@@ -34,7 +34,11 @@ export class FeedProvider {
   }
 
   hasMore(): boolean {
-    return !this.cursor.done;
+    if(this.viewEnd < this.buffer.length) return true; // There are more events in the buffer
+    if(this.cursor.count() > 0) return true; // There are more events in the cursor
+    if(!this.cursor.done) return true; // The cursor is not done
+
+    return false; // There are no more events to load
   }
 
   isLoading(): boolean {
@@ -45,15 +49,17 @@ export class FeedProvider {
     return this.eventProvider.count() > 0;
   }
 
-  async load() {
+  load() {
     this.viewStart = 0;
     this.viewEnd = 0;
 
     if (this.logging) console.log('FeedProvider:load:START');
 
-    this.mapNew();
+    this.mapNew(); // Subscribe to new events
 
-    return this.nextPage();
+    // Return what we have in the buffer right now
+    this.#loadToBuffer(false); // Don't call the cursor's relays, we want to load the buffer with what we have in memory
+    return this.#increaseView();
   }
 
   mapNew() {
@@ -110,83 +116,35 @@ export class FeedProvider {
     return view;
   }
 
-  test = new Map<string, number>();
+  
+
 
   // Gets called by the UI once when it needs more events, therefore be sure to return new events
   // If no new events are returned, the UI will stop calling this method
   // If no new events are available, return the current view
   async nextPage(): Promise<Array<Event>> {
-    if (this.logging)
-      console.log(
-        'FeedProvider:nextPage',
-        ' - Done:',
-        this.cursor.done,
-        ' - hasMore:',
-        this.hasMore(),
-        ' - PageSize:',
-        this.pageSize,
-        ' - View Start:',
-        this.viewStart,
-        ' - View End:',
-        this.viewEnd,
-        ' - Buffer:',
-        this.buffer.length,
-        ...this.#timeLogger(),
-      );
-
-    if (this.cursor.done) return this.view; // No more events to load
+    
+    if (!this.hasMore()) return this.view; // No more events to load
 
     let neededLength = this.viewEnd + this.pageSize;
 
-    let deltaItems: Array<Event> = [];
-    if (neededLength + this.pageSize > this.buffer.length && !this.cursor.done) {
+    if (neededLength > this.buffer.length) {
       // Only load more if the buffer is running low
-      deltaItems = await this.#loadToBuffer();
+      let deltaItems = await this.#loadToBuffer(true);
       await contextLoader.resolve(deltaItems);
     }
 
+    return this.#increaseView();
+  }
+
+  #increaseView() {
+    let neededLength = this.viewEnd + this.pageSize;
     this.viewEnd = neededLength > this.buffer.length ? this.buffer.length : neededLength;
-
     this.view = this.buffer.slice(this.viewStart, this.viewEnd);
-
-    // this.test = new Map<string, number>();
-    // for (const e of this.view) {
-    //   let t = this.test.get(e.id);
-
-    //   if (t && t > 1) {
-    //     console.error('FeedProvider:load:DUPLICATED FOUND:', e.id, e.kind, t);
-    //   }
-    //   if (t) this.test.set(e.id, t + 1);
-    //   else this.test.set(e.id, 1);
-    // }
-
-    if (this.logging)
-      console.log(
-        'FeedProvider:load:END',
-        ' - View:',
-        this.view.length,
-        ' - Buffer:',
-        this.buffer.length,
-        ' - View Start:',
-        this.viewStart,
-        ' - View End:',
-        this.viewEnd,
-      );
-
     return this.view;
   }
 
-  async #loadToBuffer(): Promise<Array<Event>> {
-    // Wait for new events to be loaded
-    //await this.#loadIncremental();
-
-    if (this.logging)
-      console.log(
-        'FeedProvider:#loadToBuffer:after',
-        ' - Cursor buffer:',
-        this.cursor.count(),
-        ...this.#timeLogger(),
-      );
+  async #loadToBuffer(callCursor = true): Promise<Array<Event>> {
 
     this.loading = true;
     let remaning = this.pageSize;
@@ -195,8 +153,7 @@ export class FeedProvider {
     let requestCount = 0; // Safety net
 
     while (remaning > 0) {
-      if (this.pageSize * 2 > this.cursor.count() && !this.cursor.done && requestCount < 10) {
-        requestCount++; // Safety net
+      if (this.pageSize > this.cursor.count() && !this.cursor.done && callCursor) {
         await this.cursor.load();
       }
 
@@ -206,14 +163,13 @@ export class FeedProvider {
         this.seen.add(ID(event.id));
         filteredItems.push(event);
         remaning--;
-      } 
+      } else {
+        if(requestCount++ >= 10) break; // Safety net
+      }
 
-      if (this.cursor.done && this.cursor.count() == 0) break; // No more events to load and cursor is done.
+      if ((this.cursor.done || !callCursor) && this.cursor.count() == 0) break; // No more events to load and cursor is done.
     }
     this.loading = false;
-
-    if (this.logging)
-      console.log('FeedProvider:#loadToBuffer', ' - Items added:', filteredItems.length);
 
     //this.#sort(filteredItems);
     this.buffer.push(...filteredItems);
