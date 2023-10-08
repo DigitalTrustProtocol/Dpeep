@@ -22,10 +22,6 @@ class RelayManager {
 
     }
 
-    // Get all relays data
-    async load() {
-    }
-
     enabledRelays() : Array<string> {
         if(this.activeRelays.length === 0) {
             this.activeRelays = Relays.enabledRelays();
@@ -46,6 +42,11 @@ class RelayManager {
 
     getLastSync(relayData: RelayMetadata[]) : number  {
         return min(relayData.map((r) => r.lastSync)) || EPOCH;
+    }
+
+
+    async load() : Promise<void> {
+        return Promise.resolve();
     }
 
     // #getRelayData(relay: string) : RelayMetadata {

@@ -2,7 +2,7 @@ import { throttle } from 'lodash';
 import { Event, Filter } from 'nostr-tools';
 import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import wotPubSub, { FeedOptions, OnEvent, TextKind, ZapKind } from './network/WOTPubSub';
+import wotPubSub, { FeedOptions, OnEvent, ZapKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
@@ -17,7 +17,6 @@ import Key from '@/nostr/Key';
 class ZapManager {
 
   logging = false;
-  events: Map<UID, Event> = new Map();
 
   // Profile ID, Set of Event IDs
   zaps: Map<UID, Zap> = new Map();
@@ -54,16 +53,6 @@ class ZapManager {
   }, 1000);
 
 
-
-  hasZap(id: UID) {
-    return this.events.has(id);
-  }
-
-  getZap(id: UID) {
-    return this.events.get(id);
-  }
-
-
   handle(event: Event) {
     
     this.metrics.RelayEvents++;
@@ -89,6 +78,7 @@ class ZapManager {
 
     for (let event of zaps) {
       eventManager.addSeen(ID(event.id));
+      eventManager.eventIndex.set(ID(event.id), event);
 
       if (this.#canAdd(event)) {
         this.#addZap(event);
@@ -161,8 +151,6 @@ class ZapManager {
     if (!zappedNoteId) {
       return undefined; // TODO: you can also zap profiles
     }
-
-    this.events.set(ID(event.id), event);
 
     let id = ID(zappedNoteId);
     if (!this.zaps.has(id)) {

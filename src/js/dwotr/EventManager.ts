@@ -182,6 +182,7 @@ class EventManager {
     if(!event) return false;
     eventManager.addSeen(ID(event.id));
 
+    // Check if the event has been ordered deleted
     if(EventDeletionManager.deleted.has(ID(event.id))) return false;
 
     // Use for now 

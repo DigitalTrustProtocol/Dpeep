@@ -12,6 +12,9 @@ import reactionManager from '../ReactionManager';
 import noteManager from '../NoteManager';
 import { Event } from 'nostr-tools';
 import { getNostrTime } from '../Utils';
+import zapManager from '../ZapManager';
+import eventDeletionManager from '../EventDeletionManager';
+import relayManager from '../RelayManager';
 
 type InitializeWoTProps = {
   path?: string;
@@ -34,13 +37,23 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const loadDB = async () => {
     setState((state: any) => ({ ...state, dbStatus: 'loading' }));
 
-    await graphNetwork.init(hexKey);
+    // Filtering events - blocks out unwanted events
+    muteManager.load(); // Only me
+    await eventDeletionManager.load(); 
+    
+    // Content events
+    await graphNetwork.init(hexKey); 
+    await blockManager.load(); // Not the best place for this, but currently nessessary
     await profileManager.loadAllProfiles();
-    muteManager.load();
-    await blockManager.load();
+    await noteManager.load();
+
+    // Meta events - augments content events
     await followManager.load();
     await reactionManager.load();
-    await noteManager.load();
+    await zapManager.load();
+
+    // System events
+    await relayManager.load();
 
     console.log('loadDB done');
 

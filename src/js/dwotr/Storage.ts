@@ -32,6 +32,10 @@ class Storage {
   get eventDeletions() {
     return this.db.eventDeletions;
   }
+
+  get blocks() {
+    return this.db.blocks;
+  }
   
   get db(): DWoTRDexie {
     if (!this.#db) {

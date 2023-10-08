@@ -3,12 +3,13 @@ import { Event } from 'nostr-tools';
 import { EventParser } from './Utils/EventParser';
 import graphNetwork from './GraphNetwork';
 import { Vertice } from './model/Graph';
-import IndexedDB from '@/nostr/IndexedDB';
 import Key from '@/nostr/Key';
 import wotPubSub, { BlockKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import EventCallbacks from './model/EventCallbacks';
-import { as } from 'vitest/dist/reporters-2ff87305.js';
+import { throttle } from 'lodash';
+import storage from './Storage';
+import eventManager from './EventManager';
 
 class BlockVertice extends Vertice {
   blocks?: Set<UID>;
@@ -19,6 +20,38 @@ class BlockVertice extends Vertice {
 // Blocks that are aggregated from multiple profiles
 class BlockManager {
   callbacks = new EventCallbacks(); // Callbacks to call when the mutes change
+
+
+  private metrics = {
+    TableCount: 0,
+    Loaded: 0,
+    Saved: 0,
+    Deleted: 0,
+    RelayEvents: 0,
+
+  };
+
+  #saveQueue: Map<number, Event> = new Map();
+  #saving: boolean = false;
+  private saveBulk = throttle(() => {
+    if (this.#saving) {
+      this.saveBulk(); // try again later
+      return;
+    }
+
+    this.#saving = true;
+
+    const queue = [...this.#saveQueue.values()];
+    this.#saveQueue = new Map<number, Event>();
+
+    this.metrics.Saved += queue.length;
+
+    storage.zaps.bulkPut(queue).finally(() => {
+      this.#saving = false;
+    });
+  }, 1000);
+
+
 
   isBlocked(id: number): boolean {
     let targetV = graphNetwork.g.vertices[id] as BlockVertice;
@@ -101,14 +134,20 @@ class BlockManager {
 
 
   async handle(event: Event) {
+    if(await this.#addBlock(event))
+      this.save(event);
+  }
+
+
+  async #addBlock(event: Event) : Promise<boolean> {
     let authorId = ID(event.pubkey);
 
-    if (blockManager.isBlocked(authorId)) return;
+    if (blockManager.isBlocked(authorId)) return false;
 
     let sourceV = graphNetwork.g.addVertice(authorId) as BlockVertice;
 
     // Ignore events that are older than the last time we updated the data
-    if (sourceV.blockTime && sourceV.blockTime >= event.created_at) return; // Event is older than the current data, ignore it
+    if (sourceV.blockTime && sourceV.blockTime >= event.created_at) return false; // Event is older than the current data, ignore it
 
     // Update the time of the last event
     sourceV.blockTime = event.created_at;
@@ -128,20 +167,33 @@ class BlockManager {
 
     blockManager.addBlocks(sourceV, blockIDs);
 
-    this.save(event);
+    return true;
   }
 
   async load() {
-    await IndexedDB.db.events
-      .where('kind')
-      .equals(BlockKind)
-      .each((event) => {
-        this.handle(event);
-      });
+    let blocks = await storage.blocks.toArray();
+    this.metrics.Loaded = blocks.length;
+
+    let deltaDelete: Array<string> = [];
+
+    for (let event of blocks) {
+      eventManager.addSeen(ID(event.id));
+
+      if (!await this.#addBlock(event)) {
+        deltaDelete.push(event.id);
+      }
+    }
+
+    this.metrics.Deleted += deltaDelete.length;
+
+    // Remove notes from profiles that are not relevant
+    //if (deltaDelete.length > 0) await storage.zaps.bulkDelete(deltaDelete);
+
   }
 
-  save(event: Event | Partial<Event>) {
-    IndexedDB.saveEvent(event as Event & { id: string });
+  save(event: Event) {
+    this.#saveQueue.set(ID(event.id), event);
+    this.saveBulk(); 
   }
 
   async createEvent(sourceV: BlockVertice): Promise<Event> {
@@ -163,6 +215,18 @@ class BlockManager {
       ],
     } as Event;
     return event;
+  }
+
+  async tableCount() {
+    return await storage.blocks.count();
+  }
+
+  getMetrics() {
+    this.tableCount().then((count) => {
+        this.metrics.TableCount = count;
+      });
+  
+    return this.metrics;
   }
 }
 

@@ -18,16 +18,20 @@ export class DWoTRDexie extends Dexie {
   notes!: Table<Event>;
   zaps!: Table<Event>;
   eventDeletions!: Table<Event>;
+  blocks!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(9).stores({
+    this.version(10).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
       follows: 'pubkey', // Primary key is the pubkey single event per user.
       notes: 'id, pubkey, kind, created_at, [pubkey+kind]',
+      zaps: 'id, pubkey, created_at',
+      eventDeletions: 'id, pubkey, created_at',
+      blocks: 'id, pubkey, created_at',
     });
   }
 }

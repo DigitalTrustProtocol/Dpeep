@@ -13,7 +13,6 @@ import noteManager from './NoteManager';
 class EventDeletionManager {
 
   logging = false;
-  events: Map<UID, Event> = new Map();
   
   deleted: Set<UID> = new Set();
 
@@ -48,15 +47,6 @@ class EventDeletionManager {
     });
   }, 1000);
 
-
-
-  hasEvent(id: UID) {
-    return this.events.has(id);
-  }
-
-  getEvent(id: UID) {
-    return this.events.get(id);
-  }
 
 
   handle(event: Event) {
