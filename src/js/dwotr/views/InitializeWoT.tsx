@@ -15,6 +15,7 @@ import { getNostrTime } from '../Utils';
 import zapManager from '../ZapManager';
 import eventDeletionManager from '../EventDeletionManager';
 import relayManager from '../RelayManager';
+import replyManager from '../ReplyManager';
 
 type InitializeWoTProps = {
   path?: string;
@@ -46,6 +47,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     await blockManager.load(); // Not the best place for this, but currently nessessary
     await profileManager.loadAllProfiles();
     await noteManager.load();
+    await replyManager.load();
 
     // Meta events - augments content events
     await followManager.load();

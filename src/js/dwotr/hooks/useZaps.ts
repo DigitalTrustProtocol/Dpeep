@@ -19,9 +19,10 @@ export const useZaps = (messageId: string, loadGlobal: boolean) => {
       let id = ID(messageId);
   
       let onEvent = throttle(() => {
+        if (!isMounted()) return; // Component has been unmounted, discard event.
+
         // At this point the event should have already been added to the note's zap data, so we can just get the zaps from there.
         // Therefore theres no need to process the event here.
-        if (!isMounted()) return;
   
         const zap = zapManager.zaps.get(id);
         if (!zap) return; // No zaps for this event, should only happen if the event is invalid and has been discarded.

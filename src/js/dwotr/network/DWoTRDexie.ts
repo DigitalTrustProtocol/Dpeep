@@ -19,11 +19,13 @@ export class DWoTRDexie extends Dexie {
   zaps!: Table<Event>;
   eventDeletions!: Table<Event>;
   blocks!: Table<Event>;
+  replies!: Table<Event>;
+  reposts!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(10).stores({
+    this.version(11).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
@@ -32,6 +34,8 @@ export class DWoTRDexie extends Dexie {
       zaps: 'id, pubkey, created_at',
       eventDeletions: 'id, pubkey, created_at',
       blocks: 'id, pubkey, created_at',
+      replies: 'id, pubkey, created_at',
+      reposts: 'id, pubkey, created_at',
     });
   }
 }

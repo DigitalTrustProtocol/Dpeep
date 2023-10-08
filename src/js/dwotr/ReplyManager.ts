@@ -1,36 +1,22 @@
 import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
-import { ID, STR, UID } from '@/utils/UniqueIds';
-import { TextKind } from './network/WOTPubSub';
+import { ID, UID } from '@/utils/UniqueIds';
 import blockManager from './BlockManager';
-import Key from '@/nostr/Key';
-import { getNoteReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
+import { getNoteReplyingTo } from '@/nostr/utils';
 import eventManager from './EventManager';
-import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';
-import relaySubscription from './network/RelaySubscription';
 import eventDeletionManager from './EventDeletionManager';
-
-const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
-  if (!a[1]) return 1;
-  if (!b[1]) return -1;
-
-  return b[1].created_at - a[1].created_at;
-};
+import Key from '@/nostr/Key';
+import followManager from './FollowManager';
 
 
-class NoteManager {
+
+class ReplyManager {
 
   logging = false;
-  notes: SortedMap<UID, Event> = new SortedMap([], sortCreated_at);
 
-  deletedEvents: Set<UID> = new Set();
-  
-  // Index of all reposts of an specific events, 
-  reposts: Map<UID, Set<UID>> = new Map();
-  //replies: Map<UID, Set<Event>> = new Map();
-
+  replies: Map<UID, Set<UID>> = new Map(); // Index of all replies of an specific events, the parent event may not have been loaded yet
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
@@ -40,7 +26,6 @@ class NoteManager {
     Saved: 0,
     Deleted: 0,
     RelayEvents: 0,
-
   };
 
   #saveQueue: Map<number, Event> = new Map();
@@ -58,52 +43,60 @@ class NoteManager {
 
     this.metrics.Saved += queue.length;
 
-    storage.notes.bulkPut(queue).finally(() => {
+    storage.replies.bulkPut(queue).finally(() => {
       this.#saving = false;
     });
   }, 1000);
 
-  hasNode(id: UID) {
-    return this.notes.has(id);
+
+  isReplyEvent(event: Event) : boolean {
+    return !!getNoteReplyingTo(event);
   }
 
-  getNode(id: UID) {
-    return this.notes.get(id);
-  }
+  getEventReplies(parentId: UID) : Array<Event> {
+    let preBuffer: Array<Event> = [];
+    let afterBuffer: Array<Event> = [];
 
+    for (const replyId of replyManager.replies.get(parentId) || []) {
+      let event = eventManager.eventIndex.get(replyId);
+      if (event) {
+        if (event.pubkey == Key.getPubKey()) preBuffer.unshift(event); // Put my replies at the top
+        else if (followManager.isAllowed(ID(event.pubkey)))
+          preBuffer.push(event); // Put known users replies at the top'ish
+        else afterBuffer.push(event);
+      }
+    }
+    return preBuffer.concat(afterBuffer);
+  }
 
   handle(event: Event) {
     
-    let authorId = ID(event.pubkey);
-        
-    let myId = ID(Key.getPubKey());
-    let isMe = authorId === myId;
-
-    if (isMe && this.logging) {
-      console.log('My own contact event', event);
-    }
-
     this.metrics.RelayEvents++;
 
-    this.#addEvent(event);
+    let repliesTo = this.#addEvent(event);
+    if(repliesTo.length == 0) return;
 
-    //if (followManager.isAllowed(authorId) || reactionManager.) 
     this.save(event); // Save all for now
 
-    this.onEvent.dispatch(authorId, event);
+    for(let parentId of repliesTo) {
+      this.onEvent.dispatch(parentId, event);
+    }
+
+    //this.onEvent.dispatch(authorId, event);
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
   // This could be for like the last viewed 100 to 1000 events, as the time sort should be good enough for the rest.
 
   async load() {
-    let notes = await storage.notes.toArray();
-    this.metrics.Loaded = notes.length;
+    let events = await storage.replies.toArray();
+    this.metrics.Loaded = events.length;
 
     let deltaDelete: Array<string> = [];
 
-    for (let note of notes) {
+    for (let note of events) {
       eventManager.addSeen(ID(note.id));
+      eventManager.eventIndex.set(ID(note.id), note);
 
       if (this.#canAdd(note)) {
         this.#addEvent(note);
@@ -139,15 +132,15 @@ class NoteManager {
   //   return event;
   // }
 
-  async onceNote(id: UID) {
-    if (this.notes.has(id)) return;
+  // async onceNote(id: UID) {
+  //   if (this.notes.has(id)) return;
 
-    let eventId = STR(id) as string;
+  //   let eventId = STR(id) as string;
 
-    let events = await relaySubscription.getEventByIds([eventId], [TextKind]);
+  //   let events = await relaySubscription.getEventByIds([eventId], [TextKind]);
 
-    return events?.[0];
-  }
+  //   return events?.[0];
+  // }
   // requestNote(id: UID) {
   //   if (this.notes.has(id)) return;
 
@@ -174,28 +167,36 @@ class NoteManager {
   };
 
 
-  #addEvent(event: Event) {
+  #addEvent(event: Event) : Array<UID> {
 
     let eventId = ID(event.id);
 
-    eventManager.eventIndex.set(eventId, event);
-    this.notes.set(eventId, event);
-
     // TODO: Not sure that this is the correct implementation of Nip
-    const eventIsRepost = isRepost(event);
-    if (eventIsRepost) {
-      this.#addRepost(event);
-      return;
+    let replies = this.#getRepliesTo(event);
+
+    for (const parentId of replies) {
+      this.#addToReplies(parentId, eventId);
     }
+    return replies;
   }
 
+  #getRepliesTo(event: Event) : Array<UID> {
+    const replyingTo = getNoteReplyingTo(event);
+    if (replyingTo) {
+      const repliedMsgs = event.tags
+        .filter((tag) => tag[0] === 'e')
+        .map((tag) => tag[1])
+        .slice(0, 2);  
+      return repliedMsgs.map(ID);
+    }
+    return [];
+  }
 
-  #addRepost(event: Event) {
-    const repostkey = getRepostedEventId(event);
-    if (!repostkey) return;
-    let repostId = ID(repostkey);
-    let repostSet = this.reposts.get(repostId) || this.reposts.set(repostId, new Set()).get(repostId);
-    repostSet!.add(ID(event.pubkey));
+  #addToReplies(parentId: UID, replyId: UID) {
+    if (!this.replies.has(parentId)) {
+      this.replies.set(parentId, new Set<UID>());
+    }
+    this.replies.get(parentId)?.add(replyId);
   }
 
   async tableCount() {
@@ -211,5 +212,5 @@ class NoteManager {
   }
 }
 
-const noteManager = new NoteManager();
-export default noteManager;
+const replyManager = new ReplyManager();
+export default replyManager;

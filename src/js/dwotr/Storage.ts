@@ -36,6 +36,14 @@ class Storage {
   get blocks() {
     return this.db.blocks;
   }
+
+  get replies() {
+    return this.db.replies;
+  }
+
+  get reposts() {
+    return this.db.reposts;
+  }
   
   get db(): DWoTRDexie {
     if (!this.#db) {

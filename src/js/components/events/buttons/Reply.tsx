@@ -1,23 +1,21 @@
 import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
+import { Event } from 'nostr-tools';
 
 import Key from '../../../nostr/Key';
 import { ID } from '@/utils/UniqueIds';
-import noteManager from '@/dwotr/NoteManager';
+import replyManager from '@/dwotr/ReplyManager';
+import { throttle } from 'lodash';
+import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 
 type ReplyProps = {
-  event: any; // Define the proper type
+  event: Event; 
   standalone?: boolean;
 };
 
 const Reply = (props: ReplyProps) => {
-  const [replyCount, setReplyCount] = useState<number>(0);
-
-  useEffect(() => {
-  let count = noteManager.replies.get(ID(props.event.id))?.size || 0;
-    setReplyCount(count);
-  }, [props.event]);
+  const { replyCount } = useReplies(props.event.id);
 
   function replyBtnClicked() {
     if (props.standalone) {
@@ -39,3 +37,25 @@ const Reply = (props: ReplyProps) => {
 };
 
 export default Reply;
+
+const useReplies = (eventId: string) => {
+  const [replyCount, setReplyCount] = useState<number>(0);
+  const isMounted = useIsMounted();
+
+  useEffect(() => {
+    let id = ID(eventId);
+
+    let onEvent = throttle(() => {
+      if (!isMounted()) return; // Component has been unmounted, discard event.
+      let count = replyManager.replies.get(id)?.size || 0;
+      setReplyCount(count);
+
+    }, 1000, { leading: true, trailing: false });
+
+    onEvent(); // Set initial zaps
+    replyManager.onEvent.addListener(id, onEvent);
+
+    }, [eventId]);
+  
+  return { replyCount };
+}

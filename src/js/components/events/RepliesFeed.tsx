@@ -10,6 +10,7 @@ import eventManager from '@/dwotr/EventManager';
 import { RepliesCursor } from '@/dwotr/network/RepliesCursor';
 import followManager from '@/dwotr/FollowManager';
 import Key from '@/nostr/Key';
+import replyManager from '@/dwotr/ReplyManager';
 
 type RepliesFeedProps = {
   event: Event;
@@ -38,18 +39,7 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
     let cursor = new RepliesCursor(opt);
 
     // Preload replies to the cursor buffer, if any
-    let preBuffer: Array<Event> = [];
-
-    for (const replyId of noteManager.replies.get(ID(event.id)) || []) {
-      let event = eventManager.eventIndex.get(replyId);
-      if (event) {
-        if (event.pubkey == Key.getPubKey()) preBuffer.unshift(event); // Put my replies at the top
-        else if (followManager.isAllowed(ID(event.pubkey)))
-          preBuffer.push(event); // Put known users replies at the top'ish
-        else cursor.buffer.push(event);
-      }
-    }
-    cursor.buffer = preBuffer.concat(cursor.buffer);
+    cursor.buffer = replyManager.getEventReplies(ID(event.id));
 
     opt.cursor = () => cursor;
 

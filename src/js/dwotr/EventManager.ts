@@ -27,6 +27,7 @@ import noteManager from './NoteManager';
 import { throttle } from 'lodash';
 import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
+import replyManager from './ReplyManager';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
@@ -196,7 +197,11 @@ class EventManager {
         break;
 
       case TextKind:
-        noteManager.handle(event);
+        if(replyManager.isReplyEvent(event)) {
+          replyManager.handle(event);
+        } else {
+          noteManager.handle(event);
+        }
         break;
       case RepostKind:
         noteManager.handle(event);
