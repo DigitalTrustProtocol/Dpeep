@@ -210,17 +210,15 @@ export default class Graph {
     vertice.oldScore = vertice.score;
     vertice.score = new TrustScore();
 
-    let lowestDegree = UNDEFINED_DEGREE;
-
     // Find lowest degree
     for (const outId in vertice.in) {
       const outV = this.vertices[outId] as Vertice;
+      if (outV.score.atDegree > MAX_DEGREE + 1) continue; // Skip if the in vertice has no degree or above max degree
+
       const edge = vertice.in[outId];
       if (!edge || edge.val == 0) continue; // Skip if the edge has no value / neutral
 
-      if (outV.score.atDegree < lowestDegree) lowestDegree = outV.score.atDegree;
-
-      vertice.score.addValue(edge.val, outV.score.atDegree);
+      vertice.score.addValue(edge.val, outV.score.atDegree + 1);
     }
 
     return vertice.score.hasChanged(vertice.oldScore);

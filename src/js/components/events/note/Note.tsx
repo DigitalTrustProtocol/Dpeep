@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import classNames from 'classnames';
 //import { Filter } from 'nostr-tools';
 import { Link, route } from 'preact-router';
@@ -51,11 +51,6 @@ const Note: React.FC<NoteProps> = ({
     fullWidth = !isReply && !isQuoting && !isQuote && !asInlineQuote;
   }
 
-  const wot = useVerticeMonitor(
-    ID(event.id),
-    ['badMessage', 'neutralMessage', 'goodMessage'],
-    '',
-  ) as any;
 
   //const computedIsQuote = () => isQuote || !!(!standalone && showReplies); // && replies.length),
   const computedIsQuoting = () => isQuoting || !!(replyingTo && showRepliedMsg);
@@ -135,7 +130,6 @@ const Note: React.FC<NoteProps> = ({
             isQuote={isQuote}
             asInlineQuote={asInlineQuote}
             fullWidth={fullWidth}
-            wot={wot}
           />
         </div>
       </div>

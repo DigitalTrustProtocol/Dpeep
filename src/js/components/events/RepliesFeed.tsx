@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 import { Filter, Event } from 'nostr-tools';
 import EventComponent from './EventComponent';
-import noteManager from '@/dwotr/NoteManager';
 import { ID } from '@/utils/UniqueIds';
-import eventManager from '@/dwotr/EventManager';
 import { RepliesCursor } from '@/dwotr/network/RepliesCursor';
-import followManager from '@/dwotr/FollowManager';
-import Key from '@/nostr/Key';
 import replyManager from '@/dwotr/ReplyManager';
 
 type RepliesFeedProps = {
@@ -48,6 +44,7 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
 
   return (
     <>
+    
       <InfiniteScroll
         dataLength={events.length} //This is important field to render the next data
         next={loadMore}
@@ -67,22 +64,22 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
         refreshFunction={refresh}
         pullDownToRefresh
         pullDownToRefreshThreshold={50}
-        pullDownToRefreshContent={
-          <h3 style={{ textAlign: 'center' }}>&#8595; Pull down to refresh</h3>
-        }
-        releaseToRefreshContent={
-          <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
-        }
+        // pullDownToRefreshContent={
+        //   <h3 style={{ textAlign: 'center' }}>&#8595; Pull down to refresh</h3>
+        // }
+        // releaseToRefreshContent={
+        //   <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
+        // }
       >
-        {events.map((event) => {
+        {events.map((item) => {
           return (
             <EventComponent
-              key={`${event.id}RC`}
-              id={event.id}
+              key={`${item.id}RC`}
+              id={item.id}
               isReply={true}
               isQuoting={!standalone}
               showReplies={1}
-              event={event}
+              event={item}
             />
           );
         })}

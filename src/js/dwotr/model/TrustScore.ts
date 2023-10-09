@@ -9,7 +9,13 @@ class TrustScore {
   distrusts = [0,0,0] as number[];
 
   addValue(value: number, degree: number) {
+    if(degree <= 0) {
+      console.error('Invalid degree: Too small:', degree);
+    }
     let indexDegree = degree-1;
+    if(indexDegree > 2) {
+      console.error('Invalid degree: Too large:', degree);
+    }
     if (value > 0) this.trusts[indexDegree]++;
     if (value < 0) this.distrusts[indexDegree]++;
 
@@ -73,6 +79,16 @@ class TrustScore {
       this.total != oldScore.total
     );
   }
+  
+  equals(other: TrustScore) {
+    if (this.hasChanged(other)) return false;
+
+    for (let i = 0; i <= MAX_DEGREE; i++) {
+      if (this.trusts[i] != other.trusts[i]) return false;
+      if (this.distrusts[i] != other.distrusts[i]) return false;
+    }
+    return true;
+  }
 
   clone() {
     const clone = Object.create(Object.getPrototypeOf(this)) as TrustScore;
@@ -82,17 +98,6 @@ class TrustScore {
     return clone;
   }
 
-  equals(other: TrustScore) {
-    if (!other) return this.total > 0;
-
-    if (this.hasChanged(other)) return false;
-
-    for (let i = 0; i <= MAX_DEGREE; i++) {
-      if (this.trusts[i] != other.trusts[i]) return false;
-      if (this.distrusts[i] != other.distrusts[i]) return false;
-    }
-    return true;
-  }
 
   hasTrustScore() {
     return this.trusts.some((n: number) => n > 0);

@@ -56,7 +56,7 @@ const ReactionButtons = (props) => {
         <Show when={settings.showZaps !== false}>
           <Zap event={event} />
         </Show>
-        <TrustReactionButtons event={event} wot={wot} />
+        <TrustReactionButtons event={event} />
         <Globe
           onClick={setLoadGlobal}
           size={20}

@@ -13,6 +13,7 @@ import Author from './Author';
 import Helmet from './Helmet';
 import profileManager from '@/dwotr/ProfileManager';
 import { ID } from '@/utils/UniqueIds';
+import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
 
 let loadReactions = true;
 
@@ -33,14 +34,21 @@ type Props = {
   asInlineQuote?: boolean;
   event: any;
   isPreview?: boolean;
-  wot?: any;
+  
 };
 
 
-const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPreview, wot }: Props) => {
+const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPreview }: Props) => {
   const [translatedText, setTranslatedText] = useState('');
   const [showMore, setShowMore] = useState(false);
   const [name, setName] = useState('');
+
+  const wot = useVerticeMonitor(
+    ID(event.id),
+    ['badMessage', 'neutralMessage', 'goodMessage'],
+    '',
+  ) as any;
+
 
   useEffect(() => {
     if (standalone) {
@@ -89,6 +97,8 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
     );
   }
 
+
+
   return (
     <div className={`flex-grow`}>
       <Author
@@ -128,7 +138,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
         </a>
       </Show>
       <Show when={!isPreview && !asInlineQuote && loadReactions}>
-        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} wot={wot} />
+        <ReactionButtons key={event.id + 'reactions'} standalone={standalone} event={event} />
       </Show>
       <Show when={isQuote && !loadReactions}>
         <div style={{ marginBottom: '15px' }}></div>

@@ -18,7 +18,7 @@ const useVerticeMonitor = (id: UID, options?: any, option?: any) => {
         }
 
         const cb = (e: Vertice) => {
-            if(e.id != id) return;
+            //if(e.id != id) return;
 
             findOption(e);
         }

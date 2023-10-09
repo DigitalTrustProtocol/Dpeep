@@ -4,6 +4,8 @@ import { CheckCorrect, FlagMarkSolid } from './Icons';
 import graphNetwork from '../GraphNetwork';
 import { EntityType } from '../model/Graph';
 import TrustScore from '../model/TrustScore';
+import useVerticeMonitor from '../hooks/useVerticeMonitor';
+import { ID } from '@/utils/UniqueIds';
 
 const TrustReactionButtons = (props) => {
   const [score, setScore] = useState({
@@ -12,41 +14,41 @@ const TrustReactionButtons = (props) => {
   });
 
   const event = props.event;
-  const wot = props?.wot;
+
+  const wot = useVerticeMonitor(
+    ID(event.id),
+    ['badMessage', 'neutralMessage', 'goodMessage'],
+    '',
+  ) as any;
+
 
   useEffect(() => {
     const v = wot?.vertice;
     const s = v?.score as TrustScore;
+
+    let trusted = s?.isDirectTrusted();
+    let distrusted = s?.isDirectDistrusted();
+
     setScore({
-      trusted: s?.trusted(),
-      distrusted: s?.distrusted(),
+      trusted,
+      distrusted,
     });
   }, [wot]); // Everytime the wot changes, its a new object
 
-  function trustBtnClicked(e) {
+  const trustBtnClicked = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     let val = !score.trusted ? 1 : 0;
     graphNetwork.publishTrust(event.id, val, EntityType.Item);
-
-    setScore({
-        trusted: !score.trusted,
-        distrusted: false,
-    });
   }
 
-  function distrustBtnClicked(e) {
+  const distrustBtnClicked = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     let val = !score.distrusted ? -1 : 0;
     graphNetwork.publishTrust(event.id, val, EntityType.Item);
-
-    setScore({
-        trusted: false,
-        distrusted: !score.distrusted
-    });
   }
 
   return (
