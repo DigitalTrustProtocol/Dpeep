@@ -1,8 +1,8 @@
 import { IndexableType, Table } from 'dexie';
 import { throttle } from 'lodash';
 
-export class BulkStorage<K,T> {
-  table: Table<T>;
+export class BulkStorage<K, T> {
+  #table: Table<T>;
 
   #saveQueue: Map<K, T> = new Map();
   #updateQueue: Map<K, any> = new Map();
@@ -11,7 +11,7 @@ export class BulkStorage<K,T> {
   #working: boolean = false;
 
   constructor(table: Table<T>) {
-    this.table = table;
+    this.#table = table;
   }
 
   save(id: K, item: T) {
@@ -40,7 +40,7 @@ export class BulkStorage<K,T> {
     const queue = [...this.#saveQueue.values()];
     this.#saveQueue.clear();
 
-    this.table.bulkPut(queue).finally(() => {
+    this.#table.bulkPut(queue).finally(() => {
       this.#working = false;
     });
   }, 1000);
@@ -56,8 +56,12 @@ export class BulkStorage<K,T> {
     const queue = [...this.#updateQueue.entries()]; // create a copy array
     this.#updateQueue.clear();
 
-    for (const [key, item] of queue) {
-      await this.table.update(key as IndexableType, item);
+    try {
+      for (const [key, item] of queue) {
+        await this.#table.update(key as IndexableType, item);
+      }
+    } finally {
+      this.#working = false;
     }
     this.#working = false;
   }, 1000);
@@ -73,16 +77,20 @@ export class BulkStorage<K,T> {
     const queue = [...this.#deleteQueue.values()] as IndexableType[];
     this.#deleteQueue = new Set<K>();
 
-    this.table.bulkDelete(queue).finally(() => {
+    this.#table.bulkDelete(queue).finally(() => {
       this.#working = false;
     });
   }, 1000);
 
+  get instance() {
+    return this.#table;
+  }
+
   async count() {
-    return await this.table.count();
+    return await this.#table.count();
   }
 
   async toArray() {
-    return await this.table.toArray();
+    return await this.#table.toArray();
   }
 }

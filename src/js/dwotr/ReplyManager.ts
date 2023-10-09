@@ -94,7 +94,7 @@ class ReplyManager {
   // This could be for like the last viewed 100 to 1000 events, as the time sort should be good enough for the rest.
 
   async load() {
-    let events = await storage.replies.toArray();
+    let events = await this.table.toArray();
     this.metrics.Loaded = events.length;
 
     let deltaDelete: Array<string> = [];
@@ -113,7 +113,8 @@ class ReplyManager {
     this.metrics.Deleted += deltaDelete.length;
 
     // Remove notes from profiles that are not relevant
-    //if (deltaDelete.length > 0) await storage.notes.bulkDelete(deltaDelete);
+    // if (deltaDelete.length > 0) 
+    //   this.table.delete(deltaDelete); // Delete asynchronously
   }
 
 
