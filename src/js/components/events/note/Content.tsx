@@ -44,7 +44,7 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
   const [name, setName] = useState('');
 
   const wot = useVerticeMonitor(
-    ID(event.id),
+    event?.id ?  ID(event.id) : 0,
     ['badMessage', 'neutralMessage', 'goodMessage'],
     '',
   ) as any;
