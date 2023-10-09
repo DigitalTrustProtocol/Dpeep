@@ -164,12 +164,12 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
             <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
           }
         >
-          {items.map((event) => {
+          {items.map((item) => {
             return (
               <EventComponent
-                key={`${event.id}EC`}
-                id={event.id}
-                event={event}
+                key={`${item.id}EC`}
+                id={item.id}
+                event={item}
                 {...filterOption.eventProps}
               />
             );

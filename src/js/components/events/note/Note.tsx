@@ -1,9 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import classNames from 'classnames';
-import { Filter } from 'nostr-tools';
+//import { Filter } from 'nostr-tools';
 import { Link, route } from 'preact-router';
 
-import useSubscribe from '@/nostr/hooks/useSubscribe.ts';
+//import useSubscribe from '@/nostr/hooks/useSubscribe.ts';
 import { getEventRoot, getNoteReplyingTo } from '@/nostr/utils';
 
 import Key from '../../../nostr/Key';
@@ -17,7 +17,6 @@ import Content from './Content';
 import useVerticeMonitor from '../../../dwotr/hooks/useVerticeMonitor';
 import { ID } from '@/utils/UniqueIds';
 import { RepliesFeed } from '../RepliesFeed';
-
 
 interface NoteProps {
   event: any; // Define the proper type
@@ -44,22 +43,6 @@ const Note: React.FC<NoteProps> = ({
 }) => {
   const replyingTo = useMemo(() => getNoteReplyingTo(event), [event.id]);
 
-  const repliesFilter = useMemo(() => {
-    const filter: Filter = { '#e': [event.id], kinds: [1] };
-    if (showReplies !== Infinity) {
-      filter.limit = showReplies;
-    }
-    return filter;
-  }, [event.id, showReplies]);
-  
-  const repliesFilterFn = useCallback((e) => getNoteReplyingTo(e) === event.id, [event.id]);
-
-  const { events: replies } = useSubscribe({
-    filter: repliesFilter,
-    filterFn: repliesFilterFn,
-    enabled: !!showReplies && standalone,
-  });
-
   if (showRepliedMsg === undefined) {
     showRepliedMsg = standalone;
   }
@@ -68,33 +51,26 @@ const Note: React.FC<NoteProps> = ({
     fullWidth = !isReply && !isQuoting && !isQuote && !asInlineQuote;
   }
 
-  const wot = useVerticeMonitor(ID(event.id), ["badMessage", "neutralMessage", "goodMessage"], "" ) as any;
+  const wot = useVerticeMonitor(
+    ID(event.id),
+    ['badMessage', 'neutralMessage', 'goodMessage'],
+    '',
+  ) as any;
 
-  const computedIsQuote = useMemo(
-    () => isQuote || !!(!standalone && showReplies && replies.length),
-    [isQuote, standalone, showReplies, replies.length],
-  );
-  const computedIsQuoting = useMemo(
-    () => isQuoting || !!(replyingTo && showRepliedMsg),
-    [isQuoting, replyingTo, showRepliedMsg],
-  );
+  //const computedIsQuote = () => isQuote || !!(!standalone && showReplies); // && replies.length),
+  const computedIsQuoting = () => isQuoting || !!(replyingTo && showRepliedMsg);
 
-  const className = useMemo(() => {
-    return classNames({
-      'cursor-pointer transition-all ease-in-out duration-200 hover:bg-neutral-999': !standalone,
-      'pb-2': computedIsQuote,
-      'pt-0': computedIsQuoting,
-      'pt-4': !computedIsQuoting,
-      'border-2 border-neutral-900 rounded-lg my-2': asInlineQuote,
-      'full-width':
-        fullWidth || (!isReply && !computedIsQuoting && !computedIsQuote && !asInlineQuote),
-    });
-  }, [standalone, computedIsQuote, computedIsQuoting, asInlineQuote, fullWidth]);
-
-  let threadRootId = getEventRoot(event);
-  if (!threadRootId) {
-    threadRootId = replyingTo;
-  }
+  // const className = () => {
+  //   return classNames({
+  //     'cursor-pointer transition-all ease-in-out duration-200 hover:bg-neutral-999': !standalone,
+  //     'pb-2': computedIsQuote,
+  //     'pt-0': computedIsQuoting,
+  //     'pt-4': !computedIsQuoting,
+  //     'border-2 border-neutral-900 rounded-lg my-2': asInlineQuote,
+  //     'full-width':
+  //       fullWidth || (!isReply && !computedIsQuoting && !computedIsQuote && !asInlineQuote),
+  //   });
+  // };
 
   function messageClicked(clickEvent) {
     if (standalone) {
@@ -114,38 +90,41 @@ const Note: React.FC<NoteProps> = ({
     route(`/${Key.toNostrBech32Address(event.id, 'note')}`);
   }
 
-  const repliedMsg =
-    replyingTo && showRepliedMsg ? (
-      <EventComponent key={event.id + replyingTo} id={replyingTo} isQuote={true} showReplies={0} />
-    ) : null;
+  let threadRootId = getEventRoot(event) || replyingTo;
 
-  const showThreadBtn = (
-    <Show when={!standalone && !showRepliedMsg && !isReply && !computedIsQuoting && threadRootId}>
-      <Link
-        className="text-iris-blue text-sm block mb-2"
-        href={`/${Key.toNostrBech32Address(threadRootId || '', 'note')}`}
-      >
-        {t('show_thread')}
-      </Link>
-    </Show>
-  );
-
+  const showReplyingTo = replyingTo && showRepliedMsg;
+  const showThread =
+    !standalone && !showRepliedMsg && !isReply && !computedIsQuoting && threadRootId;
   const showRepliesFeed = !!showReplies && standalone;
-
+//  ${className}
   return (
     <>
-      {repliedMsg}
+      <Show when={showReplyingTo}>
+        <EventComponent
+          key={event.id + replyingTo}
+          id={replyingTo!}
+          isQuote={true}
+          showReplies={0}
+        />
+      </Show>
       <div
         key={event.id + 'note'}
-        className={`px-2 md:px-4 pb-2 ${className}`}
+        className={`px-2 md:px-4 pb-2       `}  
         onClick={(e) => messageClicked(e)}
       >
-        {showThreadBtn}
+        <Show when={showThread}>
+          <Link
+            className="text-iris-blue text-sm block mb-2"
+            href={`/${Key.toNostrBech32Address(threadRootId || '', 'note')}`}
+          >
+            {t('show_thread')}
+          </Link>
+        </Show>
         <div className="flex flex-row" onClick={(e) => messageClicked(e)}>
           <Show when={!fullWidth}>
             <Avatar
               event={event}
-              isQuote={computedIsQuote}
+              isQuote={isQuote}
               standalone={standalone}
               fullWidth={fullWidth}
             />
@@ -153,15 +132,16 @@ const Note: React.FC<NoteProps> = ({
           <Content
             event={event}
             standalone={standalone}
-            isQuote={computedIsQuote}
+            isQuote={isQuote}
             asInlineQuote={asInlineQuote}
             fullWidth={fullWidth}
             wot={wot}
           />
         </div>
       </div>
-      <Show when={!(computedIsQuote || asInlineQuote)}>
-        <hr className="opacity-10" />
+      {/* <Show when={!(computedIsQuote || asInlineQuote)}> */}
+      <Show when={!isQuote}>
+        <hr className="opacity-10 mb-2 mt-2" />
       </Show>
       <Show when={showRepliesFeed}>
         <RepliesFeed event={event} showReplies={showReplies} standalone={standalone} />
