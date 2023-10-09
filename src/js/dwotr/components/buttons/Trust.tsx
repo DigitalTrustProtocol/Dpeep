@@ -25,10 +25,8 @@ const Trust = ({ id, showName = false, className, onClick }: Props) => {
     e.preventDefault();
     const newValue = !isTrusted;
 
-    (async () => {
-      let val = newValue ? 1 : 0;
-      await graphNetwork.publishTrust(id, val, EntityType.Key);
-    })();
+    let val = newValue ? 1 : 0;
+    graphNetwork.publishTrust(id, val, EntityType.Key);
 
     onClick?.(e);
   };

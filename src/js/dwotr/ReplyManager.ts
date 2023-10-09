@@ -9,6 +9,7 @@ import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
 import Key from '@/nostr/Key';
 import followManager from './FollowManager';
+import { BulkStorage } from './network/BulkStorage';
 
 
 
@@ -28,25 +29,31 @@ class ReplyManager {
     RelayEvents: 0,
   };
 
-  #saveQueue: Map<number, Event> = new Map();
-  #saving: boolean = false;
-  private saveBulk = throttle(() => {
-    if (this.#saving) {
-      this.saveBulk(); // try again later
-      return;
-    }
+  table = new BulkStorage(storage.replies);
 
-    this.#saving = true;
+  // #saveQueue: Map<number, Event> = new Map();
+  // #saving: boolean = false;
+  // save(event: Event) {
+  //   this.#saveQueue.set(ID(event.id), event);
+  //   this.saveBulk(); // Save to IndexedDB in bulk by throttling
+  // }
+  // private saveBulk = throttle(() => {
+  //   if (this.#saving) {
+  //     this.saveBulk(); // try again later
+  //     return;
+  //   }
 
-    const queue = [...this.#saveQueue.values()];
-    this.#saveQueue = new Map<number, Event>();
+  //   this.#saving = true;
 
-    this.metrics.Saved += queue.length;
+  //   const queue = [...this.#saveQueue.values()];
+  //   this.#saveQueue = new Map<number, Event>();
 
-    storage.replies.bulkPut(queue).finally(() => {
-      this.#saving = false;
-    });
-  }, 1000);
+  //   this.metrics.Saved += queue.length;
+
+  //   storage.replies.bulkPut(queue).finally(() => {
+  //     this.#saving = false;
+  //   });
+  // }, 1000);
 
 
   isReplyEvent(event: Event) : boolean {
@@ -76,13 +83,11 @@ class ReplyManager {
     let repliesTo = this.#addEvent(event);
     if(repliesTo.length == 0) return;
 
-    this.save(event); // Save all for now
+    this.table.save(event.id, event); // Save all for now, asynchronusly
 
     for(let parentId of repliesTo) {
       this.onEvent.dispatch(parentId, event);
     }
-
-    //this.onEvent.dispatch(authorId, event);
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
@@ -111,10 +116,6 @@ class ReplyManager {
     //if (deltaDelete.length > 0) await storage.notes.bulkDelete(deltaDelete);
   }
 
-  save(event: Event) {
-    this.#saveQueue.set(ID(event.id), event);
-    this.saveBulk(); // Save to IndexedDB in bulk by throttling
-  }
 
   // createEvent() {
   //   const event = {

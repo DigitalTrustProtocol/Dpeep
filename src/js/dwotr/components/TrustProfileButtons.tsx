@@ -5,6 +5,8 @@ import { EntityType } from '../model/Graph';
 import useVerticeMonitor from '../hooks/useVerticeMonitor';
 import TrustScore from '../model/TrustScore';
 import { ID } from '@/utils/UniqueIds';
+import profileManager from '../ProfileManager';
+import { Trust1Kind } from '../network/WOTPubSub';
 
 const TrustProfileButtons = ({str}: any) => {
   const [state, setState] = useState({
@@ -48,10 +50,19 @@ const TrustProfileButtons = ({str}: any) => {
       processing: true,
     });
 
-    (async () => {
-      let val = !state.trusted ? 1 : 0;
-      await graphNetwork.publishTrust(str, val, EntityType.Key);
-    })();
+    // Once the all trusts 
+    // Map subscribe profile
+
+    let val = !state.trusted ? 1 : 0;
+    
+    if(val == 1) {
+      let id = ID(str);
+    
+      profileManager.once(id, [Trust1Kind]);
+      profileManager.mapProfiles([id]);
+    }
+
+    graphNetwork.publishTrust(str, val, EntityType.Key);
   }
 
   function distrustBtnClicked(e) {
@@ -64,11 +75,9 @@ const TrustProfileButtons = ({str}: any) => {
       distrusted: !state.distrusted,
       processing: true,
     });
-
-    (async () => {
-      let val = !state.distrusted ? -1 : 0;
-      await graphNetwork.publishTrust(str, val, EntityType.Key);
-    })();
+       
+    let val = !state.distrusted ? -1 : 0;
+    graphNetwork.publishTrust(str, val, EntityType.Key);
   }
 
   return (

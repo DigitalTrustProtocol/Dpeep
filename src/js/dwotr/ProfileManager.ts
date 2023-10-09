@@ -122,7 +122,7 @@ class ProfileManager {
   //--------------------------------------------------------------------------------
   // Requests a profile from the API
   //--------------------------------------------------------------------------------
-  once(profileId: UID) {
+  once(profileId: UID, kinds =  [0], since = EPOCH) {
     if(this.relayProfileRequest.has(profileId)) return; // Already requested
     this.relayProfileRequest.add(profileId);
     
@@ -134,8 +134,8 @@ class ProfileManager {
     let options = {
       filter: {
         authors: [STR(profileId)],
-        kinds: [0],
-        since: EPOCH,
+        kinds,
+        since,
       } as Filter,
       onClose,
     } as FeedOptions;

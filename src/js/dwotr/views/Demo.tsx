@@ -138,12 +138,12 @@ const yegorpetrovGraphData = [
 
 const nvkGraphData = [{ from: nvk, to: jack, val: -1 }];
 
-async function addEdge(props: any) {
+function addEdge(props: any) {
   let { from, to } = props;
   //from = Key.toNostrHexAddress(from) as string;
   //to = Key.toNostrHexAddress(to) as string;
 
-  return await graphNetwork.setTrust({ ...props, from, to }, true);
+  return graphNetwork.setTrust({ ...props, from, to }, true);
 }
 
 function trust(from: string, to: string, val: number) {
@@ -311,15 +311,15 @@ const Demo = (props: TestDataProps) => {
       let count = 0;
       for (let i = 0; i < 10; i++) {
         let rpub = ensureUserExists(hdkey, count++);
-        await addEdge(trust(pub, rpub, 1));
+        addEdge(trust(pub, rpub, 1));
         for (let x = 0; x < 100; x++) {
           
           let rpub2 = ensureUserExists(hdkey, count++);
-          await addEdge(trust(rpub, rpub2, 1));
+          addEdge(trust(rpub, rpub2, 1));
           for (let y = 0; y < 100; y++) {
             
             let rpub3 = ensureUserExists(hdkey, count++);
-            await addEdge(trust(rpub2, rpub3, 1));
+            addEdge(trust(rpub2, rpub3, 1));
           }
 
           let percent = Math.round((count * 100) / (10*100*100));

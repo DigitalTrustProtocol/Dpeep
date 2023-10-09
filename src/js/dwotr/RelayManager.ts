@@ -22,6 +22,8 @@ class RelayManager {
 
     }
 
+    
+
     enabledRelays() : Array<string> {
         if(this.activeRelays.length === 0) {
             this.activeRelays = Relays.enabledRelays();

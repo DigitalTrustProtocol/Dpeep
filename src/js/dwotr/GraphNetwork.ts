@@ -1,7 +1,7 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
 import { MAX_DEGREE } from './model/TrustScore';
-import { debounce } from 'lodash';
+import { debounce, throttle } from 'lodash';
 import Key from '@/nostr/Key';
 import { ID } from '@/utils/UniqueIds';
 
@@ -12,6 +12,7 @@ import wotPubSub from './network/WOTPubSub';
 import storage from './Storage';
 import relaySubscription from './network/RelaySubscription';
 import profileManager from './ProfileManager';
+import { BulkStorage } from './network/BulkStorage';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -37,11 +38,15 @@ class GraphNetwork {
   submitTrustIndex = {};
   profilesLoaded = false;
 
+  table = new BulkStorage(storage.edges);
+
   metrics = {
     Vertices: 0,
     Edges: 0,
     SubscribedtoRelays: 0,
   };
+
+
 
   async init(source: string) {
     this.sourceKey = source;
@@ -88,18 +93,18 @@ class GraphNetwork {
     }
   }
 
-  async publishTrust(
+  publishTrust(
     to: string,
     val: number = 0,
     entityType: EntityType = EntityType.Key,
     comment?: string,
     context: string = 'nostr',
-  ): Promise<void> {
+  ): void {
     // Add the trust to the local graph, and update the score
     const timestamp = getNostrTime();
     const props = { from: this.sourceKey, to, val, entityType, context, note: comment, timestamp };
 
-    const { outV, inV, preVal, change } = await this.setTrust(props, false);
+    const { outV, inV, preVal, change } = this.setTrust(props, false);
 
     if (!change) return;
     // Update the vertice monitors
@@ -218,15 +223,15 @@ class GraphNetwork {
   }
 
 
-  async setTrust(props: any, isExternal: boolean): Promise<any> {
-    let { edge, preVal, change } = await this.putEdge(props, isExternal);
+  setTrust(props: any, isExternal: boolean) {
+    let { edge, preVal, change } = this.putEdge(props, isExternal);
     let outV = edge?.out;
     let inV = edge?.in;
 
     return { outV, inV, edge, preVal, change };
   }
 
-  async putEdge(props: any, isExternal: boolean) {
+  putEdge(props: any, isExternal: boolean) {
     let { from, to, val, entityType, context, note, timestamp } = props;
     let type = 1; // Trust1
     let preVal = undefined;
@@ -248,7 +253,7 @@ class GraphNetwork {
       record.context = context;
       record.note = note;
       record.timestamp = timestamp;
-      await storage.edges.put(record);
+      this.table.save(record.key, record);
 
       edge = this.g.addEdge(record, false); // Add the record to the graph and return the graph edge
 
@@ -273,11 +278,11 @@ class GraphNetwork {
 
         if (edge.val == 0 && isExternal) {
           // Delete the edge if the value is 0 / neutral and it is an external event
-          await storage.edges.delete(key);
+          this.table.delete(key);
           this.g.removeEdge(edge);
           edge = undefined;
         } else {
-          await storage.edges.update(key, updateObject);
+          this.table.update(key, updateObject);
         }
 
         change = true;
@@ -287,7 +292,7 @@ class GraphNetwork {
     return { edge, preVal, change };
   }
 
-  async setTrustAndProcess(
+  setTrustAndProcess(
     to: string,
     from: string,
     entityType: EntityType,
@@ -301,7 +306,7 @@ class GraphNetwork {
     to = Key.toNostrHexAddress(to) as string;
 
     // Add the Trust Event to the memory Graph and IndexedDB
-    let { outV, inV, change } = await graphNetwork.setTrust(
+    let { outV, inV, change } = graphNetwork.setTrust(
       { from, to, val, note, context, entityType, timestamp },
       true,
     );

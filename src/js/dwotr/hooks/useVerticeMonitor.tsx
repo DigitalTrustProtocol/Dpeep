@@ -14,7 +14,7 @@ const useVerticeMonitor = (id: UID, options?: any, option?: any) => {
 
         function findOption(vertice: Vertice) {
             let option = verticeMonitor.findOption(vertice, options);
-            setState({ option, vertice }); 
+            setState({ id, options, option, vertice }); 
         }
 
         const cb = (e: Vertice) => {

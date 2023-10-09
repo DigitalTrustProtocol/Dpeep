@@ -16,10 +16,9 @@ import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 import Globe from '@/dwotr/components/buttons/Globe';
 import { useKey } from '@/dwotr/hooks/useKey';
 import graphNetwork from '@/dwotr/GraphNetwork';
-import { Event } from 'nostr-tools';
-import { ContactsKind } from '@/dwotr/network/WOTPubSub';
-import relayManager from '@/dwotr/RelayManager';
 import relaySubscription from '@/dwotr/network/RelaySubscription';
+// import Reload from '@/dwotr/components/buttons/Reload';
+// import { useReloadProfile } from '@/dwotr/hooks/useReloadProfile';
 
 const ProfileStats = ({ address }) => {
   const { uid: profileId, myId, bech32Key, hexKey, isMe } = useKey(address);
@@ -30,6 +29,8 @@ const ProfileStats = ({ address }) => {
     myId,
     loadGlobal,
   );
+
+  //const { active, setActive } = useReloadProfile(profileId);
 
   return (
     <div>
@@ -49,6 +50,7 @@ const ProfileStats = ({ address }) => {
           alt="Load global followers events"
           className="flex justify-end"
         />
+        {/* <Reload active={active} onClick={setActive} size={22} title="Reload from rely servers" className="ml-auto mt-0" /> */}
       </div>
       <Show when={!isMe && knownFollowers.length > 0}>
         <div className="text-neutral-500">

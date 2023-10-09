@@ -243,8 +243,6 @@ class EventManager {
 
 
   async trustEvent(event: Event) {
-    let authorId = ID(event.pubkey);
-    if (blockManager.isBlocked(authorId)) return;
 
     let { p: pTags, e: eTags, val, pubKey, note, context, timestamp } = this.parseTrustEvent(event);
 
@@ -253,7 +251,7 @@ class EventManager {
     // and only process the event if it is newer than the current data
 
     for (const p of pTags) {
-      await graphNetwork.setTrustAndProcess(
+      graphNetwork.setTrustAndProcess(
         p,
         pubKey,
         EntityType.Key,
@@ -265,7 +263,7 @@ class EventManager {
     }
 
     for (const e of eTags) {
-      await graphNetwork.setTrustAndProcess(
+      graphNetwork.setTrustAndProcess(
         e,
         pubKey,
         EntityType.Item,

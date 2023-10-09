@@ -17,27 +17,22 @@ const TrustReactionButtons = (props) => {
   useEffect(() => {
     const v = wot?.vertice;
     const s = v?.score as TrustScore;
-    setScore((prevState) => ({
-      ...prevState,
-
-      trusted: s?.isDirectTrusted(),
-      distrusted: s?.isDirectDistrusted(),
-    }));
+    setScore({
+      trusted: s?.trusted(),
+      distrusted: s?.distrusted(),
+    });
   }, [wot]); // Everytime the wot changes, its a new object
 
   function trustBtnClicked(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    setScore((prevState) => {
-      let val = !prevState.trusted ? 1 : 0;
-      graphNetwork.publishTrust(event.id, val, EntityType.Item);
+    let val = !score.trusted ? 1 : 0;
+    graphNetwork.publishTrust(event.id, val, EntityType.Item);
 
-      return {
-        ...prevState,
-        trusted: !prevState.trusted,
+    setScore({
+        trusted: !score.trusted,
         distrusted: false,
-      };
     });
   }
 
@@ -45,15 +40,12 @@ const TrustReactionButtons = (props) => {
     e.preventDefault();
     e.stopPropagation();
 
-    setScore((prevState) => {
-      let val = !prevState.distrusted ? -1 : 0;
-      graphNetwork.publishTrust(event.id, val, EntityType.Item);
+    let val = !score.distrusted ? -1 : 0;
+    graphNetwork.publishTrust(event.id, val, EntityType.Item);
 
-      return {
-        ...prevState,
+    setScore({
         trusted: false,
-        distrusted: !prevState.distrusted,
-      };
+        distrusted: !score.distrusted
     });
   }
 
