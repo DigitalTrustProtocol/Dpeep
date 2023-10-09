@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import EventComponent from '@/components/events/EventComponent';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
@@ -37,7 +37,7 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
 
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
-  const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
+  //const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
 
   const filterOption = filterOptions[filterOptionIndex];
 
@@ -90,12 +90,12 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
         feedTopRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }
-    setInfiniteScrollKey(infiniteScrollKey + 1);
+    //setInfiniteScrollKey(infiniteScrollKey + 1);
 
     refresh(); // Add new events
   };
 
-  const infiniteScrollKeyString = `${infiniteScrollKey}-${displayAs}-${filterOption.name}`;
+  //const infiniteScrollKeyString = `${infiniteScrollKey}-${displayAs}-${filterOption.name}`;
 
   //let items = events.filter((event) => !hiddenEvents.has(event.id));
   let items = events;

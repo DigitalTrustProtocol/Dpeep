@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
@@ -7,6 +7,8 @@ import EventComponent from './EventComponent';
 import { ID } from '@/utils/UniqueIds';
 import { RepliesCursor } from '@/dwotr/network/RepliesCursor';
 import replyManager from '@/dwotr/ReplyManager';
+import Show from '../helpers/Show';
+import NewEventsButton from '@/dwotr/components/NewEventsButton';
 
 type RepliesFeedProps = {
   event: Event;
@@ -15,6 +17,7 @@ type RepliesFeedProps = {
 };
 
 export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps) => {
+  const feedTopRef = useRef<HTMLDivElement>(null);
   const [filterOption, setFilterOption] = useState<FeedOptions>();
 
   const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
@@ -42,9 +45,26 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
     setFilterOption(opt);
   }, [event.id, showReplies]);
 
+  const refreshClick = (e) => {
+    if (feedTopRef.current) {
+      const currentScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+
+      // only scroll up
+      if (currentScrollTop > feedTopRef.current.offsetTop) {
+        feedTopRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    refresh(); // Add new events
+  };
+
   return (
     <>
-    
+      <div ref={feedTopRef} />
+      <Show when={hasRefresh}>
+        <NewEventsButton onClick={refreshClick} />
+        <hr className="opacity-10" />
+      </Show>
       <InfiniteScroll
         dataLength={events.length} //This is important field to render the next data
         next={loadMore}
