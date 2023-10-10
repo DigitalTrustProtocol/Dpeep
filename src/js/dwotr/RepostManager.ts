@@ -51,7 +51,7 @@ class RepostManager {
 
     this.#addEvent(event);
 
-    this.table.save(event.id, event); // Save all for now, asynchronusly
+    this.save(event); // Save all for now, asynchronusly
 
     this.onEvent.dispatch(ID(event.id), event);
   }
@@ -81,6 +81,10 @@ class RepostManager {
     // Remove notes from profiles that are not relevant
     // if (deltaDelete.length > 0) 
     //   this.table.delete(deltaDelete); // Delete asynchronously
+  }
+
+  save(event: Event) {
+    this.table.save(ID(event.id), event);
   }
 
 

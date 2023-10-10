@@ -11,6 +11,7 @@ import eventManager from './EventManager';
 import noteManager from './NoteManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import { ReactionEvent } from './network/types';
+import { BulkStorage } from './network/BulkStorage';
 
 
 
@@ -74,10 +75,6 @@ class ReactionManager {
 
   // Map Key is : AuthorId, SortedMap is eventId, created_at
   authors: Map<UID, ReactionMap> = new Map();
-  //reactions: Map<UID, Reaction> = new Map();
-
-  #saveQueue: Map<number, ReactionRecord> = new Map();
-  #saving: boolean = false;
 
   metrics = {
     TotalMemory: 0,
@@ -86,23 +83,27 @@ class ReactionManager {
     Saved: 0,
   };
 
-  saveBulk = throttle(() => {
-    if (this.#saving) {
-      this.saveBulk(); // try again later
-      return;
-    }
+  table = new BulkStorage(storage.reactions);
 
-    this.#saving = true;
+  // #saveQueue: Map<number, ReactionRecord> = new Map();
+  // #saving: boolean = false;
+  // saveBulk = throttle(() => {
+  //   if (this.#saving) {
+  //     this.saveBulk(); // try again later
+  //     return;
+  //   }
 
-    const queue = [...this.#saveQueue.values()];
-    this.#saveQueue = new Map<number, ReactionRecord>();
+  //   this.#saving = true;
 
-    this.metrics.Saved += queue.length;
+  //   const queue = [...this.#saveQueue.values()];
+  //   this.#saveQueue = new Map<number, ReactionRecord>();
 
-    storage.reactions.bulkPut(queue).finally(() => {
-      this.#saving = false;
-    });
-  }, 1000);
+  //   this.metrics.Saved += queue.length;
+
+  //   storage.reactions.bulkPut(queue).finally(() => {
+  //     this.#saving = false;
+  //   });
+  // }, 1000);
 
   getLikes(eventId: UID): Set<UID> {
     return this.#getLikes(eventId);
@@ -239,7 +240,7 @@ class ReactionManager {
   }
 
   async load() {
-    let records = await storage.reactions.toArray();
+    let records = await this.table.toArray();
     this.metrics.Loaded = records.length;
 
     let deltaDelete: Array<string> = [];
@@ -269,9 +270,8 @@ class ReactionManager {
     }
   }
 
-  async save(record: ReactionRecord) {
-    this.#saveQueue.set(ID(record.id), record);
-    this.saveBulk(); // Save to IndexedDB in bulk by throttling
+  save(record: ReactionRecord) {
+    this.table.save(ID(record.id), record);
   }
 
   #relayCallback(event: Event) {

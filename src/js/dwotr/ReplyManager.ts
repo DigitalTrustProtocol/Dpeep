@@ -32,31 +32,6 @@ class ReplyManager {
 
   table = new BulkStorage(storage.replies);
 
-  // #saveQueue: Map<number, Event> = new Map();
-  // #saving: boolean = false;
-  // save(event: Event) {
-  //   this.#saveQueue.set(ID(event.id), event);
-  //   this.saveBulk(); // Save to IndexedDB in bulk by throttling
-  // }
-  // private saveBulk = throttle(() => {
-  //   if (this.#saving) {
-  //     this.saveBulk(); // try again later
-  //     return;
-  //   }
-
-  //   this.#saving = true;
-
-  //   const queue = [...this.#saveQueue.values()];
-  //   this.#saveQueue = new Map<number, Event>();
-
-  //   this.metrics.Saved += queue.length;
-
-  //   storage.replies.bulkPut(queue).finally(() => {
-  //     this.#saving = false;
-  //   });
-  // }, 1000);
-
-
   isReplyEvent(event: Event) : boolean {
     return !!getNoteReplyingTo(event);
   }
@@ -84,7 +59,7 @@ class ReplyManager {
     let repliesTo = this.#addEvent(event);
     if(repliesTo.length == 0) return;
 
-    this.table.save(event.id, event); // Save all for now, asynchronusly
+    this.save(event); // Save all for now, asynchronusly
 
     for(let parentId of repliesTo) {
       this.onEvent.dispatch(parentId, event);
@@ -118,45 +93,9 @@ class ReplyManager {
     //   this.table.delete(deltaDelete); // Delete asynchronously
   }
 
-
-  // createEvent() {
-  //   const event = {
-  //     kind: TextKind,
-  //     content: '',
-  //     created_at: getNostrTime(),
-  //     // tags: [
-  //     //   ['e', eventId], // Event ID
-  //     //   ['p', eventPubKey], // Profile ID
-  //     // ],
-  //   };
-
-  //   wotPubSub.sign(event);
-
-  //   return event;
-  // }
-
-  // async onceNote(id: UID) {
-  //   if (this.notes.has(id)) return;
-
-  //   let eventId = STR(id) as string;
-
-  //   let events = await relaySubscription.getEventByIds([eventId], [TextKind]);
-
-  //   return events?.[0];
-  // }
-  // requestNote(id: UID) {
-  //   if (this.notes.has(id)) return;
-
-  //   wotPubSub.getEvent(id, undefined, 1000);
-  // }
-
-
-  // ---- Private methods ----
-
-  // #getEventRecord(event: Event) {
-  //   const { uId, authorId, ...safeProperties } = event;
-  //   return safeProperties;
-  // }
+  save(event: Event) {
+    this.table.save(ID(event.id), event);
+  }
 
   #canAdd(note: Event): boolean {
     let eventId = ID(note.id);

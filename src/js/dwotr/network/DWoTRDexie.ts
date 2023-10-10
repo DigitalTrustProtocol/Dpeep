@@ -25,7 +25,7 @@ export class DWoTRDexie extends Dexie {
   constructor() {
     super(DB_NAME);
 
-    this.version(11).stores({
+    this.version(12).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
