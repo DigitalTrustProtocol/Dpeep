@@ -69,10 +69,12 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
     loadMoreCount: 10,
     // Provide the loaded state for a batch items to tell the hook
     // whether the `loadMore` should be triggered or not
-    isItemLoaded: (loadIndex) => batchLoaded[loadIndex] || !hasMore,
+    isItemLoaded: (loadIndex) => {
+      console.log('isItemLoaded: ', loadIndex, " - batchLoaded.current[loadIndex]: ", batchLoaded.current[loadIndex], " - hasMore: ", hasMore);
+      return batchLoaded.current[loadIndex]; // || !hasMore
+    },
     // The callback will be invoked when more data needs to be loaded
     loadMore: (e) => {
-      //console.log('Load more: ', e);
       loadMore(); // Loads more data into the items array
       batchLoaded.current[e.loadIndex] = true;
     },
@@ -104,7 +106,6 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
     refresh(); // Add new events
   };
 
-  //let items = events;
 
   return (
     <>
@@ -121,21 +122,6 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
           }}
         />
       </Show>
-      {/* <Show when={showDisplayAs !== false}>
-        <DisplaySelector
-          onDisplayChange={(displayAs) => {
-            setDisplayAs(displayAs);
-            Helpers.setUrlParameter('display', displayAs === 'grid' ? 'grid' : null);
-          }}
-          activeDisplay={displayAs}
-        />
-      </Show> */}
-      {/* <Show when={showEmptyMessage}>
-        <div className="m-2 md:mx-4">{emptyMessage || t('no_posts_yet')}</div>
-      </Show> */}
-      {/* <Show when={displayAs === 'grid'}>
-        <ImageGrid key={infiniteScrollKeyString} events={events} loadMore={loadMore} />
-      </Show> */}
 
       <hr className="opacity-10" />
       <Show when={hasRefresh}>
@@ -145,7 +131,7 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
 
       <Show when={displayAs === 'feed'}>
         <div
-          className="h-screen overflow-auto"
+          className="h-[700px] overflow-auto"
           ref={outerRef as any}
         >
           <div ref={innerRef as any}>

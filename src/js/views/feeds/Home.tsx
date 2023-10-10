@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import {Filter} from 'nostr-tools';
 import CreateNoteForm from '@/components/create/CreateNoteForm';
 
-//import FeedComponent from '@/components/feed/Feed';
-import Feed from '@/dwotr/components/feed/Feed';
+import Feed from '@/components/feed/Feed';
+//import Feed from '@/dwotr/components/feed/Feed';
 
 import Show from '@/components/helpers/Show';
 import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
