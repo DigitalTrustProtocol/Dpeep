@@ -204,7 +204,7 @@ export default function NavigationSidebar() {
         <img src="/img/dwotr/logo30.png" width="30" height="30" />
         <h1 className="hidden xl:flex text-3xl">Dpeep</h1>
       </a>
-      <a href="https://github.com/DigitalTrustProtocol/DWoTR-Documentation/blob/main/Trust.md" target="_blank"><small className="pl-3">Web of Trust</small></a>
+      {/* <a href="https://github.com/DigitalTrustProtocol/DWoTR-Documentation/blob/main/Trust.md" target="_blank"><small className="pl-3">Web of Trust</small></a> */}
       <div className="flex flex-col gap-2">{MENU_ITEMS.map((a: any) => renderMenuItem(a))}</div>
       <div class="py-2 flex-1">
         <button

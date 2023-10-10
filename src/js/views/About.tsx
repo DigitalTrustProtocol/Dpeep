@@ -103,14 +103,14 @@ const About: React.FC<RouteProps> = () => (
             <h3>Follow</h3>
             <div className="flex flex-row items-center w-full justify-between">
               <Link href={`/${IRIS_INFO_ACCOUNT}`} className="flex flex-row items-center gap-2">
-                <Avatar str={IRIS_INFO_ACCOUNT} width={40} />
+                <Avatar str={IRIS_INFO_ACCOUNT} width={40} loadOnDefault={true} />
                 <Name pub={IRIS_INFO_ACCOUNT} placeholder="Iris" />
               </Link>
               <Follow className="btn btn-neutral btn-sm" id={IRIS_INFO_ACCOUNT} />
             </div>
             <div className="flex flex-row items-center w-full justify-between py-5">
               <Link href={`/${KEUTMANN_INFO_ACCOUNT}`} className="flex flex-row items-center gap-2">
-                <Avatar str={KEUTMANN_INFO_ACCOUNT} width={40} />
+                <Avatar str={KEUTMANN_INFO_ACCOUNT} width={40} loadOnDefault={true} />
                 <Name pub={KEUTMANN_INFO_ACCOUNT} placeholder="Iris" />
               </Link>
               <Follow className="btn btn-neutral btn-sm" id={KEUTMANN_INFO_ACCOUNT} />
