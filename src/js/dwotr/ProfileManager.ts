@@ -18,7 +18,7 @@ import wotPubSub, { FeedOptions } from './network/WOTPubSub';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
 
-type OnProfile = (profile: ProfileMemory, state: any) => void;
+//type OnProfile = (profile: ProfileMemory, state: any) => void;
 
 class ProfileManager {
   loaded: boolean = false;
@@ -26,7 +26,7 @@ class ProfileManager {
   #saving: boolean = false;
   history: { [key: string]: any } = {};
 
-  logging: boolean = true;
+  logging: boolean = false;
 
   // Limits the relay requests to one per profile
   relayProfileRequest = new Set<UID>();

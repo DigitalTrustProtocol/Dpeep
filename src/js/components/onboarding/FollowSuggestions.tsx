@@ -5,6 +5,7 @@ import Avatar from '@/components/user/Avatar';
 import Name from '@/components/user/Name';
 import Key from '@/nostr/Key';
 import { translate as t } from '@/translations/Translation.mjs';
+import { useEffect } from 'preact/hooks';
 
 const SUGGESTED_FOLLOWS = [
   [
@@ -34,9 +35,19 @@ const SUGGESTED_FOLLOWS = [
     'npub1hu3hdctm5nkzd8gslnyedfr5ddz3z547jqcl5j88g4fame2jd08qh6h8nh',
     '"Lover of memes, maker of videos"',
   ], // carla
-];
+  , // fiatjaf
+  [
+    'npub1srpfc36pes9urzcnmrev38c9ypewahmggqc56dj7czr4k6zd4qcs4m5mn8',
+    '"Decentralized Web of Trust Reputation."',
+  ], // Carsten Keutmann
+] as [string, string][];
 
 export default function FollowSuggestions({ setShowFollowSuggestions }) {
+
+  
+
+
+
   return (
     <div className="flex flex-col flex-grow px-2 py-4 md:px-4 gap-2">
       <p className="text-base">{t('follow_someone_info')}</p>
@@ -44,7 +55,7 @@ export default function FollowSuggestions({ setShowFollowSuggestions }) {
         <div key={pub + 'suggestion'} className="flex items-center space-x-4">
           <Link href={`/${pub}`} className="flex flex-grow items-center space-x-2">
             <div className="w-10 h-10">
-              <Avatar str={pub} width={40} />
+              <Avatar str={pub} width={40} loadOnDefault={true} />
             </div>
             <div className="flex-grow">
               <Name pub={pub} placeholder="Suggested follow" />

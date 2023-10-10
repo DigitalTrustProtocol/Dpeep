@@ -16,6 +16,7 @@ type Props = {
   activity?: string;
   onClick?: () => void;
   width: number;
+  loadOnDefault?: boolean;
 };
 
 // Create a profile state object from the profile data
@@ -34,7 +35,7 @@ function getProfileState(profile: any, hasError: boolean, props: Props) {
 const MyAvatar: React.FC<Props> = (props) => {
   const { uid } = useKey(props.str);
   const [hasError, setHasError] = useState<boolean>(false);
-  const { profile } = useProfile(uid);
+  const { profile } = useProfile(uid, props.loadOnDefault);
   const [state, setState] = useState<any>(null); // Will be set in useEffect
 
   useEffect(() => {
