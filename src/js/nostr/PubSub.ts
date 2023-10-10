@@ -1,13 +1,13 @@
 import throttle from 'lodash/throttle';
 import { Event, Filter, matchFilter } from 'nostr-tools';
 
-import EventDB from '@/nostr/EventDB';
+//import EventDB from '@/nostr/EventDB';
 import getRelayPool from '@/nostr/relayPool';
 
 import Events from '../nostr/Events';
 import localState from '../state/LocalState.ts';
 
-import IndexedDB from './IndexedDB';
+//import IndexedDB from './IndexedDB';
 import Relays from './Relays';
 
 type Subscription = {
@@ -62,7 +62,7 @@ const PubSub = {
 
     // TODO if filter.ids & found in EventDB, don't ask others
 
-    callback && EventDB.find(filter, callback);
+    //callback && EventDB.find(filter, callback);
 
     // if (dev.indexedDbLoad !== false) {
     //   setTimeout(() => {

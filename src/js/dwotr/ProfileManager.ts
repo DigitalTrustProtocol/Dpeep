@@ -69,7 +69,7 @@ class ProfileManager {
 
   //--------------------------------------------------------------------------------
   // Mapping profiles from relay server
-  mapProfiles(profileIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>) {
+  mapProfiles(profileIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>, forceFullSync = false) {
     let latestSync: Array<UID> = [];
     let fullSync: Array<UID> = [];
 
@@ -77,7 +77,7 @@ class ProfileManager {
       if (!id) continue;
       let profile = this.getMemoryProfile(id);
 
-      if (profile.syncronized) {
+      if (profile.syncronized && !forceFullSync) {
         latestSync.push(id);
       } else {
         fullSync.push(id);

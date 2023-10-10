@@ -9,7 +9,7 @@ import {
 } from 'nostr-tools';
 import { EventTemplate } from 'nostr-tools';
 
-import EventDB from '@/nostr/EventDB';
+//import EventDB from '@/nostr/EventDB';
 import {
   // getEventReplyingTo,
   // getEventRoot,
@@ -32,13 +32,14 @@ import Key from './Key';
 import PubSub, { Unsubscribe } from './PubSub';
 //import SocialNetwork from './SocialNetwork';
 import SortedLimitedEventSet from './SortedLimitedEventSet';
-import muteManager from '@/dwotr/MuteManager.ts';
-import blockManager from '@/dwotr/BlockManager.ts';
+import eventManager from '@/dwotr/EventManager.ts';
+//import muteManager from '@/dwotr/MuteManager.ts';
+//import blockManager from '@/dwotr/BlockManager.ts';
 
-const startTime = Date.now() / 1000;
+//const startTime = Date.now() / 1000;
 
 const MAX_LATEST_MSGS = 500;
-const MAX_ZAPS_BY_NOTE = 1000;
+//const MAX_ZAPS_BY_NOTE = 1000;
 
 const DEFAULT_GLOBAL_FILTER = {
   maxFollowDistance: 3,
@@ -559,25 +560,25 @@ const Events = {
     }
     this.eventsMetaDb.upsert(id, { relays: new Set([url]) });
   },
-  handleNextFutureEvent() {
-    if (this.futureEventIds.size === 0) {
-      return;
-    }
-    clearTimeout(this.futureEventTimeout);
-    const nextEventId = this.futureEventIds.first();
-    const nextEvent = nextEventId && EventDB.get(nextEventId);
-    if (!nextEvent) {
-      return;
-    }
-    this.futureEventTimeout = setTimeout(
-      () => {
-        this.futureEventIds.delete(nextEvent.id);
-        this.handle(nextEvent, true);
-        this.handleNextFutureEvent();
-      },
-      (nextEvent.created_at - Date.now() / 1000) * 1000,
-    );
-  },
+  // handleNextFutureEvent() {
+  //   if (this.futureEventIds.size === 0) {
+  //     return;
+  //   }
+  //   clearTimeout(this.futureEventTimeout);
+  //   const nextEventId = this.futureEventIds.first();
+  //   const nextEvent = nextEventId && EventDB.get(nextEventId);
+  //   if (!nextEvent) {
+  //     return;
+  //   }
+  //   this.futureEventTimeout = setTimeout(
+  //     () => {
+  //       this.futureEventIds.delete(nextEvent.id);
+  //       this.handle(nextEvent, true);
+  //       this.handleNextFutureEvent();
+  //     },
+  //     (nextEvent.created_at - Date.now() / 1000) * 1000,
+  //   );
+  // },
   // isMuted(event: Event) {
   //   return muteManager.isMuted(ID(event.pubkey));
   // },
@@ -619,7 +620,7 @@ const Events = {
     }
     let count = 0;
     for (const id of Events.notifications.eventIds) {
-      const event = EventDB.get(id);
+      const event = eventManager.eventIndex.get(ID(id));
       if (event && event.created_at > Events.notificationsSeenTime) {
         count++;
       } else {
@@ -649,7 +650,7 @@ const Events = {
       .reverse()
       .slice(0, 10);
     for (const ref of referredEvents || []) {
-      const referredEvent = EventDB.get(ref[1]);
+      const referredEvent = eventManager.eventIndex.get(ID(ref[1]));
       if (referredEvent) {
         PubSub.publish(referredEvent);
       }

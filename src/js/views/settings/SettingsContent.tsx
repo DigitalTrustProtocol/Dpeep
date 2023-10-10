@@ -1,13 +1,11 @@
 import IrisAccount from './irisaccount/IrisAccount.tsx';
 import Account from './Account.js';
 import Appearance from './Appearance';
-import Backup from './Backup';
 import ContentPage from './Content';
 import Dev from './Dev';
 import Language from './Language';
 import Network from './Network.js';
 import Payments from './Payments';
-import SocialNetwork from './SocialNetwork';
 import SettingsDWoTR from '@/dwotr/views/Settings.tsx';
 import MetricsView from '@/dwotr/views/Metrics.tsx';
 
@@ -21,7 +19,7 @@ const SettingsContent = (props) => {
     payments: Payments,
     //backup: Backup, // Disabled for now, as it is not working with the WoT network
     //social_network: SocialNetwork,
-    iris_account: IrisAccount,
+    //iris_account: IrisAccount,
     dev: Dev,
     dwotr: SettingsDWoTR,
     metrics: MetricsView,

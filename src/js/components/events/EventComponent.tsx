@@ -1,7 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 //import classNames from 'classnames';
 
-import EventDB from '@/nostr/EventDB';
 import { isRepost } from '@/nostr/utils.ts';
 import { EventID } from '@/utils/Hex/Hex.ts';
 
@@ -16,6 +15,7 @@ import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
 import contextLoader from '@/dwotr/network/DependencyLoader';
+import eventManager from '@/dwotr/EventManager';
 
 declare global {
   interface Window {
@@ -72,7 +72,7 @@ const EventComponent = (props: EventComponentProps) => {
     // }
     if (!event) {
 
-      let e = EventDB.get(hex);
+      let e = eventManager.eventIndex.get(ID(hex));
       if(!e) {
         // Failsafe in case the event is not in the DB, should only happen rarely
         contextLoader.getEventsByIdWithContext([ID(hex)]).then((list: Array<Event>) => {

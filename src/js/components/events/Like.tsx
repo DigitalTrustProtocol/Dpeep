@@ -3,7 +3,6 @@ import { HeartIcon as HeartIconFull } from '@heroicons/react/24/solid';
 import { Event } from 'nostr-tools';
 import { route } from 'preact-router';
 
-import EventDB from '@/nostr/EventDB';
 import { getEventReplyingTo } from '@/nostr/utils';
 
 import Key from '../../nostr/Key';
@@ -12,6 +11,7 @@ import Name from '../user/Name';
 import EventComponent from './EventComponent';
 import reactionManager from '@/dwotr/ReactionManager';
 import { ID, STR } from '@/utils/UniqueIds';
+import eventManager from '@/dwotr/EventManager';
 
 type Props = {
   event: Event;
@@ -31,13 +31,16 @@ const messageClicked = (e: MouseEvent, likedId: string) => {
 
 export default function Like(props: Props) {
   const [allLikes, setAllLikes] = useState<string[]>([]);
-  const likedId = getEventReplyingTo(props.event);
-  const likedEvent = EventDB.get(likedId);
-  if (!likedEvent) {
+  const replyTo = getEventReplyingTo(props.event);
+  if(!replyTo) return null;
+
+  const replyToEvent = eventManager.eventIndex.get(ID(replyTo));
+  if (!replyToEvent) {
     return null;
   }
-  const authorIsYou = Key.isMine(likedEvent?.pubkey);
-  const mentioned = likedEvent?.tags?.find((tag) => tag[0] === 'p' && Key.isMine(tag[1]));
+
+  const authorIsYou = Key.isMine(replyToEvent?.pubkey);
+  const mentioned = replyToEvent?.tags?.find((tag) => tag[0] === 'p' && Key.isMine(tag[1]));
   const likeText = authorIsYou
     ? 'liked your note'
     : mentioned
@@ -45,22 +48,22 @@ export default function Like(props: Props) {
     : 'liked a note';
 
   useEffect(() => {
-    if (likedId) {
+    if (replyTo) {
       // return Events.getLikes(likedId, (likedBy: Set<string>) => {
       //   setAllLikes(Array.from(likedBy));
       // });
-      setAllLikes([...reactionManager.getLikes(ID(likedId))].map((id) => STR(id) as string));
+      setAllLikes([...reactionManager.getLikes(ID(replyTo))].map((id) => STR(id) as string));
     }
-  }, [likedId]);
+  }, [replyTo]);
 
-  if (!likedId) {
+  if (!replyTo) {
     return null;
   }
 
   const userLink = `/${Key.toNostrBech32Address(props.event.pubkey, 'npub')}`;
   return (
     <div key={props.event.id}>
-      <div onClick={(e) => messageClicked(e, likedId)}>
+      <div onClick={(e) => messageClicked(e, replyTo)}>
         <div className="flex gap-1 items-center text-sm text-neutral-500 px-2 pt-2">
           <i className="like-btn text-iris-red">
             <HeartIconFull width={18} />
@@ -72,7 +75,7 @@ export default function Like(props: Props) {
             {allLikes.length > 1 && <> and {allLikes.length - 1} others </>} {likeText}
           </span>
         </div>
-        <EventComponent key={likedId + props.event.id} id={likedId} fullWidth={false} />
+        <EventComponent key={replyTo + props.event.id} id={replyTo} fullWidth={false} />
       </div>
     </div>
   );

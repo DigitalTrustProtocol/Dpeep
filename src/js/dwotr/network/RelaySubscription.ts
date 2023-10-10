@@ -15,6 +15,7 @@ import { getNostrTime } from '../Utils';
 import blockManager from '../BlockManager';
 import { DebouncedFunc, debounce } from 'lodash';
 import relayManager from '../RelayManager';
+import { EPOCH } from '../Utils/Nostr';
 
 
 
@@ -85,7 +86,7 @@ class RelaySubscription {
   }
 
 
-  async onceAuthors(authorIds: Set<UID> | Array<UID>, since = 0, until = this.until, kinds = [...StreamKinds, ...ReplaceableKinds]) : Promise<boolean[]> {
+  async onceAuthors(authorIds: Set<UID> | Array<UID>, since = EPOCH, until = getNostrTime(), kinds = [...StreamKinds, ...ReplaceableKinds]) : Promise<boolean[]> {
     let authors: Array<string> = [];
     let timeOut = 30000;
 

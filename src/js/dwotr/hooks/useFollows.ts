@@ -9,25 +9,20 @@ export const useFollows = (key = Key.getPubKey()) => {
   const [followedUsers, setFollowedUsers] = useState<Array<string>>([]);
 
   useEffect(() => {
-    let users = followManager.getFollows(ID(key));
+    let onEvent = () => {
 
-    setFollowedUsers([...users].map((n) => STR(n)));
+      let users = followManager.getFollows(ID(key));
+      setFollowedUsers([...users].map((n) => STR(n) as string));
+    };
+
+    onEvent();
+    followManager.onEvent.addListener(ID(key), onEvent);
+
+    return () => {
+      followManager.onEvent.removeListener(ID(key), onEvent);
+    };
+
   }, [key]);
-
-
-  // useEffect(() => {
-  //   const unsub = SocialNetwork.getFollowedByUser(
-  //     Key.getPubKey(),
-  //     (newFollowedUsers) => {
-  //       setFollowedUsers(Array.from(newFollowedUsers));
-  //     },
-  //     includeSelf,
-  //   );
-
-  //   return () => {
-  //     unsub?.();
-  //   };
-  // }, [key, includeSelf]);
 
   return followedUsers;
 };

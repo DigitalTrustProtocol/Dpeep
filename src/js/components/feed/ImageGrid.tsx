@@ -6,8 +6,9 @@ import ImageGridItem from '@/components/feed/ImageGridItem';
 import ImageModal from '@/components/feed/ImageModal';
 import { ImageOrVideo } from '@/components/feed/types';
 import InfiniteScroll from '@/components/helpers/InfiniteScroll';
-import EventDB from '@/nostr/EventDB';
 import { getEventReplyingTo } from '@/nostr/utils';
+import eventManager from '@/dwotr/EventManager';
+import { ID } from '@/utils/UniqueIds';
 
 interface ImageGridProps {
   events: any[];
@@ -37,7 +38,7 @@ const ImageGrid = ({ events, loadMore }: ImageGridProps) => {
       if (event.kind === 7) {
         const taggedEventId = getEventReplyingTo(event);
         if (taggedEventId) {
-          const taggedEvent = EventDB.get(taggedEventId);
+          const taggedEvent = eventManager.eventIndex.get(ID(taggedEventId));
           return taggedEvent ? extractMediaFromEvent(taggedEvent) : [];
         }
         return [];

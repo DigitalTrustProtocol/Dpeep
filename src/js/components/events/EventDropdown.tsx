@@ -1,7 +1,6 @@
 import { Event } from 'nostr-tools';
 import { useState } from 'preact/hooks';
 
-import EventDB from '@/nostr/EventDB';
 
 import Events from '../../nostr/Events';
 import Key from '../../nostr/Key';
@@ -17,6 +16,7 @@ import Modal from '../modal/Modal';
 import EventRelaysList from './EventRelaysList';
 import muteManager from '@/dwotr/MuteManager';
 import { ID } from '@/utils/UniqueIds';
+import eventManager from '@/dwotr/EventManager';
 
 interface EventDropdownProps {
   event?: Event;
@@ -92,7 +92,7 @@ const EventDropdown = (props: EventDropdownProps) => {
     e.preventDefault();
     const hexId = Key.toNostrHexAddress(id);
     if (hexId) {
-      const event = EventDB.get(hexId);
+      const event = eventManager.eventIndex.get(ID(hexId));
       if (event) {
         // TODO indicate to user somehow
         console.log('broadcasting', hexId, event);

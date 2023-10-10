@@ -1,16 +1,15 @@
 import { sha256 } from '@noble/hashes/sha256';
 import throttle from 'lodash/throttle';
-import { Event, Filter, Sub } from 'nostr-tools';
+import { Event, Sub } from 'nostr-tools';
 
-import EventDB from '@/nostr/EventDB';
 import relayPool from '@/nostr/relayPool.ts';
 
 import localState from '../state/LocalState.ts';
 import Helpers from '../utils/Helpers';
 
-import Events from './Events';
-import Key from './Key';
-import PubSub from './PubSub';
+//import PubSub from './PubSub';
+import followManager from '@/dwotr/FollowManager.ts';
+import { ID } from '@/utils/UniqueIds.ts';
 
 type SavedRelays = {
   [key: string]: {
@@ -22,15 +21,15 @@ type SavedRelays = {
 let savedRelays: SavedRelays = {};
 
 const DEFAULT_RELAYS = [
-  //'wss://eden.nostr.land',
+  'wss://eden.nostr.land',
   'wss://nostr.fmt.wiz.biz',
   'wss://relay.damus.io',
   'wss://nostr-pub.wellorder.net',
   'wss://offchain.pub',
   'wss://nos.lol',
-  //'wss://relay.snort.social',
+  'wss://relay.snort.social',
   //'wss://relay.current.fyi', Slow!
-  //'wss://soloco.nl',
+  'wss://soloco.nl',
 ];
 
 const SEARCH_RELAYS = [
@@ -103,33 +102,16 @@ const Relays = {
     return urls;
   },
   getPopularRelays: function (): Array<PopularRelay> {
-    console.log('getPopularRelays');
-    const relays = new Map<string, number>();
-    EventDB.findArray({ kinds: [3] }).forEach((event) => {
-      if (event.content) {
-        try {
-          // content is an object of relayUrl: {read:boolean, write:boolean}
-          const content = JSON.parse(event.content);
-          for (const url in content) {
-            try {
-              const parsed = new URL(url).toString().replace(/\/$/, '');
-              const count = relays.get(parsed) || 0;
-              relays.set(parsed, count + 1);
-            } catch (e) {
-              console.log('invalid relay url', url, event);
-            }
-          }
-        } catch (e) {
-          console.log('failed to parse relay urls', event);
-        }
-      }
-    });
-    const sorted = Array.from(relays.entries())
-      .filter(([url]) => !this.relays.has(url))
-      .sort((a, b) => b[1] - a[1]);
-    return sorted.map((entry) => {
-      return { url: entry[0], users: entry[1] };
-    });
+    let result = new Array<PopularRelay>();
+
+    for(const key of followManager.relays.keys()) {
+      const count = followManager.relays.get(key)?.referenceCount || 0;
+      result.push({url: key, users: count});
+    }
+
+    result.sort((a, b) => b.users - a.users);
+
+    return result;
   },
   getConnectedRelayCount: function () {
     let count = 0;
@@ -141,16 +123,12 @@ const Relays = {
     return count;
   },
   getUserRelays(user: string): Array<[string, PublicRelaySettings]> {
-    let relays = new Map<string, PublicRelaySettings>();
     if (typeof user !== 'string') {
       console.log('getUserRelays: invalid user', user);
       return [];
     }
-    const followEvent = EventDB.findOne({ kinds: [3], authors: [user] });
-    if (followEvent) {
-      relays = this.getUrlsFromFollowEvent(followEvent);
-    }
-    return Array.from(relays.entries());
+
+    return Array.from(followManager.items.get(ID(user))?.relays.entries() || []);
   },
   manage: function () {
     localState.get('relays').put({});
@@ -219,7 +197,8 @@ const Relays = {
     for (const url of DEFAULT_RELAYS) {
       this.add(url);
     }
-    this.saveToContacts();
+    followManager.publish(); // publish new follow event by current user
+    //this.saveToContacts();
     // do not save these to contact list
     for (const url of SEARCH_RELAYS) {
       if (!this.relays.has(url)) this.add(url);
@@ -230,21 +209,6 @@ const Relays = {
     }
     localState.get('relays').put(relaysObj);
   },
-  saveToContacts() {
-    const relaysObj: any = {};
-    for (const url of this.relays.keys()) {
-      relaysObj[url] = { read: true, write: true };
-    }
-    const existing = EventDB.findOne({ kinds: [3], authors: [Key.getPubKey()] });
-    const content = JSON.stringify(relaysObj);
-
-    const event = {
-      kind: 3,
-      content,
-      tags: existing?.tags || [],
-    };
-    Events.publish(event);
-  },
   updateLastSeen: throttle(
     (url) => {
       const now = Math.floor(Date.now() / 1000);
@@ -253,50 +217,50 @@ const Relays = {
     5 * 1000,
     { leading: true },
   ),
-  groupFilter(filter: Filter): { name: string; groupedFilter: Filter } {
-    // if filter has authors, add to subscribedAuthors and group by authors
-    if (filter.authors && filter.kinds?.length === 1 && filter.kinds[0] === 0) {
-      filter.authors.forEach((a) => {
-        this.subscribedProfiles.add(a);
-      });
-      return {
-        name: 'profiles',
-        groupedFilter: {
-          authors: Array.from(this.subscribedProfiles.values()),
-          kinds: [0],
-        },
-      };
-    }
-    if (filter.authors) {
-      filter.authors = Array.from(this.subscribedProfiles.values());
-      return {
-        name: 'authors',
-        groupedFilter: {
-          authors: Array.from(this.subscribedProfiles.values()),
-        },
-      };
-    }
-    if (filter.ids) {
-      return {
-        name: 'ids',
-        groupedFilter: { ids: Array.from(PubSub.subscribedEventIds.values()) },
-      };
-    }
-    if (filter['#e']) {
-      filter['#e'].forEach((e) => {
-        this.subscribedEventTags.add(e);
-      });
-      return {
-        name: 'eventsByTag',
-        groupedFilter: { '#e': Array.from(this.subscribedEventTags.values()) },
-      };
-    }
-    // do not bundle. TODO console.log, limit or sth
-    return {
-      name: JSON.stringify(filter),
-      groupedFilter: filter,
-    };
-  },
+  // groupFilter(filter: Filter): { name: string; groupedFilter: Filter } {
+  //   // if filter has authors, add to subscribedAuthors and group by authors
+  //   if (filter.authors && filter.kinds?.length === 1 && filter.kinds[0] === 0) {
+  //     filter.authors.forEach((a) => {
+  //       this.subscribedProfiles.add(a);
+  //     });
+  //     return {
+  //       name: 'profiles',
+  //       groupedFilter: {
+  //         authors: Array.from(this.subscribedProfiles.values()),
+  //         kinds: [0],
+  //       },
+  //     };
+  //   }
+  //   if (filter.authors) {
+  //     filter.authors = Array.from(this.subscribedProfiles.values());
+  //     return {
+  //       name: 'authors',
+  //       groupedFilter: {
+  //         authors: Array.from(this.subscribedProfiles.values()),
+  //       },
+  //     };
+  //   }
+  //   if (filter.ids) {
+  //     return {
+  //       name: 'ids',
+  //       groupedFilter: { ids: Array.from(PubSub.subscribedEventIds.values()) },
+  //     };
+  //   }
+  //   if (filter['#e']) {
+  //     filter['#e'].forEach((e) => {
+  //       this.subscribedEventTags.add(e);
+  //     });
+  //     return {
+  //       name: 'eventsByTag',
+  //       groupedFilter: { '#e': Array.from(this.subscribedEventTags.values()) },
+  //     };
+  //   }
+  //   // do not bundle. TODO console.log, limit or sth
+  //   return {
+  //     name: JSON.stringify(filter),
+  //     groupedFilter: filter,
+  //   };
+  // },
 };
 
 export default Relays;

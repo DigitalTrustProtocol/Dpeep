@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { translate as t } from '../../translations/Translation.mjs';
 import followManager from '@/dwotr/FollowManager';
 import { useKey } from '@/dwotr/hooks/useKey';
+import profileManager from '@/dwotr/ProfileManager';
 
 type Props = {
   id: string;
@@ -34,8 +35,17 @@ const Follow = ({ id, className }: Props) => {
   const onClick = (e) => {
     e.preventDefault();
     const newValue = !isFollowed;
-    followManager.setFollow([uid], newValue);
-    setIsFollowed(newValue);
+    if(newValue) {
+      followManager.follow([uid]);
+          // Load profile from start
+      profileManager.mapProfiles([uid], undefined, undefined, true);
+    } else {
+      followManager.unfollow([uid]);
+
+      // Remove profile from feed!?
+    }
+    followManager.publish();
+
   };
 
   let buttonText;

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from 'react';
 import debounce from 'lodash/debounce';
 import { Event } from 'nostr-tools';
 
-import EventDB from '@/nostr/EventDB';
 import Events from '@/nostr/Events';
 import Key from '@/nostr/Key';
 import publicState from '@/state/PublicState.ts';
@@ -12,6 +11,8 @@ import View from '@/views/View.tsx';
 import Feed from '../../components/feed/Feed';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
+import eventManager from '@/dwotr/EventManager.ts';
+import { ID } from '@/utils/UniqueIds.ts';
 
 const Notifications: React.FC<RouteProps> = () => {
   const myKey = Key.getPubKey();
@@ -30,7 +31,7 @@ const Notifications: React.FC<RouteProps> = () => {
 
   const fetchEvents = () => {
     const events = Events.notifications.eventIds
-      .map((id) => EventDB.get(id))
+      .map((id) => eventManager.eventIndex.get(ID(id)))
       .filter((event): event is Event => Boolean(event)) as Event[];
 
     return {

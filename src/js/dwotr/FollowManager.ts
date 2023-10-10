@@ -11,12 +11,22 @@ import graphNetwork from './GraphNetwork';
 import { EventParser, PTagContact } from './Utils/EventParser';
 import blockManager from './BlockManager';
 import Relays, { PublicRelaySettings } from '@/nostr/Relays';
-import EventDB from '@/nostr/EventDB';
-import { throttle } from 'lodash';
 import relaySubscription from './network/RelaySubscription';
+import { EPOCH } from './Utils/Nostr';
+import { BulkStorage } from './network/BulkStorage';
+
 
 //const FOLLOW_STORE_KEY = 'myFollowList';
 const DegreeInfinit = 99;
+
+export type RelayMetadata = {
+  read: boolean;
+  write: boolean;
+
+  referenceCount: number;
+  lastSeen: number;
+  slowCount: number;   
+}
 
 export class FollowItem {
   id: UID = 0;
@@ -33,10 +43,13 @@ class FollowManager {
   filterEnabled = true;
   followSuggestionsSetting = undefined;
 
+  relays = new Map<string, RelayMetadata>();
+
   items = new Map<UID, FollowItem>();
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
+  #table = new BulkStorage(storage.follows);
 
   subsQueue = new Set<UID>(); // A queue of profiles to subscribe to
   unsubQueue = new Set<UID>(); // A queue of profiles to unsubscribe from
@@ -58,24 +71,6 @@ class FollowManager {
     // UnsubscribeQueue: 0,
     SubscribedToRelays: 0,
   };
-
-  #saveQueue: Map<number, Event> = new Map();
-  #saving: boolean = false;
-  private saveBulk = throttle(() => {
-    if (this.#saving) {
-      this.saveBulk(); // try again later
-      return;
-    }
-
-    this.#saving = true;
-
-    const queue = [...this.#saveQueue.values()];
-    this.#saveQueue = new Map<number, Event>();
-
-    storage.follows.bulkPut(queue).finally(() => {
-      this.#saving = false;
-    });
-  }, 1000);
 
 
   isFollowedByMe(profileId: UID): boolean {
@@ -135,26 +130,26 @@ class FollowManager {
     this.onEvent.dispatch(authorId, item);
   }
 
-  updateNetwork() {
-    // Possible throttle this function
+  // updateNetwork() {
+  //   // Possible throttle this function
 
-    this.#updateSubscriptions();
-    this.#updateUnsubscriptions();
-  }
+  //   this.#updateSubscriptions();
+  //   this.#updateUnsubscriptions();
+  // }
 
-  #updateSubscriptions() {
-    let list = this.subsQueue;
-    list.forEach((id) => (this.getItem(id).pubsubRegistered = true));
-    this.subsQueue = new Set();
-    wotPubSub.subscribeAuthors(list);
-  }
+  // #updateSubscriptions() {
+  //   let list = this.subsQueue;
+  //   list.forEach((id) => (this.getItem(id).pubsubRegistered = true));
+  //   this.subsQueue = new Set();
+  //   wotPubSub.subscribeAuthors(list);
+  // }
 
-  #updateUnsubscriptions() {
-    let list = this.unsubQueue;
-    list.forEach((id) => (this.getItem(id).pubsubRegistered = false));
-    this.unsubQueue = new Set();
-    wotPubSub.unsubscribeFlow(list);
-  }
+  // #updateUnsubscriptions() {
+  //   let list = this.unsubQueue;
+  //   list.forEach((id) => (this.getItem(id).pubsubRegistered = false));
+  //   this.unsubQueue = new Set();
+  //   wotPubSub.unsubscribeFlow(list);
+  // }
 
   #getPetNames(metadata: any | undefined) {
     let pTags = metadata?.pTags;
@@ -197,9 +192,31 @@ class FollowManager {
 
     item.relays = Relays.getUrlsFromFollowEvent(event);
 
+    this.#mergeRelays(item.relays);
+
     item.timestamp = event.created_at;
 
     return metadata;
+  }
+
+  #mergeRelays(relays: Map<string, PublicRelaySettings>) {
+    for (const [url, settings] of relays) {
+      let metadata = this.relays.get(url);
+      if (!metadata) {
+        metadata = {
+          read: false,
+          write: false,
+          referenceCount: 0,
+          lastSeen: 0,
+          slowCount: 0,
+        };
+        this.relays.set(url, metadata);
+      }
+      metadata.read = metadata.read || settings.read;
+      metadata.write = metadata.write || settings.write;
+      metadata.lastSeen = getNostrTime();
+      metadata.referenceCount++;
+    }
   }
 
   parseEvent(event: Event) {
@@ -240,27 +257,36 @@ class FollowManager {
     profileManager.setPetNames(item.id, this.#getPetNames(metadata)); // Update pet names from the p tags
   }
 
-  setFollow(profiles: Array<UID>, isFollowed: boolean) {
+  follow(profiles: Array<UID>) {
     let myId = ID(Key.getPubKey());
 
     for (const profileId of profiles) {
       let item = this.getItem(profileId);
-      if (isFollowed) {
-        this.addFollower(item, myId);
-      } else {
-        this.removeFollower(item, myId);
-      }
+      this.addFollower(item, myId);
     }
 
+
+  }
+
+  unfollow(profiles: Array<UID> | Set<UID>) {
+    let myId = ID(Key.getPubKey());
+
+    for (const profileId of profiles) {
+      let item = this.getItem(profileId);
+      this.removeFollower(item, myId);
+    }
+  }
+
+
+
+  publish() {
     let event = this.createEvent();
 
     this.save(event);
     
-    EventDB.insert(event);
-    
     wotPubSub.publish(event);
-    this.subscribeToRelays();
   }
+
 
   addFollower(target: FollowItem, followerId: UID): void {
     target.followedBy.add(followerId);
@@ -278,8 +304,7 @@ class FollowManager {
   }
 
   save(event: Event) {
-    this.#saveQueue.set(ID(event.id), event);
-    this.saveBulk(); // Save to IndexedDB in bulk by throttling
+    this.#table.save(event.id, event);
   }
 
   // The load system supports multiple degrees of following
@@ -397,7 +422,7 @@ class FollowManager {
     localState.get('showFollowSuggestions').put(false);
   }
 
-  subscribeToRelays() {
+  subscribeFollowsMap() {
     let authors = followManager.getFollows(ID(Key.getPubKey()));
 
     this.metrics.SubscribedToRelays += authors.size;
@@ -405,11 +430,18 @@ class FollowManager {
     profileManager.mapProfiles(authors);
   }
 
-  async subscribeOnce(since?: number, until?: number) {
+  async subscribeFollowsOnce(since?: number, until?: number) {
     let authors = followManager.getFollows(ID(Key.getPubKey()));
     this.metrics.SubscribedToRelays += authors.size;
+    await this.subscribeOnce(authors, since, until);
+  }
+
+
+  async subscribeOnce(authors: Array<UID> | Set<UID>, since = EPOCH, until = getNostrTime()) {
     await relaySubscription.onceAuthors(authors, since, until);
   }
+
+
 
 
   relayContactsRequests = new Set<UID>();

@@ -1,4 +1,3 @@
-import EventDB from '@/nostr/EventDB';
 import { ID, UID } from '@/utils/UniqueIds';
 import { Event, validateEvent, verifySignature } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
@@ -185,9 +184,6 @@ class EventManager {
 
     // Check if the event has been ordered deleted
     if(EventDeletionManager.deleted.has(ID(event.id))) return false;
-
-    // Use for now 
-    EventDB.insert(event);
 
     eventManager.metrics.HandleEvents++;
 

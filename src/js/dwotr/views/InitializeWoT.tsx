@@ -77,7 +77,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     else console.log('No notes loaded from Database');
 
     await profileManager.subscribeMyselfOnce(since);
-    await followManager.subscribeOnce(since);
+    await followManager.subscribeFollowsOnce(since);
     await graphNetwork.subscribeOnce(since);
 
     console.log('loadNetwork done');
@@ -89,7 +89,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     setState((state: any) => ({ ...state, subscribeStatus: 'loading' }));
 
     profileManager.subscribeMyself();
-    followManager.subscribeToRelays();
+    followManager.subscribeFollowsMap();
     graphNetwork.subscribeMap();
 
     console.log('subscribe done');
