@@ -14,14 +14,14 @@ const SETTINGS = {
   //backup: 'backup',
   language: 'language',
   //social_network: 'social_network',
-  iris_account: undefined as string | undefined,
+  //iris_account: undefined as string | undefined,
   dwotr: 'DWoTR',
   metrics: 'Metrics',
 };
 
-if (['iris.to', 'beta.iris.to', 'localhost'].includes(window.location.hostname)) {
-  SETTINGS.iris_account = 'iris.to';
-}
+// if (['iris.to', 'beta.iris.to', 'localhost'].includes(window.location.hostname)) {
+//   SETTINGS.iris_account = 'iris.to';
+// }
 
 const SettingsMenu = (props) => {
   const activePage = props.activePage || 'account';

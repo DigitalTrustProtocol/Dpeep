@@ -257,23 +257,22 @@ class FollowManager {
     profileManager.setPetNames(item.id, this.#getPetNames(metadata)); // Update pet names from the p tags
   }
 
-  follow(profiles: Array<UID>) {
-    let myId = ID(Key.getPubKey());
+  follow(profiles: Array<UID>, byId = ID(Key.getPubKey())) {
 
     for (const profileId of profiles) {
       let item = this.getItem(profileId);
-      this.addFollower(item, myId);
+      this.addFollower(item, byId);
     }
 
+    this.onEvent.dispatch(byId, this.getItem(byId));
 
   }
 
-  unfollow(profiles: Array<UID> | Set<UID>) {
-    let myId = ID(Key.getPubKey());
+  unfollow(profiles: Array<UID> | Set<UID>, byId = ID(Key.getPubKey())) {
 
     for (const profileId of profiles) {
       let item = this.getItem(profileId);
-      this.removeFollower(item, myId);
+      this.removeFollower(item, byId);
     }
   }
 

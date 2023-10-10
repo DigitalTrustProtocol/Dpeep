@@ -3,6 +3,7 @@ import { translate as t } from '../../translations/Translation.mjs';
 import followManager from '@/dwotr/FollowManager';
 import { useKey } from '@/dwotr/hooks/useKey';
 import profileManager from '@/dwotr/ProfileManager';
+import { ID } from '@/utils/UniqueIds';
 
 type Props = {
   id: string;
@@ -10,7 +11,7 @@ type Props = {
 };
 
 const Follow = ({ id, className }: Props) => {
-  let { uid, myId } = useKey(id);
+  let { uid, myId } = useKey(id); // id is subject
 
   const activeClass = 'following';
   const action = t('follow_btn');
@@ -21,7 +22,16 @@ const Follow = ({ id, className }: Props) => {
   const [isFollowed, setIsFollowed] = useState(false);
 
   useEffect(() => {
-    setIsFollowed(followManager.getItem(myId)?.follows?.has(uid) || false);
+
+    let onEvent = () => 
+      setIsFollowed(followManager.getItem(myId)?.follows?.has(uid) || false);
+
+    onEvent();
+    followManager.onEvent.addListener(myId, onEvent);
+
+    return () => {
+      followManager.onEvent.removeListener(myId, onEvent);
+    }
   }, [id]);
 
   const handleMouseEnter = () => {
