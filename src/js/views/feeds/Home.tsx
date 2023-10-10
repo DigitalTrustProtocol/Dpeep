@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 
 import {Filter} from 'nostr-tools';
 import CreateNoteForm from '@/components/create/CreateNoteForm';
-import FeedComponent from '@/components/feed/Feed';
+
+//import FeedComponent from '@/components/feed/Feed';
+import Feed from '@/dwotr/components/feed/Feed';
+
 import Show from '@/components/helpers/Show';
 import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
 import { getEventReplyingTo, isRepost } from '@/nostr/utils';
@@ -46,7 +49,7 @@ const Home: React.FC<RouteProps> = () => {
           <CreateNoteForm autofocus={false} placeholder={t('whats_on_your_mind')} />
         </div>
         <Show when={followedUsers.length}>
-          <FeedComponent key={`feed-${followedUsers.length}`} filterOptions={options} />
+          <Feed key={`feed-${followedUsers.length}`} filterOptions={options} />
         </Show>
       </div>
     </View>

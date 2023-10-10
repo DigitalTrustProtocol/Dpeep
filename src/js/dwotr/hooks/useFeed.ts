@@ -18,7 +18,7 @@ const useFeed = (opt: FeedOptions | undefined) => {
   useEffect(() => {
     if (!opt) return; // The options may not be ready yet
 
-    // The options may change, so we need to get a new provider
+    //if(!feedProvider.current)
     feedProvider.current = feedManager.getProvider(opt); // Make sure to get the same provider for the same feedId
 
     let list = feedProvider.current.load();
@@ -39,6 +39,7 @@ const useFeed = (opt: FeedOptions | undefined) => {
   }, [opt]);
 
   const loadMore = useCallback(() => {
+    if(!feedProvider.current) return
     if (loading.current == true) return;
     loading.current = true; // Prevent multiple loads from happening at once
 
