@@ -4,7 +4,6 @@ import { ID, STR, UID } from '@/utils/UniqueIds';
 import { TextKind } from './network/WOTPubSub';
 import blockManager from './BlockManager';
 import Key from '@/nostr/Key';
-import { getRepostedEventId } from '@/nostr/utils';
 import eventManager from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';

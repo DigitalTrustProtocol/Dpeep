@@ -2,7 +2,7 @@ import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID, UID } from '@/utils/UniqueIds';
 import blockManager from './BlockManager';
-import { getRepostedEventId } from '@/nostr/utils';
+import { getRepostedEventId, isRepost } from '@/nostr/utils';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
@@ -47,6 +47,8 @@ class RepostManager {
     
     this.metrics.RelayEvents++;
 
+    if(!this.#canAdd(event)) return;
+
     this.#addEvent(event);
 
     this.table.save(event.id, event); // Save all for now, asynchronusly
@@ -86,12 +88,12 @@ class RepostManager {
 
 
   #canAdd(note: Event): boolean {
-    let eventId = ID(note.id);
-    let authorId = ID(note.pubkey);
+    // This should have been checked before calling this method
+    //if(!isRepost(note)) return false; // A note kind 1 may actually be a repost from tags, so we need to check the content
 
-    if (eventDeletionManager.deleted.has(eventId)) return false;
+    if (eventDeletionManager.deleted.has(ID(note.id))) return false;
 
-    if (blockManager.isBlocked(authorId)) return false;
+    if (blockManager.isBlocked(ID(note.pubkey))) return false; // May already been blocked, so redudant code
 
     return true;
   };

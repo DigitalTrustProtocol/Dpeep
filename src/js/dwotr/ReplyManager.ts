@@ -177,7 +177,7 @@ class ReplyManager {
     noteManager.notes.set(eventId, event); // Add to the noteManager, so its in the feed
 
     // TODO: Not sure that this is the correct implementation of Nip
-    let replies = this.#getRepliesTo(event);
+    let replies = this.getRepliesTo(event);
 
     for (const parentId of replies) {
       this.#addToReplies(parentId, eventId);
@@ -185,7 +185,7 @@ class ReplyManager {
     return replies;
   }
 
-  #getRepliesTo(event: Event) : Array<UID> {
+  getRepliesTo(event: Event) : Array<UID> {
     const replyingTo = getNoteReplyingTo(event);
     if (replyingTo) {
       const repliedMsgs = event.tags

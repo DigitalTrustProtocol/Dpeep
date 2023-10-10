@@ -28,6 +28,7 @@ import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
 import replyManager from './ReplyManager';
 import repostManager from './RepostManager';
+import { isRepost } from '@/nostr/utils';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
@@ -194,12 +195,20 @@ class EventManager {
         break;
 
       case TextKind:
+
         if(replyManager.isReplyEvent(event)) {
           replyManager.handle(event);
-        } else {
-          noteManager.handle(event);
+          break;
+        } 
+
+        if(isRepost(event)) { // Check if the event is a repost even that the kind is 1
+          repostManager.handle(event);
+          break;
         }
+
+        noteManager.handle(event); // Handle the event as a note
         break;
+        
       case RepostKind:
         repostManager.handle(event);
         break;
