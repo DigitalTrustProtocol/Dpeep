@@ -91,6 +91,7 @@ export class DependencyLoader {
 
     await relaySubscription.getEventsByFilter(filter, cb);
 
+    if (this.logging)
     console.log('ContextLoader:loadEvents:Loading events:', filter, this.items);
   }
 
@@ -107,6 +108,7 @@ export class DependencyLoader {
 
     await relaySubscription.getEventsByFilter(filter, cb);
 
+    if (this.logging)
     console.log('ContextLoader:loadProfiles:Loading profiles:', filter, this.items);
   }
 
