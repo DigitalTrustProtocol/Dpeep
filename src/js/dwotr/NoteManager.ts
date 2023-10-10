@@ -1,16 +1,16 @@
-import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { TextKind } from './network/WOTPubSub';
 import blockManager from './BlockManager';
 import Key from '@/nostr/Key';
-import { getNoteReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
+import { getRepostedEventId } from '@/nostr/utils';
 import eventManager from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';
 import relaySubscription from './network/RelaySubscription';
 import eventDeletionManager from './EventDeletionManager';
+import { BulkStorage } from './network/BulkStorage';
 
 const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
   if (!a[1]) return 1;
@@ -19,20 +19,15 @@ const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
   return b[1].created_at - a[1].created_at;
 };
 
-
 class NoteManager {
-
   logging = false;
   notes: SortedMap<UID, Event> = new SortedMap([], sortCreated_at);
 
   deletedEvents: Set<UID> = new Set();
-  
-  // Index of all reposts of an specific events, 
-  reposts: Map<UID, Set<UID>> = new Map();
-  //replies: Map<UID, Set<Event>> = new Map();
-
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
+
+  table = new BulkStorage(storage.notes);
 
   private metrics = {
     TableCount: 0,
@@ -40,28 +35,7 @@ class NoteManager {
     Saved: 0,
     Deleted: 0,
     RelayEvents: 0,
-
   };
-
-  #saveQueue: Map<number, Event> = new Map();
-  #saving: boolean = false;
-  private saveBulk = throttle(() => {
-    if (this.#saving) {
-      this.saveBulk(); // try again later
-      return;
-    }
-
-    this.#saving = true;
-
-    const queue = [...this.#saveQueue.values()];
-    this.#saveQueue = new Map<number, Event>();
-
-    this.metrics.Saved += queue.length;
-
-    storage.notes.bulkPut(queue).finally(() => {
-      this.#saving = false;
-    });
-  }, 1000);
 
   hasNode(id: UID) {
     return this.notes.has(id);
@@ -71,11 +45,9 @@ class NoteManager {
     return this.notes.get(id);
   }
 
-
   handle(event: Event) {
-    
     let authorId = ID(event.pubkey);
-        
+
     let myId = ID(Key.getPubKey());
     let isMe = authorId === myId;
 
@@ -87,7 +59,7 @@ class NoteManager {
 
     this.#addEvent(event);
 
-    //if (followManager.isAllowed(authorId) || reactionManager.) 
+    //if (followManager.isAllowed(authorId) || reactionManager.)
     this.save(event); // Save all for now
 
     this.onEvent.dispatch(authorId, event);
@@ -119,25 +91,8 @@ class NoteManager {
   }
 
   save(event: Event) {
-    this.#saveQueue.set(ID(event.id), event);
-    this.saveBulk(); // Save to IndexedDB in bulk by throttling
+    this.table.save(ID(event.id), event);
   }
-
-  // createEvent() {
-  //   const event = {
-  //     kind: TextKind,
-  //     content: '',
-  //     created_at: getNostrTime(),
-  //     // tags: [
-  //     //   ['e', eventId], // Event ID
-  //     //   ['p', eventPubKey], // Profile ID
-  //     // ],
-  //   };
-
-  //   wotPubSub.sign(event);
-
-  //   return event;
-  // }
 
   async onceNote(id: UID) {
     if (this.notes.has(id)) return;
@@ -148,19 +103,8 @@ class NoteManager {
 
     return events?.[0];
   }
-  // requestNote(id: UID) {
-  //   if (this.notes.has(id)) return;
-
-  //   wotPubSub.getEvent(id, undefined, 1000);
-  // }
-
 
   // ---- Private methods ----
-
-  // #getEventRecord(event: Event) {
-  //   const { uId, authorId, ...safeProperties } = event;
-  //   return safeProperties;
-  // }
 
   #canAdd(note: Event): boolean {
     let eventId = ID(note.id);
@@ -171,31 +115,14 @@ class NoteManager {
     if (blockManager.isBlocked(authorId)) return false;
 
     return true;
-  };
-
+  }
 
   #addEvent(event: Event) {
-
     let eventId = ID(event.id);
 
     eventManager.eventIndex.set(eventId, event);
     this.notes.set(eventId, event);
-
-    // TODO: Not sure that this is the correct implementation of Nip
-    const eventIsRepost = isRepost(event);
-    if (eventIsRepost) {
-      this.#addRepost(event);
-      return;
-    }
-  }
-
-
-  #addRepost(event: Event) {
-    const repostkey = getRepostedEventId(event);
-    if (!repostkey) return;
-    let repostId = ID(repostkey);
-    let repostSet = this.reposts.get(repostId) || this.reposts.set(repostId, new Set()).get(repostId);
-    repostSet!.add(ID(event.pubkey));
+    
   }
 
   async tableCount() {
@@ -204,9 +131,9 @@ class NoteManager {
 
   getMetrics() {
     this.tableCount().then((count) => {
-        this.metrics.TableCount = count;
-      });
-  
+      this.metrics.TableCount = count;
+    });
+
     return this.metrics;
   }
 }

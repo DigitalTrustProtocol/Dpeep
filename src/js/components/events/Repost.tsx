@@ -11,7 +11,8 @@ import Name from '../user/Name';
 
 import EventComponent from './EventComponent';
 import noteManager from '@/dwotr/NoteManager';
-import { ID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
+import repostManager, { RepostEvent } from '@/dwotr/RepostManager';
 
 interface Props {
   event: Event;
@@ -22,24 +23,21 @@ interface Props {
 export default function Repost(props: Props) {
   const [allReposts, setAllReposts] = useState<string[]>([]);
   const [repostedEvent, setRepostedEvent] = useState<Event | undefined>(undefined);
-  //const repostedEventId = getRepostedEventId(props.event) || '';
-
-
-  //const repostedEvent = noteManager.notes.get(ID(repostedEventId)); // At this point noteManager should have the reposted event
 
   useEffect(() => {
-    const repostedEventId = getRepostedEventId(props.event);
+    if (!props.event) return;
+    let repostEvent = props.event as RepostEvent;
+    const repostedEventId = repostEvent?.meta?.repost_of || getRepostedEventId(props.event);
     if (!repostedEventId) return;
     const e = noteManager.notes.get(ID(repostedEventId)); // At this point noteManager should have the reposted event
     setRepostedEvent(e);
 
-    // TODO: Fix this with globus
-    // if (props.notification) {
-    //   const unsub = Events.getReposts(repostedEventId, (repostedBy: Set<string>) => {
-    //     setAllReposts(Array.from(repostedBy));
-    //   });
-    //   return () => unsub();
-    // }
+    if (props.notification) {
+      let reposters = [...(repostManager.reposts.get(ID(repostedEventId)) || new Set<Event>())].map(
+        (e) => e.pubkey,
+      );
+      setAllReposts(reposters);
+    }
   }, [props.event]);
 
   if (!repostedEvent) return null;

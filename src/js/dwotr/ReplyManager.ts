@@ -10,6 +10,7 @@ import eventDeletionManager from './EventDeletionManager';
 import Key from '@/nostr/Key';
 import followManager from './FollowManager';
 import { BulkStorage } from './network/BulkStorage';
+import noteManager from './NoteManager';
 
 
 
@@ -172,6 +173,8 @@ class ReplyManager {
   #addEvent(event: Event) : Array<UID> {
 
     let eventId = ID(event.id);
+
+    noteManager.notes.set(eventId, event); // Add to the noteManager, so its in the feed
 
     // TODO: Not sure that this is the correct implementation of Nip
     let replies = this.#getRepliesTo(event);

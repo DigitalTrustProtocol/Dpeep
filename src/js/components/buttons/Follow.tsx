@@ -3,7 +3,6 @@ import { translate as t } from '../../translations/Translation.mjs';
 import followManager from '@/dwotr/FollowManager';
 import { useKey } from '@/dwotr/hooks/useKey';
 import profileManager from '@/dwotr/ProfileManager';
-import { ID } from '@/utils/UniqueIds';
 
 type Props = {
   id: string;

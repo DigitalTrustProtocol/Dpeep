@@ -27,6 +27,7 @@ import { throttle } from 'lodash';
 import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
 import replyManager from './ReplyManager';
+import repostManager from './RepostManager';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
@@ -200,7 +201,7 @@ class EventManager {
         }
         break;
       case RepostKind:
-        noteManager.handle(event);
+        repostManager.handle(event);
         break;
 
       case ContactsKind: 
