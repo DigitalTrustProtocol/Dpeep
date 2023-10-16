@@ -11,8 +11,10 @@ import Name from '../user/Name';
 
 import EventComponent from './EventComponent';
 import noteManager from '@/dwotr/NoteManager';
-import { ID, STR, UID } from '@/utils/UniqueIds';
-import repostManager, { RepostEvent } from '@/dwotr/RepostManager';
+import { ID } from '@/utils/UniqueIds';
+import repostManager from '@/dwotr/RepostManager';
+import eventManager from '@/dwotr/EventManager';
+import { RepostContainer } from '@/dwotr/model/DisplayEvent';
 
 interface Props {
   event: Event;
@@ -26,14 +28,16 @@ export default function Repost(props: Props) {
 
   useEffect(() => {
     if (!props.event) return;
-    let repostEvent = props.event as RepostEvent;
-    const repostedEventId = repostEvent?.meta?.repost_of || getRepostedEventId(props.event);
-    if (!repostedEventId) return;
-    const e = noteManager.notes.get(ID(repostedEventId)); // At this point noteManager should have the reposted event
+    let repostEvent = props.event;
+
+    let repostContainer = eventManager.containers.get(ID(repostEvent.id)) as RepostContainer;
+
+    if (!repostContainer?.repostOf) return;
+    const e = noteManager.notes.get(repostContainer.repostOf!); // At this point noteManager should have the reposted event
     setRepostedEvent(e);
 
     if (props.notification) {
-      let reposters = [...(repostManager.reposts.get(ID(repostedEventId)) || new Set<Event>())].map(
+      let reposters = [...(repostManager.reposts.get(repostContainer.repostOf!) || new Set<Event>())].map(
         (e) => e.pubkey,
       );
       setAllReposts(reposters);

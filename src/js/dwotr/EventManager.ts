@@ -23,20 +23,18 @@ import followManager from './FollowManager';
 import profileManager from './ProfileManager';
 import reactionManager from './ReactionManager';
 import noteManager from './NoteManager';
-import { throttle } from 'lodash';
 import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
-import replyManager from './ReplyManager';
 import repostManager from './RepostManager';
-import { isRepost } from '@/nostr/utils';
+import { EventContainer } from './model/DisplayEvent';
+import relayManager from './RelayManager';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
-  requestedEvents: Set<UID> = new Set();
-
   eventIndex: Map<UID, Event> = new Map();
 
-
+  
+  containers: Map<UID, EventContainer> = new Map(); // Index of all containers, eventid, eventcontainer
 
 
   metrics = {
@@ -45,24 +43,22 @@ class EventManager {
     HandleEvents: 0,
   };
 
-  constructor() {}
+  
+  parse(event: Event, relayUrl?: string) : EventContainer {
+    let eventId = ID(event.id);
+    let container = {
+      id: eventId,
+      kind: event.kind,
+      event: event,
+      relayId: relayUrl ? relayManager.getRelayId(relayUrl) : undefined,
+    };
 
-
-  loadRequestedEvents = throttle(async () => {
-    if (this.requestedEvents.size == 0) return;
-
-  });
-
-
-  requestEvents(eventId: UID | UID[]) {
-    let ids = Array.isArray(eventId) ? eventId : [eventId];
-
-    for (let id of ids) {
-      if (this.requestedEvents.has(id)) return;
-
-      this.requestedEvents.add(id);
-    }
+    return container;
   }
+
+  // addContainer(container: EventContainer) {
+  //   this.containers.set(container.id, container);
+  // }
 
 
   createTrustEvent(
@@ -180,7 +176,7 @@ class EventManager {
     return true;
   }
 
-  async eventCallback(event: Event) {
+  async eventCallback(event: Event, afterEose?: boolean, url?: string | undefined) {
     if(!event) return false;
     eventManager.addSeen(ID(event.id));
 
@@ -191,22 +187,12 @@ class EventManager {
 
     switch (event.kind) {
       case MetadataKind:
-        profileManager.handle(event);
+        profileManager.handle(event, url);
         break;
 
       case TextKind:
 
-        if(replyManager.isReplyEvent(event)) {
-          replyManager.handle(event);
-          break;
-        } 
-
-        if(isRepost(event)) { // Check if the event is a repost even that the kind is 1
-          repostManager.handle(event);
-          break;
-        }
-
-        noteManager.handle(event); // Handle the event as a note
+        noteManager.handle(event, url); // Handle the event as a note
         break;
         
       case RepostKind:

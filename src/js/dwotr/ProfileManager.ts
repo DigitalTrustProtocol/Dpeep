@@ -500,23 +500,23 @@ class ProfileManager {
 
   // Get the latest profile
 
-  subscribeProfile(
-    profileId: UID,
-    cb: (profile: ProfileMemory) => void,
-    kinds = [0],
-    delay = 1000,
-  ) {
-    this.callbacks.addListener(profileId, cb);
+  // subscribeProfile(
+  //   profileId: UID,
+  //   cb: (profile: ProfileMemory) => void,
+  //   kinds = [0],
+  //   delay = 1000,
+  // ) {
+  //   this.callbacks.addListener(profileId, cb);
 
-    const handleEvent = (event: Event) => {
-      // At this point the profile should be loaded into memory from the event
-      let profile = profileManager.getMemoryProfile(profileId);
+  //   const handleEvent = (event: Event) => {
+  //     // At this point the profile should be loaded into memory from the event
+  //     let profile = profileManager.getMemoryProfile(profileId);
 
-      this.callbacks.dispatch(profileId, profile);
-    };
+  //     this.callbacks.dispatch(profileId, profile);
+  //   };
 
-    wotPubSub.getAuthorEvent(profileId, kinds, handleEvent, delay); // delay 1 sec
-  }
+  //   wotPubSub.getAuthorEvent(profileId, kinds, handleEvent, delay); // delay 1 sec
+  // }
 
   // subscribe(address: string, cb: (e: any) => void): Unsubscribe {
   //   return () => {};
@@ -610,7 +610,7 @@ class ProfileManager {
     return await storage.profiles.count();
   }
 
-  handle(event: Event) {
+  handle(event: Event, relayUrl?: string) {
     let authorId = ID(event.pubkey);
     let isBlocked = blockManager.isBlocked(authorId); // Limit the profile if its blocked
     let profile = this.addProfileEvent(event, isBlocked);

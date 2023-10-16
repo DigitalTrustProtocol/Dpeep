@@ -1,6 +1,7 @@
 import { min } from "lodash";
 import { EPOCH } from "./Utils/Nostr";
 import Relays from "@/nostr/Relays";
+import { UID } from "@/utils/UniqueIds";
 
 export class RelayMetadata {
 
@@ -14,7 +15,15 @@ class RelayManager {
 
     logging = false;
 
+    urlCount = 0;
+    urlId: Map<string, number> = new Map();
+    urlLookup: Map<number, string> = new Map();
+    sourceRelays: Map<UID, Set<number>> = new Map(); // Event Id, Relay Ids. Possible source relays for the event id, used to specify the relay to use when querying for the event
+
     relays: Map<string, RelayMetadata> = new Map();
+
+
+
 
     activeRelays: Array<string> = [];
 
@@ -23,6 +32,33 @@ class RelayManager {
     }
 
     
+    addRelayUrl(url: string) : number {
+        if(this.urlId.has(url)) 
+            return this.urlId.get(url) || 0;
+
+        const id = ++this.urlCount;
+        this.urlLookup.set(id, url);
+        this.urlId.set(url, id);
+        return id;
+    }
+
+    getRelayUrl(id: number) : string {
+        return this.urlLookup.get(id) || '';
+    }
+
+    getRelayId(url: string) : number {
+        return this.urlId.get(url) || 0;
+    }
+
+    addSourceRelay(eventId: UID, relayId: number) {
+        if(!this.sourceRelays.has(eventId))
+            this.sourceRelays.set(eventId, new Set());
+        this.sourceRelays.get(eventId)?.add(relayId);
+    }
+
+
+
+
 
     enabledRelays() : Array<string> {
         if(this.activeRelays.length === 0) {

@@ -2,22 +2,23 @@ import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID, UID } from '@/utils/UniqueIds';
 import blockManager from './BlockManager';
-import { getRepostedEventId, isRepost } from '@/nostr/utils';
+import { getRepostedEventId } from '@/nostr/utils';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
 import { BulkStorage } from './network/BulkStorage';
 import { RepostKind } from './network/WOTPubSub';
 import noteManager from './NoteManager';
+import { RepostContainer } from './model/DisplayEvent';
 
 
 // Decorate the event with the repost_of meta data
 // The intention is to store the repost_of in the IndexedDB, so its faster, and more intuitive. (overkill?)
-export type RepostEvent<K extends number = number> = Event<K> & {
-  meta: {
-    repost_of?: string; // This gets stored in IndexedDB
-  }
-};
+// export type RepostEvent<K extends number = number> = Event<K> & {
+//   meta: {
+//     repost_of?: string; // This gets stored in IndexedDB
+//   }
+// };
 
 class RepostManager {
 
@@ -47,13 +48,21 @@ class RepostManager {
     
     this.metrics.RelayEvents++;
 
-    if(!this.#canAdd(event)) return;
+    let container = this.parse(event) as RepostContainer;
 
-    this.#addEvent(event);
+    this.handleContainer(container);
 
-    this.save(event); // Save all for now, asynchronusly
+  }
 
-    this.onEvent.dispatch(ID(event.id), event);
+  handleContainer(container: RepostContainer) {
+    if(!this.#canAdd(container)) return;
+
+    this.#addEvent(container);
+
+    this.save(container.event!); // Save all for now, asynchronusly
+
+    this.onEvent.dispatch(container.id, container.event!);
+
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
@@ -63,20 +72,23 @@ class RepostManager {
     let events = await this.table.toArray();
     this.metrics.Loaded = events.length;
 
-    let deltaDelete: Array<string> = [];
+    //let deltaDelete: Array<string> = [];
 
     for (let note of events) {
       eventManager.addSeen(ID(note.id));
       eventManager.eventIndex.set(ID(note.id), note);
+      
+      let container = this.parse(note)!;
+      eventManager.containers.set(container.id, container);
 
-      if (this.#canAdd(note)) {
-        this.#addEvent(note);
+      if (this.#canAdd(container)) {
+        this.#addEvent(container);
       } else {
-        deltaDelete.push(note.id);
+        //deltaDelete.push(note.id);
       }
     }
 
-    this.metrics.Deleted += deltaDelete.length;
+    //this.metrics.Deleted += deltaDelete.length;
 
     // Remove notes from profiles that are not relevant
     // if (deltaDelete.length > 0) 
@@ -88,40 +100,45 @@ class RepostManager {
   }
 
 
+  parse(event: Event, url?: string): RepostContainer | undefined {
+    if(!this.isRepostEvent(event)) return undefined;
+
+    let repostOfId = getRepostedEventId(event);
+    if(!repostOfId) return undefined;
+
+    let container = eventManager.parse(event, url) as RepostContainer;
+    container.kind= RepostKind; // Repost
+    container.repostOf = ID(repostOfId);
+
+    return container;
+  }
+
+
   // ---- Private methods ----
 
 
-  #canAdd(note: Event): boolean {
-    // This should have been checked before calling this method
-    //if(!isRepost(note)) return false; // A note kind 1 may actually be a repost from tags, so we need to check the content
-
-    if (eventDeletionManager.deleted.has(ID(note.id))) return false;
-
-    if (blockManager.isBlocked(ID(note.pubkey))) return false; // May already been blocked, so redudant code
+  #canAdd(container: RepostContainer): boolean {
+    if(!container) return false;
+    if(!container?.repostOf) return false; // A repost must have a repostOf
+    if (eventDeletionManager.deleted.has(container.id)) return false;
+    if (blockManager.isBlocked(ID(container?.event!.pubkey))) return false; // May already been blocked, so redudant code
 
     return true;
   };
 
 
-  #addEvent(event: Event) : void {
+  #addEvent(container: RepostContainer) : void {
 
-    let eventId = ID(event.id);
-    noteManager.notes.set(eventId, event); // Add to the noteManager, so its in the feed
-    this.#addRepost(event as RepostEvent); // Add to the reposts index
-  }
+    noteManager.notes.set(container.id, container.event!); // Add to the noteManager, so its in the feed
+    eventManager.containers.set(container.id, container);
+    eventManager.eventIndex.set(container.id, container.event!);
 
-  #addRepost(event: RepostEvent) {
-    if(!event?.meta?.repost_of) {
-      event.meta = {
-        repost_of: getRepostedEventId(event) // Decorate the event
-      }
-    }
-    const repostkey = event.meta.repost_of ; // Get the repost key from the event, or from the content
-    if (!repostkey) return;
-    let repostId = ID(repostkey);
-    let repostSet =
-      this.reposts.get(repostId) || this.reposts.set(repostId, new Set()).get(repostId);
-    repostSet!.add(event);
+
+    let repostOf = container.repostOf!;
+
+    let repostSet = this.reposts.get(repostOf) || this.reposts.set(repostOf, new Set()).get(repostOf);
+
+    repostSet!.add(container.event!);
   }
 
 
@@ -136,6 +153,18 @@ class RepostManager {
   
     return this.metrics;
   }
+
+  static isRepost(event: Event) {
+    if (event.kind === 6) {
+      return true;
+    }
+    const mentionIndex = event.tags?.findIndex((tag) => tag[0] === 'e' && tag[3] === 'mention');
+    if (event.kind === 1 && event.content === `#[${mentionIndex}]`) {
+      return true;
+    }
+    return false;
+  }
+
 }
 
 const repostManager = new RepostManager();

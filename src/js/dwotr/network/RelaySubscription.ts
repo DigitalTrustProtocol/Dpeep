@@ -399,7 +399,7 @@ class RelaySubscription {
       // By waiting with verifying the event until its a new event, saves a lot of time.
       if(!eventManager.verify(event)) return; // Skip events that are not valid.
 
-      eventManager.eventCallback(event).then((_) => {
+      eventManager.eventCallback(event, afterEose, url).then((_) => {
           userOnEvent?.(event, afterEose, url);
       });
     }

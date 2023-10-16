@@ -8,8 +8,6 @@ import eventManager from '../EventManager';
 import { STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 import { ICursor } from './types';
-import { FeedProvider } from './FeedProvider';
-
 
 // Wot Custom
 export const Trust1Kind: number = 32010;
@@ -49,7 +47,7 @@ export interface EntityItem {
   entityType: EntityType;
 }
 
-type NostrKind = number;
+//type NostrKind = number;
 
 // Subscribe to trust events, mutes, blocks, etc
 
@@ -73,6 +71,8 @@ export const StreamKinds = [
   EventDeletionKind,
 ];
 export const ReplaceableKinds = [MetadataKind, ContactsKind, ZapRequestKind, RelayListKind, Trust1Kind];
+
+export const DisplayKinds = [TextKind,RepostKind];
 
 export type OnEvent = (event: Event, afterEose: boolean, url: string | undefined) => void;
 
@@ -122,36 +122,20 @@ class WOTPubSub {
     TrustEvents: 0,
   };
 
-  // Gets an event
-  getEvent(evnetId: UID, cb?: OnEvent, delay: number = 0) {
-    return;
-    let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
-      unSub?.();
-      eventManager.eventCallback(event);
-      if (cb) cb(event, afterEose, url);
-    };
+  // getAuthorEvent(authorId: UID, kinds: Array<number> = [0], cb?: OnEvent, delay: number = 0) {
+  //   return;
+  //   let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
+  //     unSub?.();
+  //     eventManager.eventCallback(event);
+  //     if (cb) cb(event, afterEose, url);
+  //   };
 
-    let unSub = this.subscribeFilter(
-      [{ ids: [STR(evnetId) as string], kinds: [1, 6], limit: 1 }],
-      callback,
-      delay,
-    );
-  }
-
-  getAuthorEvent(authorId: UID, kinds: Array<number> = [0], cb?: OnEvent, delay: number = 0) {
-    return;
-    let callback = (event: Event, afterEose: boolean, url: string | undefined) => {
-      unSub?.();
-      eventManager.eventCallback(event);
-      if (cb) cb(event, afterEose, url);
-    };
-
-    let unSub = this.subscribeFilter(
-      [{ authors: [STR(authorId) as string], kinds, limit: 1 }],
-      callback,
-      delay,
-    );
-  }
+  //   let unSub = this.subscribeFilter(
+  //     [{ authors: [STR(authorId) as string], kinds, limit: 1 }],
+  //     callback,
+  //     delay,
+  //   );
+  // }
 
   updateRelays(urls: Array<string> | undefined) {
     if (!urls) return;
@@ -195,73 +179,73 @@ class WOTPubSub {
     }
   }
 
-  // Do we need to break up hugh subscriptions into smaller ones? YES
-  async ReplaceableEventsOnce(
-    ids: Array<string>,
-    authors: Array<string>,
-    kinds: Array<number> = [0],
-    cb?: EventCallback,
-  ): Promise<boolean> {
-    let filters = [
-      {
-        //ids,
-        authors,
-        kinds,
-      } as Filter,
-    ];
+  // // Do we need to break up hugh subscriptions into smaller ones? YES
+  // async ReplaceableEventsOnce(
+  //   ids: Array<string>,
+  //   authors: Array<string>,
+  //   kinds: Array<number> = [0],
+  //   cb?: EventCallback,
+  // ): Promise<boolean> {
+  //   let filters = [
+  //     {
+  //       //ids,
+  //       authors,
+  //       kinds,
+  //     } as Filter,
+  //   ];
 
-    let relays = this.getRelays(filters);
+  //   let relays = this.getRelays(filters);
 
-    let promise = new Promise<boolean>((resolve, reject) => {
+  //   let promise = new Promise<boolean>((resolve, reject) => {
       
-      let tries = 0;
-      let authorsRest = new Set<string>(authors);
-      let idsRest = new Set<string>(ids);
+  //     let tries = 0;
+  //     let authorsRest = new Set<string>(authors);
+  //     let idsRest = new Set<string>(ids);
 
-      const onEvent = (event: Event) => {
-        console.log('ReplaceableEventsOnce', idsRest?.size, authorsRest?.size);
-        eventManager.eventCallback(event);
-        cb?.(event);
-        idsRest?.delete(event.id);
-        authorsRest?.delete(event.pubkey);
-        if (!!idsRest?.size && !!authorsRest?.size) resolve?.(true);
-      };
+  //     const onEvent = (event: Event) => {
+  //       console.log('ReplaceableEventsOnce', idsRest?.size, authorsRest?.size);
+  //       eventManager.eventCallback(event);
+  //       cb?.(event);
+  //       idsRest?.delete(event.id);
+  //       authorsRest?.delete(event.pubkey);
+  //       if (!!idsRest?.size && !!authorsRest?.size) resolve?.(true);
+  //     };
 
-      const onEose = (relayUrl: string) => {
-        console.log('ReplaceableEventsOnce.onEose', relayUrl, tries, relays);
-        // if (idsRest.size === 0 && authorsRest.size === 0) { // DO we need this?
-        //   resolve(true);
-        //   return;
-        // }
+  //     const onEose = (relayUrl: string) => {
+  //       console.log('ReplaceableEventsOnce.onEose', relayUrl, tries, relays);
+  //       // if (idsRest.size === 0 && authorsRest.size === 0) { // DO we need this?
+  //       //   resolve(true);
+  //       //   return;
+  //       // }
 
-        if (relays.includes(relayUrl)) {
-          tries++;
-        }
+  //       if (relays.includes(relayUrl)) {
+  //         tries++;
+  //       }
 
-        if (tries === relays.length) {
-          resolve(false);
-          //reject(new Error(`Failed to fetch events for ${idsRest.size} IDs and ${authorsRest.size} authors`));
-        }
-      }
+  //       if (tries === relays.length) {
+  //         resolve(false);
+  //         //reject(new Error(`Failed to fetch events for ${idsRest.size} IDs and ${authorsRest.size} authors`));
+  //       }
+  //     }
 
-      getRelayPool().subscribe(
-        filters,
-        relays,
-        onEvent,
-        undefined,
-        onEose,
-        {
-          allowDuplicateEvents: false,
-          allowOlderEvents: false,
-          logAllEvents: false,
-          unsubscribeOnEose: true,
-          //dontSendOtherFilters: true,
-          //defaultRelays: string[]
-        },
-      );
-    });
-    return promise;
-  }
+  //     getRelayPool().subscribe(
+  //       filters,
+  //       relays,
+  //       onEvent,
+  //       undefined,
+  //       onEose,
+  //       {
+  //         allowDuplicateEvents: false,
+  //         allowOlderEvents: false,
+  //         logAllEvents: false,
+  //         unsubscribeOnEose: true,
+  //         //dontSendOtherFilters: true,
+  //         //defaultRelays: string[]
+  //       },
+  //     );
+  //   });
+  //   return promise;
+  // }
 
   unsubscribeFlow(authorIDs: Set<UID> | Array<UID>) {
     // TODO: unsubscribe authors, currently its unknown how to do this effectly without unsubscribing all authors

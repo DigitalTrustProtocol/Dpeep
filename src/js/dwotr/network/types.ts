@@ -1,6 +1,5 @@
 import { Event } from 'nostr-tools';
 import { FeedOptions } from './WOTPubSub';
-import { UID } from '@/utils/UniqueIds';
 import { Reaction } from '../ReactionManager';
 
 export type Events = Array<Event>;

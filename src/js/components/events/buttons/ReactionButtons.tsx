@@ -7,7 +7,7 @@ import localState from '@/state/LocalState.ts';
 import ReactionsList from '../ReactionsList';
 
 import Like from './Like';
-import Reply from './Reply';
+import ReplyButton from './ReplyButton';
 import Repost from './Repost';
 import Zap from './Zap';
 import TrustReactionButtons from '@/dwotr/components/TrustReactionButtons';
@@ -46,7 +46,7 @@ const ReactionButtons = (props) => {
         />
       )}
       <div className="flex gap-4">
-        <Reply event={event} standalone={standalone} />
+        <ReplyButton event={event} standalone={standalone} />
         <Show when={settings.showReposts !== false}>
           <Repost event={event} />
         </Show>

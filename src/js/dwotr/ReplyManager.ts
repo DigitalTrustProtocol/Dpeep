@@ -1,7 +1,6 @@
-import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
-import { ID, UID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
 import blockManager from './BlockManager';
 import { getNoteReplyingTo } from '@/nostr/utils';
 import eventManager from './EventManager';
@@ -10,17 +9,17 @@ import eventDeletionManager from './EventDeletionManager';
 import Key from '@/nostr/Key';
 import followManager from './FollowManager';
 import { BulkStorage } from './network/BulkStorage';
+import { ReplyContainer } from './model/DisplayEvent';
 import noteManager from './NoteManager';
 
 
-
-class ReplyManager {
+export class ReplyManager {
 
   logging = false;
 
   replies: Map<UID, Set<UID>> = new Map(); // Index of all replies of an specific events, the parent event may not have been loaded yet
 
-  onEvent = new EventCallbacks(); // Callbacks to call when the follower change
+  updated = new EventCallbacks(); // Callbacks to call when the follower change
 
   private metrics = {
     TableCount: 0,
@@ -31,10 +30,6 @@ class ReplyManager {
   };
 
   table = new BulkStorage(storage.replies);
-
-  isReplyEvent(event: Event) : boolean {
-    return !!getNoteReplyingTo(event);
-  }
 
   getEventReplies(parentId: UID) : Array<Event> {
     let preBuffer: Array<Event> = [];
@@ -52,18 +47,20 @@ class ReplyManager {
     return preBuffer.concat(afterBuffer);
   }
 
-  handle(event: Event) {
+  handleContainer(container: ReplyContainer) {
     
     this.metrics.RelayEvents++;
 
-    let repliesTo = this.#addEvent(event);
-    if(repliesTo.length == 0) return;
+    if(!this.#canAdd(container)) return;
 
-    this.save(event); // Save all for now, asynchronusly
+    this.#addEvent(container);
 
-    for(let parentId of repliesTo) {
-      this.onEvent.dispatch(parentId, event);
-    }
+    this.save(container.event!); // Save all for now, asynchronusly
+
+    if(container.rootId) 
+      this.updated.dispatch(container.rootId, container);
+    if(container.repliedTo && container.repliedTo != container.rootId)
+      this.updated.dispatch(container.repliedTo, container);
   }
 
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
@@ -76,13 +73,16 @@ class ReplyManager {
     let deltaDelete: Array<string> = [];
 
     for (let note of events) {
-      eventManager.addSeen(ID(note.id));
-      eventManager.eventIndex.set(ID(note.id), note);
 
-      if (this.#canAdd(note)) {
-        this.#addEvent(note);
+      let container = noteManager.parse(note)!;
+      eventManager.addSeen(container.id);
+      eventManager.eventIndex.set(container.id, note);
+      eventManager.containers.set(container.id, container);
+
+      if (this.#canAdd(container)) {
+        this.#addEvent(container);
       } else {
-        deltaDelete.push(note.id);
+        //deltaDelete.push(STR(container.id));
       }
     }
 
@@ -97,31 +97,25 @@ class ReplyManager {
     this.table.save(ID(event.id), event);
   }
 
-  #canAdd(note: Event): boolean {
-    let eventId = ID(note.id);
-    let authorId = ID(note.pubkey);
+  #canAdd(container: ReplyContainer): boolean {
 
-    if (eventDeletionManager.deleted.has(eventId)) return false;
+    if (eventDeletionManager.deleted.has(container.id)) return false;
 
-    if (blockManager.isBlocked(authorId)) return false;
+    if(container?.event)
+      if (blockManager.isBlocked(ID(container.event?.pubkey))) return false;
 
     return true;
   };
 
 
-  #addEvent(event: Event) : Array<UID> {
+  #addEvent(container: ReplyContainer) : void {
 
-    let eventId = ID(event.id);
+    noteManager.notes.set(container.id, container?.event!); // Add to the noteManager, so its in the feed
+    eventManager.eventIndex.set(container.id, container.event!);
+    eventManager.containers.set(container.id, container);
 
-    noteManager.notes.set(eventId, event); // Add to the noteManager, so its in the feed
-
-    // TODO: Not sure that this is the correct implementation of Nip
-    let replies = this.getRepliesTo(event);
-
-    for (const parentId of replies) {
-      this.#addToReplies(parentId, eventId);
-    }
-    return replies;
+    if(container.rootId) this.#addToReplies(container.rootId, container.id);
+    if(container.repliedTo) this.#addToReplies(container.repliedTo, container.id);
   }
 
   getRepliesTo(event: Event) : Array<UID> {
@@ -154,6 +148,35 @@ class ReplyManager {
   
     return this.metrics;
   }
+
+  parse(event: Event, relayUrl?: string) : ReplyContainer {
+    let container = noteManager.parse(event, relayUrl) as ReplyContainer;
+
+    container.involved = new Set<UID>();
+    for(let tag of event.tags) {
+      if(tag[0] == 'p') container.involved.add(ID(tag[1]));
+      
+      if(tag[0] == 'e') {
+        if(tag[3] == 'root')  container.rootId = ID(tag[1]);
+        if(tag[3] == 'reply') container.repliedTo = ID(tag[1]);
+        if(tag[3] === '') container.repliedTo = ID(tag[1]);
+
+        container.subtype = 2; // Reply
+      }
+    }
+
+    if(container.rootId && !container.repliedTo) container.repliedTo = container.rootId;
+
+    return container;
+  }
+
+  // ---- Static methods ----
+
+  static isReplyEvent(event: Event) : boolean {
+    return !!getNoteReplyingTo(event);
+  }
+
+
 }
 
 const replyManager = new ReplyManager();

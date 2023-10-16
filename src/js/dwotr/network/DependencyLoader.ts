@@ -2,20 +2,16 @@ import { Event, Filter } from 'nostr-tools';
 import profileManager from '../ProfileManager';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from './RelaySubscription';
-import { getEventReplyingTo, getRepostedEventId, isRepost } from '@/nostr/utils';
-import noteManager from '../NoteManager';
-import { MetadataKind, ReactionKind, RepostKind, TextKind } from './WOTPubSub';
+import { DisplayKinds, MetadataKind, ReactionKind, RepostKind, TextKind } from './WOTPubSub';
 import { Events, ReactionEvent } from './types';
 import eventManager from '../EventManager';
-import { RepostEvent } from '../RepostManager';
-import replyManager from '../ReplyManager';
+import { NoteContainer, ReplyContainer, RepostContainer } from '../model/DisplayEvent';
 
 export class DependencyLoader {
   logging = false;
 
   eventIds: Set<UID> = new Set();
   authorIds: Set<UID> = new Set();
-  kinds: Set<number> = new Set();
   items: Events = [];
 
   async getEventsByIdWithContext(ids: Array<UID>): Promise<Array<Event>> {
@@ -49,16 +45,7 @@ export class DependencyLoader {
     for (let i = 0; i < 3; i++) {
       this.#doItems();
 
-      if (this.logging)
-        console.log(
-          'ContextLoader:loadContext:Load dependencies:',
-          ' - Events:',
-          this.eventIds.size,
-          [...this.eventIds.values()].map((id) => STR(id)),
-          ' - Profiles:',
-          this.authorIds.size,
-          [...this.authorIds.values()].map((id) => STR(id)),
-        );
+      if(this.logging) this.logData();
 
       if (!this.eventIds.size && !this.authorIds.size) break; // Nothing to load
 
@@ -67,56 +54,62 @@ export class DependencyLoader {
       await this.#loadProfiles();
     }
 
-    if (this.eventIds.size > 0) {
-      if (this.logging)
-        console.log(
-          'ContextLoader:loadContext:Missing not loaded!',
-          this.eventIds.size,
-          this.eventIds,
-        );
-    }
+    // if (this.eventIds.size > 0) {
+    //   if (this.logging)
+    //     console.log(
+    //       'ContextLoader:loadContext:Missing not loaded!',
+    //       this.eventIds.size,
+    //       this.eventIds,
+    //     );
+    // }
   }
+
+  logData() {
+    console.log(
+      'ContextLoader:loadContext:Load dependencies:',
+      ' - Events:',
+      this.eventIds.size,
+      [...this.eventIds.values()].map((id) => STR(id)),
+      ' - Profiles:',
+      this.authorIds.size,
+      [...this.authorIds.values()].map((id) => STR(id)),
+    );
+    }
 
   async #loadEvents() {
     if (!this.eventIds.size) return;
 
-    let filter = { kinds: [] } as Filter;
+    let filter = { kinds: DisplayKinds } as Filter;
     filter.ids = [...this.eventIds.values()].map((id) => STR(id) as string);
-    filter.kinds?.push(...this.kinds.values());
-  
 
-    const cb = (event: Event, afterEose: boolean, url: string | undefined) => {
+    const cb = (event: Event, _afterEose: boolean, _url: string | undefined) => {
       this.items.push(event);
     };
 
     await relaySubscription.getEventsByFilter(filter, cb);
 
-    if (this.logging)
-    console.log('ContextLoader:loadEvents:Loading events:', filter, this.items);
+    if (this.logging) console.log('ContextLoader:loadEvents:Loading events:', filter, this.items);
   }
 
   async #loadProfiles() {
     if (!this.authorIds.size) return;
 
-    let filter = { kinds: [] } as Filter;
+    let filter = { kinds: [MetadataKind] } as Filter;
     filter.authors = [...this.authorIds.values()].map((id) => STR(id) as string);
-    filter.kinds?.push(MetadataKind);
 
-    const cb = (event: Event, afterEose: boolean, url: string | undefined) => {
+    const cb = (event: Event, _afterEose: boolean, _url: string | undefined) => {
       this.items.push(event);
     };
 
     await relaySubscription.getEventsByFilter(filter, cb);
 
     if (this.logging)
-    console.log('ContextLoader:loadProfiles:Loading profiles:', filter, this.items);
+      console.log('ContextLoader:loadProfiles:Loading profiles:', filter, this.items);
   }
-
 
   #doItems() {
     this.eventIds.clear();
     this.authorIds.clear();
-    this.kinds.clear();
 
     for (const event of this.items) {
       // Load profiles from every event pubKey
@@ -128,23 +121,12 @@ export class DependencyLoader {
           break;
 
         case TextKind: {
-          if (replyManager.isReplyEvent(event)) {
-            this.#doReply(event); // Can be a reply
-            break;
-          }
-
-          if (isRepost(event)) {
-            // Check if the event is a repost even that the kind is 1
-            this.#doRepost(event as RepostEvent); // Can be a repost
-            break;
-          }
-
           this.#doText(event); // Handle the event as a note
           break;
         }
 
         case RepostKind:
-          this.#doRepost(event as RepostEvent);
+          this.#doRepost(event);
           break;
         case ReactionKind:
           this.#doReactions(event as ReactionEvent);
@@ -161,12 +143,12 @@ export class DependencyLoader {
     this.authorIds.add(id);
   }
 
-  addEvent(id: UID, kind: number) : boolean {
+  addEvent(id: UID): boolean {
     if (eventManager.seen(id)) return false; // Already seen
 
     this.eventIds.add(id);
-    this.kinds.add(kind);
-    if (kind == RepostKind) this.kinds.add(TextKind); // Add text kind if repost, as it can be a text kind
+    // this.kinds.add(kind);
+    // if (kind == RepostKind) this.kinds.add(TextKind); // Add text kind if repost, as it can be a text kind
 
     return true;
   }
@@ -174,16 +156,31 @@ export class DependencyLoader {
   clear() {
     this.eventIds.clear();
     this.authorIds.clear();
-    this.kinds.clear();
     this.items = [];
   }
 
   #doProfile(event: Event) {
     let id = ID(event.pubkey);
+
     this.#addProfile(id);
   }
 
   #doText(event: Event) {
+
+    // Get the container from memory, as it have been loaded already
+    let container = eventManager.containers.get(ID(event.id)) as NoteContainer;
+    if (!container) return; // May be blocked
+
+    if (container?.subtype == 2) {
+      this.#doReply(container); // Can be a reply
+      return;
+    }
+
+    if (container?.subtype == 3) {
+      // Check if the event is a repost even that the kind is 1
+      this.#doRepostContainer(container); // Can be a repost
+      return;
+    }
     // Check content for mentions of profiles
   }
 
@@ -191,7 +188,7 @@ export class DependencyLoader {
     let meta = event.meta;
     if (!meta || !meta.subjectEventId) return;
 
-    if(!this.addEvent(meta.subjectEventId, TextKind)) return;
+    if (!this.addEvent(meta.subjectEventId)) return;
 
     if (!meta.subjectAuthorId) return;
     if (!this.#hasProfile(meta.subjectAuthorId)) return;
@@ -199,23 +196,32 @@ export class DependencyLoader {
     this.#addProfile(meta.subjectAuthorId);
   }
 
-  #doRepost(event: RepostEvent) {
-    if (!isRepost(event)) return;
+  #doReply(container: ReplyContainer) {
 
-    let repostId = event?.meta?.repost_of || getRepostedEventId(event);
-    if (!repostId) return;
+    if(container?.rootId) {
+      this.addEvent(container?.rootId!);
+    }
 
-    this.addEvent(ID(repostId), RepostKind);
-  }
-
-  #doReply(event: Event) {
-
-    let replies = replyManager.getRepliesTo(event);
-
-    for (const parentId of replies) {
-      this.addEvent(parentId, RepostKind); // Automatically adds text kind
+    if(container?.repliedTo) {
+      this.addEvent(container?.repliedTo!);
     }
   }
+
+  #doRepost(event: Event) {
+
+    let container = eventManager.containers.get(ID(event.id)) as RepostContainer;
+    if (!container) return;
+
+    this.#doRepostContainer(container);
+  }
+
+  #doRepostContainer(container: RepostContainer) {
+    if(container.repostOf) {
+      this.addEvent(container.repostOf);
+    }
+  }
+
+
 
   #hasProfile(authorId: UID): boolean {
     if (!profileManager.hasProfile(authorId)) return false;
