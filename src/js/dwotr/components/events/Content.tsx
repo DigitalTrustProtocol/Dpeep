@@ -7,6 +7,7 @@ import Helpers from '@/utils/Helpers';
 
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
 import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import ExpandableTextDiv from '../display/ExpandableTextDiv';
 
 const MSG_TRUNCATE_LENGTH = 500;
 const MSG_TRUNCATE_LINES = 8;
@@ -17,7 +18,7 @@ type Props = {
 };
 
 const Content = ({ container, translatedText }: Props) => {
-  const [doTruncate, setDoTruncate] = useState(true);
+  //const [doTruncate, setDoTruncate] = useState(true);
 
   const wot = useVerticeMonitor(
     container ? container.id : 0,
@@ -26,10 +27,11 @@ const Content = ({ container, translatedText }: Props) => {
   ) as any;
 
   let event = container?.event!;
+  let text = event.content || '';
 
   const emojiOnly = event.content?.length === 2 && Helpers.isEmoji(event.content);
 
-  const { text, isTooLong } = processText(event.content, doTruncate);
+  //const { text, isTooLong } = processText(event.content, doTruncate);
 
   return (
     <div className="flex flex-col">
@@ -38,15 +40,17 @@ const Content = ({ container, translatedText }: Props) => {
           className={`preformatted-wrap pb-1 ${emojiOnly && 'text-3xl'} 
           ${wot?.option}`}
         >
-          <HyperText event={event}>{text}</HyperText>
-          <Show when={translatedText}>
-            <p>
-              <i>{translatedText}</i>
-            </p>
-          </Show>
+          <ExpandableTextDiv>
+            <HyperText event={event}>{text}</HyperText>
+            <Show when={translatedText}>
+              <p>
+                <i>{translatedText}</i>
+              </p>
+            </Show>
+          </ExpandableTextDiv>
         </div>
       </Show>
-      <Show when={doTruncate && isTooLong()}>
+      {/* <Show when={doTruncate && isTooLong()}>
         <a
           className="text-sm link mb-2"
           onClick={(e) => {
@@ -56,7 +60,7 @@ const Content = ({ container, translatedText }: Props) => {
         >
           ... {t(`show_${doTruncate ? 'more' : 'less'}`)}
         </a>
-      </Show>
+      </Show> */}
     </div>
   );
 };

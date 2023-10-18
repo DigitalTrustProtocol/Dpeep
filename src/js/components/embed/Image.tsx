@@ -24,12 +24,12 @@ const Image: Embed = {
     return (
       <div
         key={match + index}
-        className="flex justify-center items-center md:justify-start md:h-96 my-2"
+        className="flex justify-center items-center md:justify-start my-2"
       >
         <ProxyImg
           onError={() => setHasError(true)}
           onClick={onClick}
-          className="my-2 rounded md:max-h-96 max-w-full cursor-pointer"
+          className="my-2 rounded-xl md:max-h-96 max-w-full cursor-pointer border border-neutral-500"
           src={match}
         />
         <Show when={showModal}>

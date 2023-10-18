@@ -1,9 +1,9 @@
 import { nip19 } from 'nostr-tools';
 import { Link } from 'preact-router';
 
-import EventComponent from '../../events/EventComponent';
 import Name from '../../user/Name';
 import Embed from '../index';
+import { InLineQuote } from '@/dwotr/components/events/inline/InlineQuote';
 
 const nip19Regex = /\bnostr:(n(?:event|profile)1\w+)\b/g;
 
@@ -23,7 +23,7 @@ const NostrUser: Embed = {
         );
       } else if (type === 'nevent') {
         // same as note
-        return <EventComponent id={data.id} asInlineQuote={true} />;
+        return <InLineQuote id={data.id} />;
       }
     } catch (e) {
       console.log(e);
