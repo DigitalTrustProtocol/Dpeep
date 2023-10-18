@@ -69,11 +69,6 @@ export default function NavigationSidebar() {
     };
   }, []);
 
-  const isStPatricksDay = useMemo(() => {
-    const today = new Date();
-    return today.getMonth() === 2 && today.getDate() === 17;
-  }, []);
-
   const menuLinkClicked = () => {
     localState.get('scrollUp').put(true);
     window.scrollTo(0, 0);
@@ -125,73 +120,6 @@ export default function NavigationSidebar() {
       </div>
     );
   };
-
-  // const renderMenuItem = (a) => {
-  //   const isActive = a.url === activeRoute;
-  //   const Icon = isActive ? a.activeIcon : a.icon;
-  //   return (
-  //     <div>
-  //       <a
-  //         onClick={(e) => menuLinkClicked(e, a)}
-  //         className={`${
-  //           isActive ? 'active' : ''
-  //         } inline-flex w-auto flex items-center space-x-4 p-3 rounded-full transition-colors duration-200 hover:bg-neutral-900`}
-  //         href={a.url}
-  //       >
-  //         <img src="/img/dwotr/logo30.png" style="padding-top:5px" />
-  //         <h1 className="hidden xl:flex text-3xl">Dpeep</h1>
-  //       </a>
-  //       <a href="https://github.com/DigitalTrustProtocol/DWoTR-Documentation/blob/main/Trust.md" target="_blank"><small className="pl-3">Iris clone with DWoTR</small></a>
-  //       {APPLICATIONS.map((a: any) => {
-  //         if (a.url && (!a.beta || this.state.showBetaFeatures)) {
-  //           let isActive = this.state.activeRoute.startsWith(a.url);
-  //           if (a.url === '/') {
-  //             isActive = this.state.activeRoute.length <= 1;
-  //           }
-  //           const Icon = isActive ? a.activeIcon : a.icon;
-  //           return (
-  //             <div>
-  //               <a
-  //                 onClick={(e) => this.menuLinkClicked(e, a)}
-  //                 className={`${
-  //                   isActive ? 'active' : ''
-  //                 } inline-flex w-auto flex items-center space-x-4 p-3 rounded-full transition-colors duration-200 hover:bg-neutral-900`}
-  //                 href={a.url}
-  //               >
-  //                 {a.text === 'messages' && this.state.unseenMsgsTotal ? (
-  //                   <span class="unseen unseen-total">{this.state.unseenMsgsTotal}</span>
-  //                 ) : (
-  //                   ''
-  //                 )}
-  //                 <Icon width={24} />
-  //                 <span className="hidden xl:flex">{t(a.text)}</span>
-  //               </a>
-  //             </div>
-  //           );
-  //         }
-  //       })}
-  //       <hr className="-mx-2 opacity-10 my-2" />
-  //       <div class="py-2">
-  //         <button
-  //           className="btn btn-primary md:max-xl:btn-circle"
-  //           onClick={() => this.setState({ showNewPostModal: !this.state.showNewPostModal })}
-  //         >
-  //           <PlusIcon width={24} />
-  //           <span className="hidden xl:flex">{t('new_post')}</span>
-  //         </button>
-  //         {this.renderNewPostModal()}
-  //       </div>
-  //       <hr className="-mx-2 opacity-10 my-2" />
-  //       {this.renderProfileLink()}
-  //         <Show when={a.text === 'messages' && unseenMsgsTotal}>
-  //           <span class="unseen unseen-total">{unseenMsgsTotal}</span>
-  //         </Show>
-  //         <Icon width={24} />
-  //         <span className="hidden xl:flex">{t(a.text)}</span>
-  //       </a>
-  //     </div>
-  //   );
-  // };
 
   return (
     <div className="sticky border-r border-neutral-900 top-0 z-20 h-screen max-h-screen hidden md:flex xl:w-56 flex-col px-2 py-4 flex-shrink-0">

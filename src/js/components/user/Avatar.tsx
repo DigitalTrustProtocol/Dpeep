@@ -8,6 +8,9 @@ import { useProfile } from '@/dwotr/hooks/useProfile';
 import blockManager from '@/dwotr/BlockManager.ts';
 import { ID } from '@/utils/UniqueIds.ts';
 
+import { UserIcon } from "@heroicons/react/24/outline";
+//import { UserIcon as UserIconSolid } from "@heroicons/react/24/solid";
+
 type Props = {
   str: string | undefined;
   hidePicture?: boolean;
@@ -71,7 +74,7 @@ const MyAvatar: React.FC<Props> = (props) => {
           />
         </Show>
         <Show when={!hasPic}>
-          <img width={width} className="max-w-full rounded-full" src={state.avatar || ''} />
+          <UserIcon width={width-5} />
         </Show>
       </div>
       <Show when={props.showTooltip && state.name}>

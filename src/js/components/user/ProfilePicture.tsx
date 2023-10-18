@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 
 import Modal from '../modal/Modal';
 import ProxyImg from '../ProxyImg.tsx';
+import Show from '../helpers/Show.tsx';
+import { UserIcon } from '@heroicons/react/24/outline';
 
 type Props = { picture?: string; onError?: () => void };
 
@@ -16,21 +18,23 @@ const ProfilePicture = ({ picture, onError }: Props) => {
     setShowModal(false);
   };
 
-  if (!picture) {
-    return null;
-  }
-
   return (
     <div className="rounded-full aspect-square border-4 border-black bg-black">
-      <ProxyImg
-        width={128}
-        square={true}
-        className="rounded-full w-full h-full cursor-pointer object-cover"
-        src={picture}
-        onError={onError}
-        onClick={handleClick}
-      />
-      {showModal && (
+      <Show when={picture}>
+        <ProxyImg
+          width={128}
+          square={true}
+          className="rounded-full w-full h-full cursor-pointer object-cover"
+          src={picture!}
+          onError={onError}
+          onClick={handleClick}
+        />
+      </Show>
+      <Show when={!picture}>
+        <UserIcon width={128} />
+      </Show>
+
+      {showModal && picture && (
         <Modal centerVertically={true} onClose={handleClose}>
           <ProxyImg
             className="max-w-full max-h-[90vh]"
