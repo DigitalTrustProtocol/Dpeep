@@ -25,7 +25,7 @@ const Like = ({ likedBy, onLike, standalone }) => {
      
   return (
     <a
-      className={`btn-ghost btn-sm justify-center hover:bg-transparent btn content-center gap-2 rounded-none ${
+      className={`btn-ghost btn-sm justify-center hover:bg-transparent btn content-center rounded-none ${
         liked ? 'text-iris-red' : 'hover:text-iris-red text-neutral-500'
       }`}
       onClick={(e) => likeBtnClicked(e, !liked)}

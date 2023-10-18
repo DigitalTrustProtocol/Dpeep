@@ -10,7 +10,8 @@ import replyManager from '@/dwotr/ReplyManager';
 
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import Show from '@/components/helpers/Show';
-import EventComponent from '@/components/events/EventComponent';
+import EventComponent from '../events/EventComponent';
+import eventManager from '@/dwotr/EventManager';
 
 type RepliesFeedProps = {
   eventId: string;
@@ -58,6 +59,10 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
     refresh(); // Add new events
   };
 
+  if(!events) return null;
+
+  let items = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
+
   return (
     <>
       <div ref={feedTopRef} />
@@ -84,23 +89,14 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
         refreshFunction={refresh}
         pullDownToRefresh
         pullDownToRefreshThreshold={50}
-        // pullDownToRefreshContent={
-        //   <h3 style={{ textAlign: 'center' }}>&#8595; Pull down to refresh</h3>
-        // }
-        // releaseToRefreshContent={
-        //   <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
-        // }
       >
-        {events.map((item) => {
+        {items.map((container) => {
+          if (!container) return null;
           return (
-            <EventComponent
-              key={`${item.id}RC`}
-              id={item.id}
-              //isReply={true}
-              // isQuoting={!standalone}
-              //showReplies={1}
-              event={item}
-            />
+            <>
+              <EventComponent key={`${container?.id!}RF`} container={container} showReplies={0} />
+              <hr className="opacity-10 mb-2 mt-2" />
+            </>
           );
         })}
       </InfiniteScroll>

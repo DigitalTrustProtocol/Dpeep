@@ -29,7 +29,7 @@ const Image: Embed = {
         <ProxyImg
           onError={() => setHasError(true)}
           onClick={onClick}
-          className="my-2 rounded-xl md:max-h-96 max-w-full cursor-pointer border border-neutral-500"
+          className="my-2 md:max-h-96 max-w-full cursor-pointer border border-neutral-500 rounded-xl"
           src={match}
         />
         <Show when={showModal}>

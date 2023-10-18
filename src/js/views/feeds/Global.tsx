@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 
 import CreateNoteForm from '@/components/create/CreateNoteForm';
-import FeedComponent from '@/components/feed/Feed';
 import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
 import { getEventReplyingTo, isRepost } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
 import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
+import Feed from '@/dwotr/components/feed/Feed';
 
 const Global: React.FC<RouteProps> = () => {
   const filterOptions = useMemo(
@@ -39,7 +39,7 @@ const Global: React.FC<RouteProps> = () => {
           <div className="hidden md:block px-4">
             <CreateNoteForm autofocus={false} placeholder={t('whats_on_your_mind')} />
           </div>
-          <FeedComponent filterOptions={filterOptions} />
+          <Feed filterOptions={filterOptions} />
         </div>
       </div>
     </View>

@@ -33,6 +33,8 @@ const ReactionButtons = (props) => {
   const { zapAmountByUser, formattedZapAmount } = useZaps(event.id, loadGlobal);
   const reposts = useReposts(event.id, loadGlobal);
 
+
+
   return (
     <>
       {props.standalone && (
@@ -45,7 +47,7 @@ const ReactionButtons = (props) => {
           reposts={reposts}
         />
       )}
-      <div className="flex gap-4">
+      <div className="flex">
         <ReplyButton event={event} standalone={standalone} />
         <Show when={settings.showReposts !== false}>
           <Repost event={event} />

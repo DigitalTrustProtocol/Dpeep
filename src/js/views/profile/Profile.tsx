@@ -7,7 +7,6 @@ import { getEventReplyingTo, isRepost } from '@/nostr/utils.ts';
 import useLocalState from '@/state/useLocalState.ts';
 import ProfileHelmet from '@/views/profile/Helmet.tsx';
 
-import Feed from '../../components/feed/Feed.tsx';
 import Show from '../../components/helpers/Show.tsx';
 import { shouldSkipProxy } from '../../components/ProxyImg.tsx';
 import ProfileCard from '../../components/user/ProfileCard.tsx';
@@ -21,6 +20,7 @@ import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub.ts';
 import { ReactionMemoryCursor } from '@/dwotr/network/ReactionMemoryCursor.ts';
+import Feed from '@/dwotr/components/feed/Feed.tsx';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile

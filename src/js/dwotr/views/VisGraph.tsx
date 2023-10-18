@@ -240,7 +240,7 @@ const VisGraph = ({ props }: ViewComponentProps) => {
 
     // Load the profiles for all the vertices
     let vertices = Object.values(distinctV); // convert to array
-    let addresses = vertices.map((v) => STR(v.id)); // convert to pub hex format
+    let addresses = vertices.map((v) => STR(v.id) as string); // convert to pub hex format
     let profiles = await profileManager.getProfiles(addresses); // Load profiles for all the vertices 
     if (!isMounted()) return; // Check if component is still mounted
 
@@ -330,7 +330,7 @@ const VisGraph = ({ props }: ViewComponentProps) => {
       </div>
 
       <hr className="-mx-2 opacity-10 my-2" />
-      <div className="h-full w-full flex items-stretch justify-center">
+      <div className="h-screen h-full w-full flex items-stretch justify-center">
         <div className="flex-grow" ref={visJsRef} />
       </div>
     </>

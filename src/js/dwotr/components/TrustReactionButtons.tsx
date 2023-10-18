@@ -54,7 +54,7 @@ const TrustReactionButtons = (props) => {
   return (
     <>
       <a
-        className={`btn-ghost trust-btn btn-sm flex-1 justify-center hover:bg-transparent btn content-center gap-2 rounded-none ${
+        className={`btn-ghost btn-sm justify-center hover:bg-transparent btn content-center rounded-none ${
           score.trusted ? 'trusted' : 'hover:trusted text-neutral-500'
         }`}
         onClick={(e) => trustBtnClicked(e)}
@@ -68,7 +68,7 @@ const TrustReactionButtons = (props) => {
         {(!props.standalone && wot?.vertice?.score?.renderTrustCount()) || ''}
       </a>
       <a
-        className={`btn-ghost trust-btn btn-sm flex-1 justify-center hover:bg-transparent btn content-center gap-2 rounded-none ${
+        className={`btn-ghost btn-sm justify-center hover:bg-transparent btn content-center rounded-none ${
           score.distrusted ? 'distrusted' : 'hover:distrusted text-neutral-500'
         }`}
         onClick={(e) => distrustBtnClicked(e)}

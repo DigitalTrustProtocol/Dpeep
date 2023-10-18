@@ -52,14 +52,14 @@ const Zap = ({ event }) => {
       <a
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
-        className={`btn-ghost btn-sm hover:bg-transparent btn content-center gap-2 rounded-none
+        className={`btn-ghost btn-sm hover:bg-transparent btn content-center rounded-none
           ${zappedByMe ? 'text-iris-orange' : 'text-neutral-500 hover:text-iris-orange'}`}
       >
         <Show when={defaultZapAmount}>{Icons.quickZap}</Show>
         <Show when={!defaultZapAmount}>
           <BoltIcon width={18} />
         </Show>
-        {formattedZapAmount}
+        {/* {formattedZapAmount} */}
       </a>
       {state.showZapModal && (
         <ZapModal

@@ -34,7 +34,7 @@ const Video: Embed = {
     }, [match]);
 
     return (
-      <div className="relative w-full object-contain my-2 min-h-96">
+      <div className="relative w-full object-contain my-2 min-h-96 border border-neutral-500 rounded-xl">
         <video
           ref={videoRef}
           className="rounded max-h-[70vh] md:max-h-96"

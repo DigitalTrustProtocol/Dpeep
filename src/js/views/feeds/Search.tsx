@@ -1,9 +1,8 @@
 import React from 'react';
 import { useMemo } from 'preact/hooks';
 
-import FeedComponent from '@/components/feed/Feed';
-
 import View from '../View';
+import Feed from '@/dwotr/components/feed/Feed';
 
 type Props = {
   path: string;
@@ -33,7 +32,7 @@ const Search: React.FC<Props> = ({ query }) => {
     <View>
       <div className="flex flex-row">
         <div className="flex flex-col w-full">
-          <FeedComponent key={query} filterOptions={filterOptions} />
+          <Feed key={query} filterOptions={filterOptions} />
         </div>
       </div>
     </View>

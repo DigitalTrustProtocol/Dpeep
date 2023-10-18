@@ -26,7 +26,7 @@ const ReplyButton = (props: ReplyButtonProps) => {
 
   return (
     <a
-      className="btn-ghost btn-sm hover:bg-transparent hover:text-iris-blue btn content-center gap-2 rounded-none text-neutral-500"
+      className="btn-ghost btn-sm hover:bg-transparent hover:text-iris-blue btn content-center rounded-none text-neutral-500"
       onClick={() => onReplyBtnClicked()}
     >
       <ChatBubbleOvalLeftIcon width={18} />
