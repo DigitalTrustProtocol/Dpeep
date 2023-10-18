@@ -1,9 +1,6 @@
-import { useEffect, useMemo } from 'react';
-import classNames from 'classnames';
-//import { Filter } from 'nostr-tools';
+import { useMemo } from 'react';
 import { Link, route } from 'preact-router';
 
-//import useSubscribe from '@/nostr/hooks/useSubscribe.ts';
 import { getEventRoot, getNoteReplyingTo } from '@/nostr/utils';
 
 import Key from '../../../nostr/Key';
@@ -14,9 +11,7 @@ import EventComponent from '../EventComponent';
 import Avatar from './Avatar';
 import Content from './Content';
 
-import useVerticeMonitor from '../../../dwotr/hooks/useVerticeMonitor';
-import { ID } from '@/utils/UniqueIds';
-import { RepliesFeed } from '../RepliesFeed';
+import { RepliesFeed } from '../../../dwotr/components/feed/RepliesFeed';
 
 interface NoteProps {
   event: any; // Define the proper type
@@ -138,7 +133,7 @@ const Note: React.FC<NoteProps> = ({
         <hr className="opacity-10 mb-2 mt-2" />
       </Show>
       <Show when={showRepliesFeed}>
-        <RepliesFeed event={event} showReplies={showReplies} standalone={standalone} />
+        <RepliesFeed eventId={event.id} />
       </Show>
     </>
   );

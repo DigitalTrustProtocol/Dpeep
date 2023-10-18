@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import {Filter} from 'nostr-tools';
 import CreateNoteForm from '@/components/create/CreateNoteForm';
 
-import Feed from '@/components/feed/Feed';
+import Feed from '@/dwotr/components/feed/Feed';
 //import Feed from '@/dwotr/components/feed/Feed';
 
 import Show from '@/components/helpers/Show';
@@ -24,6 +24,8 @@ const Home: React.FC<RouteProps> = () => {
         id: 'home',
         name: t('posts'),
         filter: { kinds: [1, 6], authors: followedUsers, limit: 10 } as Filter,
+        includeReplies: false,
+        includeReposts: false,
         filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         mergeReposts: true,
         eventProps: { showRepliedMsg: true },
@@ -33,6 +35,8 @@ const Home: React.FC<RouteProps> = () => {
         id: 'home-replies',
         name: t('posts_and_replies'),
         filter: { kinds: [1, 6], authors: followedUsers, limit: 5 },
+        includeReplies: false,
+        includeReposts: false,
         mergeReposts: true,
         eventProps: { showRepliedMsg: true, fullWidth: false },
         source: 'memory'

@@ -2,21 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
-import { Filter, Event } from 'nostr-tools';
-import EventComponent from './EventComponent';
+import { Filter } from 'nostr-tools';
+
 import { ID } from '@/utils/UniqueIds';
 import { RepliesCursor } from '@/dwotr/network/RepliesCursor';
 import replyManager from '@/dwotr/ReplyManager';
-import Show from '../helpers/Show';
+
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
+import Show from '@/components/helpers/Show';
+import EventComponent from '@/components/events/EventComponent';
 
 type RepliesFeedProps = {
-  event: Event;
-  showReplies: number;
-  standalone?: boolean;
+  eventId: string;
 };
 
-export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps) => {
+export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
   const feedTopRef = useRef<HTMLDivElement>(null);
   const [filterOption, setFilterOption] = useState<FeedOptions>();
 
@@ -24,10 +24,10 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
 
   useEffect(() => {
     let opt = {
-      id: 'repliesFeed' + event.id, // Unique ID for this feed
+      id: 'repliesFeed' + eventId, // Unique ID for this feed
       name: 'Replies',
       filter: {
-        '#e': [event.id],
+        '#e': [eventId],
         kinds: [1],
         limit: 1000,
         //until: getNostrTime(), // Load events from now
@@ -38,12 +38,12 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
     let cursor = new RepliesCursor(opt);
 
     // Preload replies to the cursor buffer, if any
-    cursor.buffer = replyManager.getEventReplies(ID(event.id));
+    cursor.buffer = replyManager.getEventReplies(ID(eventId));
 
     opt.cursor = () => cursor;
 
     setFilterOption(opt);
-  }, [event.id, showReplies]);
+  }, [eventId]);
 
   const refreshClick = (e) => {
     if (feedTopRef.current) {
@@ -96,9 +96,9 @@ export const RepliesFeed = ({ event, showReplies, standalone }: RepliesFeedProps
             <EventComponent
               key={`${item.id}RC`}
               id={item.id}
-              isReply={true}
-              isQuoting={!standalone}
-              showReplies={1}
+              //isReply={true}
+              // isQuoting={!standalone}
+              //showReplies={1}
               event={item}
             />
           );

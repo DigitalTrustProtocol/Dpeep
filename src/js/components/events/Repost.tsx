@@ -11,7 +11,7 @@ import Name from '../user/Name';
 
 import EventComponent from './EventComponent';
 import noteManager from '@/dwotr/NoteManager';
-import { ID } from '@/utils/UniqueIds';
+import { ID, STR } from '@/utils/UniqueIds';
 import repostManager from '@/dwotr/RepostManager';
 import eventManager from '@/dwotr/EventManager';
 import { RepostContainer } from '@/dwotr/model/DisplayEvent';
@@ -37,8 +37,8 @@ export default function Repost(props: Props) {
     setRepostedEvent(e);
 
     if (props.notification) {
-      let reposters = [...(repostManager.reposts.get(repostContainer.repostOf!) || new Set<Event>())].map(
-        (e) => e.pubkey,
+      let reposters = [...(repostManager.reposts.get(repostContainer.repostOf!) || new Set<RepostContainer>())].map(
+        (e) => STR(e.authorId) as string,
       );
       setAllReposts(reposters);
     }

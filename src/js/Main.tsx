@@ -19,7 +19,6 @@ import Notifications from './views/feeds/Notifications';
 import SearchFeed from './views/feeds/Search';
 import KeyConverter from './views/KeyConverter';
 import Login from './views/login/Login.tsx';
-import Note from './views/Note';
 import EditProfile from './views/profile/EditProfile.tsx';
 import Follows from './views/profile/Follows.tsx';
 import Profile from './views/profile/Profile.tsx';
@@ -38,6 +37,7 @@ import View16463 from './dwotr/views/View16463.tsx';
 import InitializeWoT from './dwotr/views/InitializeWoT.tsx';
 import MetricsView from './dwotr/views/Metrics.tsx';
 import NoteNew from './views/NoteNew.tsx';
+import NoteView from './dwotr/views/NoteView.tsx';
 
 
 const Main = () => {
@@ -82,7 +82,7 @@ const Main = () => {
 
   const NoteOrProfile = (params: { id?: string; path: string }) => {
     if (params.id?.startsWith('note')) {
-      return <Note id={params.id} />;
+      return <NoteView id={params.id} />;
     }
     return <Profile id={params.id} tab="posts" path={params.path} />;
   };
@@ -117,7 +117,7 @@ const Main = () => {
               getComponent={() => import('./views/chat/Chat').then((module) => module.default)}
             />
             <NoteNew path="/post/new" />
-            <Note path="/post/:id+" />
+            <NoteView path="/post/:id+" />
             <About path="/about" />
             <AsyncRoute
               path="/settings/:page?"

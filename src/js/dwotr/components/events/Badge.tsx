@@ -1,4 +1,3 @@
-import { UID } from '@/utils/UniqueIds';
 import { JSX } from 'preact';
 
 // import { useKey } from '@/dwotr/hooks/useKey';
@@ -7,14 +6,8 @@ import { JSX } from 'preact';
 // import { translate as t } from '../../translations/Translation.mjs';
 // import Icons from '../../utils/Icons';
 
-type Props = {
-  id: UID;
-};
-
-
-
-export default function Badge({ id }:Props): JSX.Element | null {
-  
+export default function Badge(props): JSX.Element | null {
+  // const { hexKey, isMe, myPubKey } = useKey(props.pub);
   
   // if(!props.pub) return null; // If no pub key, don't render anything
 

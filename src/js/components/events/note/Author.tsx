@@ -35,7 +35,7 @@ const Author = ({ event, fullWidth, isQuote, standalone, setTranslatedText, isPr
   }, [event.created_at]);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
       <Show when={fullWidth}>
         <Avatar event={event} isQuote={isQuote} standalone={standalone} fullWidth={fullWidth} />
       </Show>

@@ -51,6 +51,7 @@ class EventManager {
       kind: event.kind,
       event: event,
       relayId: relayUrl ? relayManager.getRelayId(relayUrl) : undefined,
+      authorId: ID(event.pubkey),
     };
 
     return container;

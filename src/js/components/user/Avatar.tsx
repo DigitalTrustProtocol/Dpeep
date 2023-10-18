@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import Show from '../helpers/Show';
 import ProxyImg from '../ProxyImg.tsx';
 
-import profileManager from '../../dwotr/ProfileManager';
 import { useKey } from '@/dwotr/hooks/useKey';
 import { useProfile } from '@/dwotr/hooks/useProfile';
 import blockManager from '@/dwotr/BlockManager.ts';

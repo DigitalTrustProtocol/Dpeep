@@ -25,7 +25,8 @@ class RepostManager {
   logging = false;
 
   // Index of all reposts of an specific events,
-  reposts: Map<UID, Set<Event>> = new Map();
+  // ID is subject event, set is all reposts of that event
+  reposts: Map<UID, Set<RepostContainer>> = new Map();
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
@@ -138,7 +139,7 @@ class RepostManager {
 
     let repostSet = this.reposts.get(repostOf) || this.reposts.set(repostOf, new Set()).get(repostOf);
 
-    repostSet!.add(container.event!);
+    repostSet!.add(container);
   }
 
 

@@ -41,6 +41,7 @@ export type EventContainer = {
   kind: number; // the kind of the event
   event?: Event; // the event itself
   relayId?: number; // the relay that sent this event
+  authorId?: UID; // the author of the event
 }
 
 // DisplayEvent is an note event
@@ -48,6 +49,9 @@ export type EventContainer = {
 export type NoteContainer = EventContainer & {
   subtype?: number;
   //content?: string; // the content of the event
+  // reposters?: Set<UID>; // The id for each reposter (event) of this repost
+  // repliers?: Set<UID>; // The id for each replier (event) of this reply
+  // likes?: Set<UID>; // The id for each liker (event) of this note
 }
 
 export type ReplyContainer = NoteContainer & {

@@ -3,9 +3,9 @@
 import { nip19 } from 'nostr-tools';
 import { Link } from 'preact-router';
 
-import EventComponent from '../../events/EventComponent';
 import Name from '../../user/Name';
 import Embed from '../index';
+import { InLineQuote } from '@/dwotr/components/events/inline/InlineQuote';
 
 const fail = (s: string) => `#[${s}]`;
 
@@ -30,7 +30,7 @@ const InlineMention: Embed = {
         </Link>
       );
     } else if (type === 'e') {
-      return <EventComponent id={id} key={id} asInlineQuote={true} />;
+      return <InLineQuote id={id} key={id} />;
     } else {
       console.log('unknown tag type', type, index, event);
       return <>{fail(match)}</>;

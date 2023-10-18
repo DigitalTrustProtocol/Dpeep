@@ -2,13 +2,11 @@ import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event, Filter } from 'nostr-tools';
 import wotPubSub, { ReactionKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
-import { throttle } from 'lodash';
 import storage from './Storage';
 import followManager from './FollowManager';
 import Key from '@/nostr/Key';
 import blockManager from './BlockManager';
 import eventManager from './EventManager';
-import noteManager from './NoteManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import { ReactionEvent } from './network/types';
 import { BulkStorage } from './network/BulkStorage';
@@ -84,26 +82,6 @@ class ReactionManager {
   };
 
   table = new BulkStorage(storage.reactions);
-
-  // #saveQueue: Map<number, ReactionRecord> = new Map();
-  // #saving: boolean = false;
-  // saveBulk = throttle(() => {
-  //   if (this.#saving) {
-  //     this.saveBulk(); // try again later
-  //     return;
-  //   }
-
-  //   this.#saving = true;
-
-  //   const queue = [...this.#saveQueue.values()];
-  //   this.#saveQueue = new Map<number, ReactionRecord>();
-
-  //   this.metrics.Saved += queue.length;
-
-  //   storage.reactions.bulkPut(queue).finally(() => {
-  //     this.#saving = false;
-  //   });
-  // }, 1000);
 
   getLikes(eventId: UID): Set<UID> {
     return this.#getLikes(eventId);

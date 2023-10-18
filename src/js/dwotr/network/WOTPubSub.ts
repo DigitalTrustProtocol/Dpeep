@@ -87,6 +87,8 @@ export type FeedOptions = {
   id?: string;
   name?: string;
   filter: Filter;
+  includeReposts?: boolean;
+  includeReplies?: boolean;
   filterFn?: (event: Event) => boolean;
   onEvent?: OnEvent;
   onEose?: OnEose;

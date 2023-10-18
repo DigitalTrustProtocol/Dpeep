@@ -1,5 +1,5 @@
+import { InLineQuote } from '@/dwotr/components/events/inline/InlineQuote';
 import Key from '../../../nostr/Key';
-import EventComponent from '../../events/EventComponent';
 import Embed from '../index';
 
 const eventRegex =
@@ -9,7 +9,7 @@ const NostrUser: Embed = {
   regex: eventRegex,
   component: ({ match }) => {
     const hex = Key.toNostrHexAddress(match.replace('@', ''))!;
-    return <EventComponent id={hex} asInlineQuote={true} />;
+    return <InLineQuote id={hex} key={hex} />;
   },
 };
 

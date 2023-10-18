@@ -1,46 +1,26 @@
-import { Fragment, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
-import EventComponent from '@/components/events/EventComponent';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
 
 import Show from '@/components/helpers/Show';
 import useHistoryState from '@/state/useHistoryState.ts';
 import Helpers from '@/utils/Helpers';
 
-//import InfiniteScroll from 'react-infinite-scroll-component';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import useVirtual, { LoadMore } from 'react-cool-virtual';
+import EventComponent from '../events/EventComponent';
+import eventManager from '@/dwotr/EventManager';
+import { ID } from '@/utils/UniqueIds';
+import { EventContainer } from '@/dwotr/model/DisplayEvent';
 
 export type FeedProps = {
   filterOptions: FeedOptions[];
   showDisplayAs?: boolean;
-  //filterFn?: (event: any) => boolean;
   emptyMessage?: string;
   fetchEvents?: any;
-  // (opts: any) => {
-  //   events: Event[];
-  //   hasMore: boolean;
-  //   hasRefresh: boolean;
-  //   loadMore: () => void;
-  //   refresh: () => void;
-  //   loadAll: () => void;
-  // };
-};
-
-// const TOTAL_COMMENTS = 500;
-// const BATCH_COMMENTS = 5;
-
-// We only have 50 (500 / 5) batches of items, so set the 51th (index = 50) batch as `true`
-// to avoid the `loadMore` callback from being invoked, yep it's a trick 😉
-
-let currentIndex = -1;
-
-const Loading = ({ show }) => {
-  if (!show) return null;
-  return <div className="item">⏳ Loading...</div>;
 };
 
 const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
@@ -51,47 +31,24 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
 
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
-  //const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
 
   const filterOption = filterOptions[filterOptionIndex];
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
   const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
 
-  const batchLoaded = useRef<Array<boolean>>([]);
+  useEffect(() => {
+    if (events.length === 0 && hasRefresh) {
+      refresh(); // Auto refresh to show new events
+      return;
+    }
 
-  //  const [comments, setComments] = useState([]);
-  const { outerRef, innerRef, items } = useVirtual({
-    // Provide the number of comments
-    itemCount: events.length,
-    // Starts to pre-fetch data when the user scrolls within every 5 items
-    // e.g. 1 - 5, 6 - 10 and so on (default = 15)
-    loadMoreCount: 10,
-    // Provide the loaded state for a batch items to tell the hook
-    // whether the `loadMore` should be triggered or not
-    isItemLoaded: (loadIndex) => {
-      console.log('isItemLoaded: ', loadIndex, " - batchLoaded.current[loadIndex]: ", batchLoaded.current[loadIndex], " - hasMore: ", hasMore);
-      return batchLoaded.current[loadIndex]; // || !hasMore
-    },
-    // The callback will be invoked when more data needs to be loaded
-    loadMore: (e) => {
-      loadMore(); // Loads more data into the items array
-      batchLoaded.current[e.loadIndex] = true;
-    },
-  });
-
-  // useEffect(() => {
-  //   if (events.length === 0 && hasRefresh) {
-  //     refresh(); // Auto refresh to show new events
-  //     return;
-  //   }
-
-  //   // 10 should be enough to fill the screen
-  //   if (events.length < 10 && hasMore) {
-  //     loadMore(); // Auto load more to fill the screen
-  //     return;
-  //   }
-  // }, [events.length, hasRefresh, hasMore]);
+    // 10 should be enough to fill the screen
+    if (events.length < 10 && hasMore) {
+      loadMore(); // Auto load more to fill the screen
+      return;
+    }
+  }, [events.length, hasRefresh, hasMore]);
 
   const refreshClick = (e) => {
     if (feedTopRef.current) {
@@ -102,10 +59,15 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
         feedTopRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }
+    //setInfiniteScrollKey(infiniteScrollKey + 1);
 
     refresh(); // Add new events
   };
 
+  //const infiniteScrollKeyString = `${infiniteScrollKey}-${displayAs}-${filterOption.name}`;
+
+  //let items = events.filter((event) => !hiddenEvents.has(event.id));
+  let items = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
 
   return (
     <>
@@ -130,38 +92,42 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
       </Show>
 
       <Show when={displayAs === 'feed'}>
-        <div
-          className="h-[700px] overflow-auto"
-          ref={outerRef as any}
+        <InfiniteScroll
+          dataLength={items.length} //This is important field to render the next data
+          next={loadMore}
+          hasMore={hasMore}
+          loader={
+            <div className="justify-center items-center flex w-full mt-4 mb-4">
+              <div className="loading">🔄</div>
+            </div>
+          }
+          endMessage={
+            <p style={{ textAlign: 'center' }}>
+              <b>No more notes</b>
+            </p>
+          }
+          // below props only if you need pull down functionality
+
+          refreshFunction={refresh}
+          pullDownToRefresh
+          pullDownToRefreshThreshold={50}
+          pullDownToRefreshContent={
+            <h3 style={{ textAlign: 'center' }}>&#8595; Pull down to refresh</h3>
+          }
+          releaseToRefreshContent={
+            <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
+          }
         >
-          <div ref={innerRef as any}>
-            {items.length ? (
-              items.map(({ index, measureRef }) => {
-                const showLoading = index === events.length - 1;
-
-                let item = events[index];
-                console.log('item index: ', index, " - item.length: ", items.length);
- 
-                return (
-                  <Fragment key={'Feed' + item.id}>
-                    <div ref={measureRef}>
-                      <EventComponent
-                        
-                        id={item.id}
-                        event={item}
-                        {...filterOption.eventProps}
-                      />
-                    </div>
-
-                    <Loading show={showLoading} />
-                  </Fragment>
-                );
-              })
-            ) : (
-              <Loading show={true} />
-            )}
-          </div>
-        </div>
+          {items.map((item: EventContainer | undefined) => {
+            if (!item) return null;
+            return (
+              <>
+              <EventComponent key={`${item?.id!}EC`} container={item} />
+              <hr className="opacity-10 mb-2 mt-2" />
+              </>
+            );
+          })}
+        </InfiniteScroll>
       </Show>
     </>
   );
