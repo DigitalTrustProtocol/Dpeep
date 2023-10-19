@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import AsyncRoute from 'preact-async-route';
 import { Router, RouterOnChangeArgs } from 'preact-router';
@@ -38,9 +38,13 @@ import InitializeWoT from './dwotr/views/InitializeWoT.tsx';
 import MetricsView from './dwotr/views/Metrics.tsx';
 import NoteNew from './views/NoteNew.tsx';
 import NoteView from './dwotr/views/NoteView.tsx';
+import Empty from './dwotr/views/Empty.tsx';
 
 
 const Main = () => {
+
+  const [showMain, setShowMain] = useState(true);
+
   const [loggedIn] = useLocalState('loggedIn', false);
   const [unseenMsgsTotal] = useLocalState('unseenMsgsTotal', 0);
   const [activeRoute, setActiveRoute] = useLocalState('activeRoute', '');
@@ -57,6 +61,8 @@ const Main = () => {
 
   const handleRoute = (e: RouterOnChangeArgs) => {
     const currentActiveRoute = e.url;
+    setShowMain(currentActiveRoute === '/');
+    console.log('currentActiveRoute', currentActiveRoute, " - RouterOnChangeArgs:", e)
     setActiveRoute(currentActiveRoute);
     localState.get('activeRoute').put(currentActiveRoute);
   };
@@ -104,8 +110,11 @@ const Main = () => {
           <meta name="twitter:image" content="https://iris.to/assets/img/irisconnects.png" />
         </Helmet>
         <div className="pb-16 md:pb-0 relative flex h-full flex-grow flex-col w-1/2">
+          <div style={{ display: showMain ? 'block' : 'none' }}>
+              <Home path="/" />
+          </div>
           <Router onChange={(e) => handleRoute(e)}>
-            <Home path="/" />
+            <Empty path="/" />
             <Search path="/search" focus={true} />
             <KeyConverter path="/key" />
             <Global path="/global" />

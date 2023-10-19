@@ -14,6 +14,9 @@ import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { useFollows } from '@/dwotr/hooks/useFollows';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
+import FeedTanStack from '@/dwotr/components/feed/FeedTanStack';
+import FeedVirtual from '@/dwotr/components/feed/FeedVirtual';
+import FeedInView from '@/dwotr/components/feed/FeedInView';
 
 const Home: React.FC<RouteProps> = () => {
   const followedUsers = useFollows();
@@ -53,7 +56,11 @@ const Home: React.FC<RouteProps> = () => {
           <CreateNoteForm autofocus={false} placeholder={t('whats_on_your_mind')} />
         </div>
         <Show when={followedUsers.length}>
-          <Feed key={`feed-${followedUsers.length}`} filterOptions={options} />
+          {/* <Feed key={`feed-${followedUsers.length}`} filterOptions={options} /> */}
+          {/* <FeedVirtual key={`hoomfeed`} filterOptions={options} /> */}
+          {/* <FeedTanStack key={`tanStackfeed`} filterOptions={options} /> */}
+          <FeedInView key={`feedInView`} filterOptions={options} />
+
         </Show>
       </div>
     </View>

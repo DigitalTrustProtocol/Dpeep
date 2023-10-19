@@ -14,11 +14,13 @@ const useFeed = (opt: FeedOptions | undefined) => {
   const intervalRef = useRef<any>(undefined);
   const loading = useRef<boolean>(false);
 
+  const mounted = useRef<boolean>(true);
+
   // Loading events from memory
   useEffect(() => {
+    mounted.current = true;
     if (!opt) return; // The options may not be ready yet
 
-    //if(!feedProvider.current)
     feedProvider.current = feedManager.getProvider(opt); // Make sure to get the same provider for the same feedId
 
     let list = feedProvider.current.load();
@@ -33,20 +35,23 @@ const useFeed = (opt: FeedOptions | undefined) => {
     }, 3000);
 
     return () => {
+      mounted.current = false;
       feedProvider.current?.unmount();
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [opt]);
 
-  const loadMore = useCallback(() => {
+  const loadMore = useCallback((cb?: (list: Event[]) => void) => {
     if(!feedProvider.current) return
     if (loading.current == true) return;
     loading.current = true; // Prevent multiple loads from happening at once
 
     feedProvider.current?.nextPage().then((list) => {
+      if (!mounted.current) return;
       setEvents(list);
       setHasMore(feedProvider.current?.hasMore() || false);
       loading.current = false;
+      cb?.(list);
     });
 
   }, []);

@@ -22,7 +22,7 @@ const InlineAuthor = ({ container, showTools = false }: Props) => {
   const authorId = container!.authorId!;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 h-12">
       <Link href={`/${BECH32(authorId, 'npub')}`}>
         <MyAvatar str={STR(authorId) as string} width={40} />
       </Link>

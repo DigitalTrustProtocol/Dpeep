@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef } from 'react';
+import { Event } from 'nostr-tools';
 
-import EventComponent from '@/components/events/EventComponent';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
 
 import Show from '@/components/helpers/Show';
@@ -13,6 +13,9 @@ import { FeedOptions } from '@/dwotr/network/WOTPubSub';
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import useVirtual, { LoadMore } from 'react-cool-virtual';
+import eventManager from '@/dwotr/EventManager';
+import { ID } from '@/utils/UniqueIds';
+import EventComponent from '../events/EventComponent';
 
 export type FeedProps = {
   filterOptions: FeedOptions[];
@@ -58,12 +61,16 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
   const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
 
+  const containers = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
+
+
   const batchLoaded = useRef<Array<boolean>>([]);
 
   //  const [comments, setComments] = useState([]);
   const { outerRef, innerRef, items } = useVirtual({
     // Provide the number of comments
-    itemCount: events.length,
+    itemCount: containers.length,
+    //itemCount: 10,
     // Starts to pre-fetch data when the user scrolls within every 5 items
     // e.g. 1 - 5, 6 - 10 and so on (default = 15)
     loadMoreCount: 10,
@@ -75,23 +82,18 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
     },
     // The callback will be invoked when more data needs to be loaded
     loadMore: (e) => {
-      loadMore(); // Loads more data into the items array
-      batchLoaded.current[e.loadIndex] = true;
+      
+      const cb = (list: Event[]) => {
+        console.log('loadMore:list.length:', list.length);
+        if(list.length === 0) return;
+
+        batchLoaded.current[e.loadIndex] = true;
+      }
+
+      loadMore(cb); // Loads more data into the items array
+      
     },
   });
-
-  // useEffect(() => {
-  //   if (events.length === 0 && hasRefresh) {
-  //     refresh(); // Auto refresh to show new events
-  //     return;
-  //   }
-
-  //   // 10 should be enough to fill the screen
-  //   if (events.length < 10 && hasMore) {
-  //     loadMore(); // Auto load more to fill the screen
-  //     return;
-  //   }
-  // }, [events.length, hasRefresh, hasMore]);
 
   const refreshClick = (e) => {
     if (feedTopRef.current) {
@@ -139,18 +141,18 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
               items.map(({ index, measureRef }) => {
                 const showLoading = index === events.length - 1;
 
-                let item = events[index];
-                console.log('item index: ', index, " - item.length: ", items.length);
+                let container = containers[index];
+                if (!container) return null;
+                console.log('item index: ', index, " - item.length: ", items.length, " - container.length: ", containers.length);
  
                 return (
-                  <Fragment key={'Feed' + item.id}>
+                  <Fragment key={'Feed' + container.id}>
                     <div ref={measureRef}>
-                      <EventComponent
-                        
-                        id={item.id}
-                        event={item}
-                        {...filterOption.eventProps}
-                      />
+                    <>
+                      <EventComponent key={`${container?.id!}TanStack`} container={container} />
+                      <hr className="opacity-10 mb-2 mt-2" />
+                    </>
+
                     </div>
 
                     <Loading show={showLoading} />

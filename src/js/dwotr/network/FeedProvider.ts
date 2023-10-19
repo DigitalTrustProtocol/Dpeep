@@ -139,7 +139,10 @@ export class FeedProvider {
 
   #increaseView() {
     let neededLength = this.viewEnd + this.pageSize;
+
     this.viewEnd = neededLength > this.buffer.length ? this.buffer.length : neededLength;
+    //if(this.viewEnd < this.buffer.length) this.viewEnd = this.buffer.length; // Make sure we don't go over the buffer length
+
     this.view = this.buffer.slice(this.viewStart, this.viewEnd);
     return this.view;
   }

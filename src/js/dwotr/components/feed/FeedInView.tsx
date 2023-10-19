@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
-
+import { useEffect, useRef, useCallback } from 'preact/hooks';
 
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
 
@@ -15,8 +14,10 @@ import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import EventComponent from '../events/EventComponent';
 import eventManager from '@/dwotr/EventManager';
 import { ID } from '@/utils/UniqueIds';
-import { EventContainer } from '@/dwotr/model/DisplayEvent';
+import { EventContainer, NoteContainer } from '@/dwotr/model/DisplayEvent';
 import { useScrollYPosition } from '@/dwotr/hooks/useScrollPosition';
+import InViewComponent, { OnInView } from '../display/InViewComponent';
+import { Fragment } from 'preact/jsx-runtime';
 
 export type FeedProps = {
   filterOptions: FeedOptions[];
@@ -25,11 +26,17 @@ export type FeedProps = {
   fetchEvents?: any;
 };
 
-const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
+type InViewData = {
+  inView: boolean;
+  height: number | null;
+};
+
+const FeedInView = ({ showDisplayAs, filterOptions }: FeedProps) => {
   //const fetchEvents = props.fetchEvents || useSubscribe;
   const hasScrolled = useRef<boolean>(false);
 
   const feedTopRef = useRef<HTMLDivElement>(null);
+  const inViewComponents = useRef<Map<number, InViewData>>(new Map());
 
   //const positionY = useScrollYPosition();
 
@@ -87,9 +94,15 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
 
   //console.log("Feed:ScrollY:", positionY, " - Items:", items.length);
 
+  const onInView = useCallback((id: number, inView: boolean, height: number | null) => {
+    inViewComponents.current.set(id, { inView, height });
+    
+
+}, []);
+
   return (
     <>
-      <div ref={feedTopRef} />
+      <div ref={feedTopRef}></div>
       <Show when={hasRefresh}>
         <ShowNewEvents onClick={refreshClick} />
       </Show>
@@ -136,13 +149,16 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
             <h3 style={{ textAlign: 'center' }}>&#8593; Release to refresh</h3>
           }
         >
-          {items.map((item: EventContainer | undefined) => {
+          {items.map((item: NoteContainer | undefined) => {
             if (!item) return null;
+            if(item.subtype != 1) return null;
             return (
-              <>
-              <EventComponent key={`${item?.id!}EC`} container={item} />
-              <hr className="opacity-10 mb-2 mt-2" />
-              </>
+              <Fragment key={'Feed' + item.id}>
+                <InViewComponent id={item.id} onInView={onInView}>
+                  <EventComponent key={`${item?.id!}ECT`} container={item} />
+                  <hr className="opacity-10 mb-2 mt-2" />
+                </InViewComponent>
+              </Fragment>
             );
           })}
         </InfiniteScroll>
@@ -151,4 +167,4 @@ const Feed = ({ showDisplayAs, filterOptions }: FeedProps) => {
   );
 };
 
-export default Feed;
+export default FeedInView;

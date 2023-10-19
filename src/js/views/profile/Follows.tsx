@@ -18,7 +18,7 @@ import followManager, { FollowItem } from '@/dwotr/FollowManager.ts';
 import { Event } from 'nostr-tools';
 
 const FollowedUser = memo(({ id }: { id: UID }) => {
-  const hexKey = STR(id);
+  const hexKey = STR(id) as string;
   const npub = Key.toNostrBech32Address(hexKey, 'npub') || '';
   return (
     <div key={npub} className="flex w-full">
@@ -99,7 +99,7 @@ const Follows: React.FC<Props> = (props) => {
 
   const followAll = () => {
     if (confirm(`${t('follow_all')} (${items.length})?`)) {
-      followManager.follow(items.map((hexKey) => STR(hexKey)), true);
+      followManager.follow(items.map((hexKey) => STR(hexKey) as string), true)
     }
   };
 
