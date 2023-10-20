@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+//import { getCurrentUrl } from 'preact-router';
 import { Helmet } from 'react-helmet';
 import AsyncRoute from 'preact-async-route';
 import { Router, RouterOnChangeArgs } from 'preact-router';
@@ -40,39 +41,39 @@ import NoteNew from './views/NoteNew.tsx';
 import NoteView from './dwotr/views/NoteView.tsx';
 import Empty from './dwotr/views/Empty.tsx';
 
+// Show/Hide The main feed component
+// function showHideMainFeed(route: string) {
+
+//   var divElement = document.getElementById('HomeElement');
+//   if (divElement) {
+//     const isHome = route === '/';
+//     if (isHome) {
+//       divElement.style.display = 'block';
+//     } else {
+//       divElement.style.display = 'none';
+//     }
+//   }
+// }
 
 const Main = () => {
-
-  const [showMain, setShowMain] = useState(true);
+  const [activeRoute] = useLocalState('activeRoute', '');
+  //const [routePath, setRoutePath] = useState(getCurrentUrl());
 
   const [loggedIn] = useLocalState('loggedIn', false);
-  const [unseenMsgsTotal] = useLocalState('unseenMsgsTotal', 0);
-  const [activeRoute, setActiveRoute] = useLocalState('activeRoute', '');
   const [translationsLoadedState, setTranslationsLoadedState] = useState(false);
   const [showLoginModal] = useLocalState('showLoginModal', false);
 
   const [Initialized, setInitialized] = useState(false);
+
+  // useEffect(() => {
+  //   showHideMainFeed(getCurrentUrl());
+  // }, []);
 
   useEffect(() => {
     translationLoaded.then(() => {
       setTranslationsLoadedState(true);
     });
   }, []);
-
-  const handleRoute = (e: RouterOnChangeArgs) => {
-    const currentActiveRoute = e.url;
-    setShowMain(currentActiveRoute === '/');
-    console.log('currentActiveRoute', currentActiveRoute, " - RouterOnChangeArgs:", e)
-    setActiveRoute(currentActiveRoute);
-    localState.get('activeRoute').put(currentActiveRoute);
-  };
-
-  let title = '';
-  if (activeRoute && activeRoute.length > 1) {
-    title = Helpers.capitalize(activeRoute.replace('/', '').split('?')[0]);
-  }
-  const titleTemplate = unseenMsgsTotal ? `(${unseenMsgsTotal}) %s | Dpeep` : '%s | Dpeep';
-  const defaultTitle = unseenMsgsTotal ? `(${unseenMsgsTotal}) Dpeep` : 'Dpeep';
 
   if (!translationsLoadedState) {
     return <div />;
@@ -82,16 +83,11 @@ const Main = () => {
     return <Login fullScreen={true} />;
   }
 
-  if(loggedIn && !Initialized) {
+  if (loggedIn && !Initialized) {
     return <InitializeWoT setInitialized={setInitialized} />;
   }
 
-  const NoteOrProfile = (params: { id?: string; path: string }) => {
-    if (params.id?.startsWith('note')) {
-      return <NoteView id={params.id} />;
-    }
-    return <Profile id={params.id} tab="posts" path={params.path} />;
-  };
+  console.log('Main:activeRoute', activeRoute);
 
   return (
     <div className="flex justify-center">
@@ -99,71 +95,11 @@ const Main = () => {
         <Show when={loggedIn}>
           <NavigationSidebar />
         </Show>
-        <Helmet titleTemplate={titleTemplate} defaultTitle={defaultTitle}>
-          <title>{title}</title>
-          <meta name="description" content="Connecting People" />
-          <meta property="og:type" content="website" />
-          <meta property="og:title" content={title} />
-          <meta property="og:description" content="Connecting People" />
-          <meta property="og:image" content="https://iris.to/assets/img/irisconnects.png" />
-          <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:image" content="https://iris.to/assets/img/irisconnects.png" />
-        </Helmet>
         <div className="pb-16 md:pb-0 relative flex h-full flex-grow flex-col w-1/2">
-          <div style={{ display: showMain ? 'block' : 'none' }}>
-              <Home path="/" />
+          <div id="HomeElement" style={ activeRoute == '/' ? {display: 'block'} : { display: 'none'}}>
+            <Home />
           </div>
-          <Router onChange={(e) => handleRoute(e)}>
-            <Empty path="/" />
-            <Search path="/search" focus={true} />
-            <KeyConverter path="/key" />
-            <Global path="/global" />
-            <SearchFeed path="/search/:query" />
-            <Login path="/login" fullScreen={true} />
-            <Notifications path="/notifications" />
-            <AsyncRoute
-              path="/chat/:id?"
-              getComponent={() => import('./views/chat/Chat').then((module) => module.default)}
-            />
-            <NoteNew path="/post/new" />
-            <NoteView path="/post/:id+" />
-            <About path="/about" />
-            <AsyncRoute
-              path="/settings/:page?"
-              getComponent={() =>
-                import('./views/settings/Settings').then((module) => module.default)
-              }
-            />
-            <LogoutConfirmation path="/logout" />
-            <EditProfile path="/profile/edit" />
-            <Subscribe path="/subscribe" />
-            <Profile path="/profile/:id" tab="posts" />
-            <Profile path="/:id/replies" tab="replies" />
-            <Profile path="/:id/likes" tab="likes" />
-            <Follows path="/follows/:id" />
-            <Follows followers={true} path="/followers/:id" />
-
-            
-            <AsyncRoute
-              path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?"
-              getComponent={() =>
-                import('./dwotr/views/GraphView').then((module) => module.default)
-              }
-            />
-
-            <View32010 path="/trusts/" />
-            <View16463 path="/flags/" />
-            <MetricsView path="/metrics/" />
-            <Demo path="/demo/:id?" />
-
-            <AsyncRoute
-              path="/explorer/:p?"
-              getComponent={() =>
-                import('./views/explorer/Explorer').then((module) => module.default)
-              }
-            />
-            <NoteOrProfile path="/:id" />
-          </Router>
+          <RouterSection />
         </div>
         <Footer />
       </section>
@@ -182,3 +118,93 @@ const Main = () => {
 };
 
 export default Main;
+
+const RouterSection = ({ }) => {
+  const [activeRoute, setActiveRoute] = useLocalState('activeRoute', '');
+  const [unseenMsgsTotal] = useLocalState('unseenMsgsTotal', 0);
+
+  const handleRoute = (e: RouterOnChangeArgs) => {
+    const currentActiveRoute = e.url;
+
+    // Pure javascript function to show/hide the main feed component outside of the React state management
+    //setRoutePath?.(currentActiveRoute);
+    //showHideMainFeed(currentActiveRoute);
+
+    setActiveRoute(currentActiveRoute);
+    localState.get('activeRoute').put(currentActiveRoute);
+  };
+
+  const NoteOrProfile = (params: { id?: string; path: string }) => {
+    if (params.id?.startsWith('note')) {
+      return <NoteView id={params.id} />;
+    }
+    return <Profile id={params.id} tab="posts" path={params.path} />;
+  };
+
+  let title = '';
+  if (activeRoute && activeRoute.length > 1) {
+    title = Helpers.capitalize(activeRoute.replace('/', '').split('?')[0]);
+  }
+  const titleTemplate = unseenMsgsTotal ? `(${unseenMsgsTotal}) %s | Dpeep` : '%s | Dpeep';
+  const defaultTitle = unseenMsgsTotal ? `(${unseenMsgsTotal}) Dpeep` : 'Dpeep';
+
+  return (
+    <>
+      <Helmet titleTemplate={titleTemplate} defaultTitle={defaultTitle}>
+        <title>{title}</title>
+        <meta name="description" content="Connecting People" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content="Connecting People" />
+        <meta property="og:image" content="https://iris.to/assets/img/irisconnects.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://iris.to/assets/img/irisconnects.png" />
+      </Helmet>
+
+      <Router onChange={(e) => handleRoute(e)}>
+        <Empty path="/" />
+        <Search path="/search" focus={true} />
+        <KeyConverter path="/key" />
+        <Global path="/global" />
+        <SearchFeed path="/search/:query" />
+        <Login path="/login" fullScreen={true} />
+        <Notifications path="/notifications" />
+        <AsyncRoute
+          path="/chat/:id?"
+          getComponent={() => import('./views/chat/Chat').then((module) => module.default)}
+        />
+        <NoteNew path="/post/new" />
+        <NoteView path="/post/:id+" />
+        <About path="/about" />
+        <AsyncRoute
+          path="/settings/:page?"
+          getComponent={() => import('./views/settings/Settings').then((module) => module.default)}
+        />
+        <LogoutConfirmation path="/logout" />
+        <EditProfile path="/profile/edit" />
+        <Subscribe path="/subscribe" />
+        <Profile path="/profile/:id" tab="posts" />
+        <Profile path="/:id/replies" tab="replies" />
+        <Profile path="/:id/likes" tab="likes" />
+        <Follows path="/follows/:id" />
+        <Follows followers={true} path="/followers/:id" />
+
+        <AsyncRoute
+          path="/graph/:npub?/:dir?/:trusttype?/:view?/:filter?"
+          getComponent={() => import('./dwotr/views/GraphView').then((module) => module.default)}
+        />
+
+        <View32010 path="/trusts/" />
+        <View16463 path="/flags/" />
+        <MetricsView path="/metrics/" />
+        <Demo path="/demo/:id?" />
+
+        <AsyncRoute
+          path="/explorer/:p?"
+          getComponent={() => import('./views/explorer/Explorer').then((module) => module.default)}
+        />
+        <NoteOrProfile path="/:id" />
+      </Router>
+    </>
+  );
+};

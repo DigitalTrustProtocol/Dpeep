@@ -54,8 +54,8 @@ const MyAvatar: React.FC<Props> = (props) => {
   return (
     <div
       style={{
-        width: `${width}px`,
-        height: `${width}px`,
+        minWidth: `${width}px`,
+        minHeight: `${width}px`,
         cursor: props.onClick ? 'pointer' : undefined,
       }}
       className={`inline-flex flex-col flex-shrink-0 items-center justify-center relative select-none ${

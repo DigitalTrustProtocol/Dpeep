@@ -1,24 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import profileManager from '../ProfileManager';
 import { ProfileMemory } from '../model/ProfileRecord';
 import { UID } from '@/utils/UniqueIds';
-import { useIsMounted } from './useIsMounted';
 import followManager from '../FollowManager';
 
 
 export const useProfile = (profileId: UID, loadOnDefault = false) => {
-  const [profile, setProfile] = useState<ProfileMemory>();
-  const isMounted = useIsMounted();
+  const [profile, setProfile] = useState<ProfileMemory>(profileManager.getMemoryProfile(profileId));
+  const isMounted = useRef(true)
 
 
   useEffect(() => {
-    let profile = profileManager.getMemoryProfile(profileId);
-
-    setProfile(profile);
-
     let onEvent = (profile: ProfileMemory) => {
-      if(!isMounted()) return;
-
+      if(!isMounted.current) return;
       setProfile({...profile});
     }
 
@@ -31,6 +25,7 @@ export const useProfile = (profileId: UID, loadOnDefault = false) => {
     }
 
     return () => {
+      isMounted.current = false;
       // Unsubscribe from profile updates
       profileManager.onEvent.removeListener(profileId, onEvent);
     }

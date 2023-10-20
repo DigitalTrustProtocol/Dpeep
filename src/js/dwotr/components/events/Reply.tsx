@@ -1,9 +1,7 @@
+import { memo } from 'preact/compat';
 import Show from '@/components/helpers/Show';
 import { ReplyContainer } from '@/dwotr/model/DisplayEvent';
-import { BECH32 } from '@/utils/UniqueIds';
-import { Link } from 'preact-router';
 import EventComponent from './EventComponent';
-import { translate as t } from '../../../translations/Translation.mjs';
 import { useEventContainer } from '@/dwotr/hooks/useEventContainer';
 import Note from './Note';
 
@@ -52,4 +50,4 @@ const Reply: React.FC<ReplyProps> = ({
   );
 };
 
-export default Reply;
+export default memo(Reply);

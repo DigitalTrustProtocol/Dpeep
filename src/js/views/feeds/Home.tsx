@@ -1,24 +1,21 @@
 import { useMemo } from 'react';
 
 import {Filter} from 'nostr-tools';
-import CreateNoteForm from '@/components/create/CreateNoteForm';
 
-import Feed from '@/dwotr/components/feed/Feed';
-//import Feed from '@/dwotr/components/feed/Feed';
 
 import Show from '@/components/helpers/Show';
 import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
 import { getEventReplyingTo, isRepost } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
-import { RouteProps } from '@/views/types.ts';
+//import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { useFollows } from '@/dwotr/hooks/useFollows';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
-import FeedTanStack from '@/dwotr/components/feed/FeedTanStack';
+//import FeedTanStack from '@/dwotr/components/feed/FeedTanStack';
 import FeedVirtual from '@/dwotr/components/feed/FeedVirtual';
-import FeedInView from '@/dwotr/components/feed/FeedInView';
+//import FeedInView from '@/dwotr/components/feed/FeedInView';
 
-const Home: React.FC<RouteProps> = () => {
+const Home = () => {
   const followedUsers = useFollows();
 
   const options = useMemo(
@@ -52,14 +49,14 @@ const Home: React.FC<RouteProps> = () => {
     <View>
       <div className="flex flex-col w-full">
         <OnboardingNotification />
-        <div className="hidden md:block px-4">
+        {/* <div className="hidden md:block px-4">
           <CreateNoteForm autofocus={false} placeholder={t('whats_on_your_mind')} />
-        </div>
+        </div> */}
         <Show when={followedUsers.length}>
           {/* <Feed key={`feed-${followedUsers.length}`} filterOptions={options} /> */}
-          {/* <FeedVirtual key={`hoomfeed`} filterOptions={options} /> */}
+          <FeedVirtual key={`hoomfeed`} filterOptions={options} />
           {/* <FeedTanStack key={`tanStackfeed`} filterOptions={options} /> */}
-          <FeedInView key={`feedInView`} filterOptions={options} />
+          {/* <FeedInView key={`feedInView`} filterOptions={options} /> */}
 
         </Show>
       </div>

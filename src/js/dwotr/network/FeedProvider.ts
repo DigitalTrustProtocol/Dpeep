@@ -25,6 +25,7 @@ export class FeedProvider {
   eventProvider: IEventProvider;
 
   loading: boolean = false;
+  isDone: boolean = false;
 
   constructor(_id:string, _cursor: ICursor, _eventProvider: IEventProvider, size = 10) {
     this.id = _id;
@@ -133,6 +134,8 @@ export class FeedProvider {
       let deltaItems = await this.#loadToBuffer(true);
       await contextLoader.resolve(deltaItems);
     }
+
+    this.isDone = this.cursor.done && this.cursor.count() == 0;
 
     return this.#increaseView();
   }

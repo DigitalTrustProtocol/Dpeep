@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { useMemo } from 'react';
 import { Link } from 'preact-router';
 
@@ -50,7 +51,7 @@ const InlineAuthor = ({ container, showTools = false }: Props) => {
   );
 };
 
-export default InlineAuthor;
+export default memo(InlineAuthor);
 
 export const authorDates = (created_at: number) => {
   const t = new Date(created_at * 1000);

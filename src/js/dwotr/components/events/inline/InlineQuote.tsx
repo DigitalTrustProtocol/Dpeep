@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { useEventContainer } from '@/dwotr/hooks/useEventContainer';
 import { useKey } from '@/dwotr/hooks/useKey';
 import InlineComponent from './InlineComponent';
@@ -6,7 +7,7 @@ type InLineQuoteProps = {
   id?: string;
 };
 
-export const InLineQuote = ({ id }: InLineQuoteProps) => {
+const InLineQuote = ({ id }: InLineQuoteProps) => {
   const { uid } = useKey(id);
 
   const { container } = useEventContainer(uid);
@@ -17,3 +18,5 @@ export const InLineQuote = ({ id }: InLineQuoteProps) => {
     </div>
   );
 };
+
+export default memo(InLineQuote);

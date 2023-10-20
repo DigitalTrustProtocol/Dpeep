@@ -1,3 +1,4 @@
+import React from 'preact/compat';
 import { useEffect, useRef, useCallback } from 'preact/hooks';
 
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
@@ -14,9 +15,8 @@ import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import EventComponent from '../events/EventComponent';
 import eventManager from '@/dwotr/EventManager';
 import { ID } from '@/utils/UniqueIds';
-import { EventContainer, NoteContainer } from '@/dwotr/model/DisplayEvent';
-import { useScrollYPosition } from '@/dwotr/hooks/useScrollPosition';
-import InViewComponent, { OnInView } from '../display/InViewComponent';
+import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import InViewComponent from '../display/InViewComponent';
 import { Fragment } from 'preact/jsx-runtime';
 
 export type FeedProps = {
@@ -32,8 +32,6 @@ type InViewData = {
 };
 
 const FeedInView = ({ showDisplayAs, filterOptions }: FeedProps) => {
-  //const fetchEvents = props.fetchEvents || useSubscribe;
-  const hasScrolled = useRef<boolean>(false);
 
   const feedTopRef = useRef<HTMLDivElement>(null);
   const inViewComponents = useRef<Map<number, InViewData>>(new Map());
@@ -96,7 +94,7 @@ const FeedInView = ({ showDisplayAs, filterOptions }: FeedProps) => {
 
   const onInView = useCallback((id: number, inView: boolean, height: number | null) => {
     inViewComponents.current.set(id, { inView, height });
-    
+
 
 }, []);
 
@@ -167,4 +165,4 @@ const FeedInView = ({ showDisplayAs, filterOptions }: FeedProps) => {
   );
 };
 
-export default FeedInView;
+export default React.memo(FeedInView);

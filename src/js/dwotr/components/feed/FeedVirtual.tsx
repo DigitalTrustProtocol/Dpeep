@@ -1,21 +1,19 @@
-import { Fragment, useEffect, useRef } from 'react';
+import { useRef, Fragment } from 'react';
 import { Event } from 'nostr-tools';
 
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
 
 import Show from '@/components/helpers/Show';
 import useHistoryState from '@/state/useHistoryState.ts';
-import Helpers from '@/utils/Helpers';
-
-//import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
-import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import useVirtual, { LoadMore } from 'react-cool-virtual';
+import useVirtual from 'react-cool-virtual';
 import eventManager from '@/dwotr/EventManager';
 import { ID } from '@/utils/UniqueIds';
 import EventComponent from '../events/EventComponent';
+import useFillViewportHeight from '@/dwotr/hooks/useFillViewportHeight';
+import ToTopButton from './ToTopButton';
 
 export type FeedProps = {
   filterOptions: FeedOptions[];
@@ -33,43 +31,37 @@ export type FeedProps = {
   // };
 };
 
-// const TOTAL_COMMENTS = 500;
-// const BATCH_COMMENTS = 5;
+// const Loading = ({ show }) => {
+//   if (!show) return null;
+//   return <div className="item">⏳ Loading...</div>;
+// };
 
-// We only have 50 (500 / 5) batches of items, so set the 51th (index = 50) batch as `true`
-// to avoid the `loadMore` callback from being invoked, yep it's a trick 😉
-
-let currentIndex = -1;
-
-const Loading = ({ show }) => {
-  if (!show) return null;
-  return <div className="item">⏳ Loading...</div>;
-};
+const Loading = () => (
+  <div className="justify-center items-center flex w-full mt-4 mb-4">
+    <div className="loading">🔄</div>
+  </div>
+);
 
 const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
-  //const fetchEvents = props.fetchEvents || useSubscribe;
-  const feedTopRef = useRef<HTMLDivElement>(null);
-
-  const displayAsParam = Helpers.getUrlParameter('display') === 'grid' ? 'grid' : 'feed';
-
   const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
-  const [displayAs, setDisplayAs] = useHistoryState(displayAsParam, 'display');
-  //const [infiniteScrollKey, setInfiniteScrollKey] = useState(0);
-
   const filterOption = filterOptions[filterOptionIndex];
 
+  const [viewportRef, viewportHeight] = useFillViewportHeight<HTMLDivElement>();
+  //const [scrollRef, isScrolled] = useScrollDetection<HTMLDivElement>();
+
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
-  const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
+  const { events, hasMore, hasRefresh, isLoading, isDone, loadMore, refresh } =
+    useFeed(filterOption);
 
   const containers = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
-
 
   const batchLoaded = useRef<Array<boolean>>([]);
 
   //  const [comments, setComments] = useState([]);
-  const { outerRef, innerRef, items } = useVirtual({
+  const { outerRef, innerRef, items, scrollTo } = useVirtual<HTMLDivElement, HTMLDivElement>({
     // Provide the number of comments
-    itemCount: containers.length,
+    itemCount: events.length,
+    itemSize: 150,
     //itemCount: 10,
     // Starts to pre-fetch data when the user scrolls within every 5 items
     // e.g. 1 - 5, 6 - 10 and so on (default = 15)
@@ -77,44 +69,42 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
     // Provide the loaded state for a batch items to tell the hook
     // whether the `loadMore` should be triggered or not
     isItemLoaded: (loadIndex) => {
-      console.log('isItemLoaded: ', loadIndex, " - batchLoaded.current[loadIndex]: ", batchLoaded.current[loadIndex], " - hasMore: ", hasMore);
+      //console.log('isItemLoaded: ', loadIndex, " - batchLoaded.current[loadIndex]: ", batchLoaded.current[loadIndex], " - hasMore: ", hasMore);
       return batchLoaded.current[loadIndex]; // || !hasMore
     },
     // The callback will be invoked when more data needs to be loaded
     loadMore: (e) => {
-      
       const cb = (list: Event[]) => {
         console.log('loadMore:list.length:', list.length);
-        if(list.length === 0) return;
+        if (list.length === 0) return;
 
         batchLoaded.current[e.loadIndex] = true;
-      }
+      };
 
       loadMore(cb); // Loads more data into the items array
-      
+    },
+
+    //scrollDuration: (distance) => distance * 0.05,
+    scrollDuration: 1500,
+    // Using "easeInOutBack" effect (default = easeInOutSine), see: https://easings.net/#easeInOutSine
+    scrollEasingFunction: (x) => {
+      return 1 - Math.pow(1 - x, 5);
     },
   });
 
   const refreshClick = (e) => {
-    if (feedTopRef.current) {
-      const currentScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-
-      // only scroll up
-      if (currentScrollTop > feedTopRef.current.offsetTop) {
-        feedTopRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-
     refresh(); // Add new events
+    scrollTo({ offset: 0, smooth: true });
   };
 
-
   return (
-    <>
-      <div ref={feedTopRef} />
-      <Show when={hasRefresh}>
-        <ShowNewEvents onClick={refreshClick} />
-      </Show>
+    <div
+      style={{ height: viewportHeight, overflow: 'auto' }}
+      ref={(el) => {
+        outerRef.current = el; // Set the element to the `outerRef`
+        viewportRef.current = el; // Share the element for viewport calculation
+      }}
+    >
       <Show when={filterOptions.length > 1}>
         <FilterOptionsSelector
           filterOptions={filterOptions}
@@ -124,48 +114,60 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
           }}
         />
       </Show>
+      <Show when={hasRefresh}>
+        <ShowNewEvents onClick={refreshClick} />
+      </Show>
 
       <hr className="opacity-10" />
-      <Show when={hasRefresh}>
-        <NewEventsButton onClick={refreshClick} />
-        <hr className="opacity-10" />
-      </Show>
 
-      <Show when={displayAs === 'feed'}>
-        <div
-          className="h-[700px] overflow-auto"
-          ref={outerRef as any}
-        >
-          <div ref={innerRef as any}>
-            {items.length ? (
-              items.map(({ index, measureRef }) => {
-                const showLoading = index === events.length - 1;
+      <div ref={innerRef}>
+        {items.length ? (
+          items.map(({ index, size, width, measureRef }) => {
+            const isEndOfList = index === containers.length - 1;
+            const showLoading = hasMore && isEndOfList;
+            const showNoMore = !hasMore && isEndOfList;
 
-                let container = containers[index];
-                if (!container) return null;
-                console.log('item index: ', index, " - item.length: ", items.length, " - container.length: ", containers.length);
- 
-                return (
-                  <Fragment key={'Feed' + container.id}>
-                    <div ref={measureRef}>
-                    <>
-                      <EventComponent key={`${container?.id!}TanStack`} container={container} />
-                      <hr className="opacity-10 mb-2 mt-2" />
-                    </>
+            let container = containers[index];
+            if (!container) {
+              return null;
+            }
 
-                    </div>
-
-                    <Loading show={showLoading} />
-                  </Fragment>
-                );
-              })
-            ) : (
-              <Loading show={true} />
-            )}
-          </div>
-        </div>
-      </Show>
-    </>
+            return (
+              <div
+                key={'FeedItem' + index}
+                ref={measureRef}
+                style={{ minHeight: size, minWidth: width }}
+              >
+                <Fragment key={`Virtual${container?.id!}`}>
+                  <EventComponent container={container} />
+                  <hr className="opacity-10 mb-2 mt-2" />
+                  <Show when={showNoMore}>
+                    <p className="text-center">
+                      <b>No more messages</b>&nbsp;
+                      {/* <ToTopButton onClick={() => scrollTo({ offset: 0, smooth: true })} /> */}
+                    </p>
+                  </Show>
+                  <Show when={showLoading}>
+                    <Loading />
+                  </Show>
+                </Fragment>
+              </div>
+            );
+          })
+        ) : (
+          <>
+            <Show when={isLoading}>
+              <Loading />
+            </Show>
+            <Show when={isDone}>
+              <p className="text-center">
+                <b>No messages</b>
+              </p>
+            </Show>
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 

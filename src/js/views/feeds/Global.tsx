@@ -7,7 +7,7 @@ import { translate as t } from '@/translations/Translation.mjs';
 import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub';
-import Feed from '@/dwotr/components/feed/Feed';
+import FeedVirtual from '@/dwotr/components/feed/FeedVirtual';
 
 const Global: React.FC<RouteProps> = () => {
   const filterOptions = useMemo(
@@ -39,7 +39,7 @@ const Global: React.FC<RouteProps> = () => {
           <div className="hidden md:block px-4">
             <CreateNoteForm autofocus={false} placeholder={t('whats_on_your_mind')} />
           </div>
-          <Feed filterOptions={filterOptions} />
+          <FeedVirtual filterOptions={filterOptions} />
         </div>
       </div>
     </View>

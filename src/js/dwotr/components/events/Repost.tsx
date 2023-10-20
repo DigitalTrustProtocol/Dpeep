@@ -1,3 +1,5 @@
+
+import { memo } from 'preact/compat';
 import EventComponent from './EventComponent';
 import { RepostContainer } from '@/dwotr/model/DisplayEvent';
 
@@ -10,7 +12,7 @@ type RepostProps = {
   focusId?: number;
 };
 
-export default function Repost({ container, focusId, showReplies, isThread }: RepostProps) {
+const Repost = ({ container, focusId, showReplies, isThread }: RepostProps) => {
   const { repostOf, repostCount } = useRepost(container!);
 
   if (!repostOf) return null;
@@ -26,3 +28,5 @@ export default function Repost({ container, focusId, showReplies, isThread }: Re
     </>
   );
 }
+
+export default memo(Repost);

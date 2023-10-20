@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { NoteContainer } from '@/dwotr/model/DisplayEvent';
 import Reply from './Reply';
 import Repost from './Repost';
@@ -65,4 +66,4 @@ const EventComponent = ({
   );
 };
 
-export default EventComponent;
+export default memo(EventComponent);

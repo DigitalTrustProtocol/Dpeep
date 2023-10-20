@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import Badge from '@/components/user/Badge';
 import { useProfile } from '@/dwotr/hooks/useProfile';
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
@@ -27,4 +28,4 @@ const Name = ({ id, placeholder, hideBadge }: Props) => {
   );
 };
 
-export default Name;
+export default memo(Name);

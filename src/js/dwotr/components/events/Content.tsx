@@ -1,8 +1,6 @@
-import { useState } from 'preact/hooks';
-
+import { memo } from 'preact/compat';
 import Show from '@/components/helpers/Show';
 import HyperText from '@/components/HyperText';
-import { translate as t } from '@/translations/Translation.mjs';
 import Helpers from '@/utils/Helpers';
 
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
@@ -18,7 +16,6 @@ type Props = {
 };
 
 const Content = ({ container, translatedText }: Props) => {
-  //const [doTruncate, setDoTruncate] = useState(true);
 
   const wot = useVerticeMonitor(
     container ? container.id : 0,
@@ -50,22 +47,11 @@ const Content = ({ container, translatedText }: Props) => {
           </ExpandableTextDiv>
         </div>
       </Show>
-      {/* <Show when={doTruncate && isTooLong()}>
-        <a
-          className="text-sm link mb-2"
-          onClick={(e) => {
-            e.preventDefault();
-            setDoTruncate(!doTruncate);
-          }}
-        >
-          ... {t(`show_${doTruncate ? 'more' : 'less'}`)}
-        </a>
-      </Show> */}
     </div>
   );
 };
 
-export default Content;
+export default memo(Content);
 
 export const processText = (content: string, doTruncate: boolean = false) => {
   let text = content || '';

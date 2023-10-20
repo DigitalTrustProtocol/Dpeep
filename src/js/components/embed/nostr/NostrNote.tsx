@@ -1,4 +1,4 @@
-import { InLineQuote } from '@/dwotr/components/events/inline/InlineQuote';
+import InLineQuote from '@/dwotr/components/events/inline/InlineQuote';
 import Key from '../../../nostr/Key';
 import Embed from '../index';
 

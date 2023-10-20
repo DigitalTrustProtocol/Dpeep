@@ -9,7 +9,7 @@ import { allEmbeds, textEmbeds } from './embed';
 let settings: any = {};
 localState.get('settings').on((s) => (settings = s));
 
-const HyperText = memo(
+const HyperText =
   ({ children, event, textOnly }: { children: string; event?: Event; textOnly?: boolean }) => {
     let processedChildren = [children?.trim()] as any[];
 
@@ -41,7 +41,6 @@ const HyperText = memo(
     });
 
     return <>{processedChildren}</>;
-  },
-);
+  }
 
-export default HyperText;
+export default memo(HyperText);

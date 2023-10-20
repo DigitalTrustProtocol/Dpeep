@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { useInView } from 'react-intersection-observer';
 
@@ -47,7 +48,4 @@ const InViewComponent = ({ children, id, onInView }: InViewComponentProps) => {
   );
 };
 
-export default InViewComponent;
-
-
-<div class="css-1dbjc4n r-172uzmj r-1pi2tsx r-1ny4l3l r-o7ynqc r-6416eg r-13qz1uu"></div>
+export default memo(InViewComponent);

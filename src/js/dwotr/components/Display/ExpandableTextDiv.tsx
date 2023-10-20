@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import React, { useState, useRef, useEffect } from 'react';
 
 const ExpandableTextDiv: React.FC = ({ children }) => {
@@ -50,4 +51,4 @@ const ExpandableTextDiv: React.FC = ({ children }) => {
   );
 };
 
-export default ExpandableTextDiv;
+export default memo(ExpandableTextDiv);

@@ -3,7 +3,7 @@ import { Link } from 'preact-router';
 
 import Name from '../../user/Name';
 import Embed from '../index';
-import { InLineQuote } from '@/dwotr/components/events/inline/InlineQuote';
+import InLineQuote from '@/dwotr/components/events/inline/InlineQuote';
 
 const nip19Regex = /\bnostr:(n(?:event|profile)1\w+)\b/g;
 

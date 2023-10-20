@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { NoteContainer } from '@/dwotr/model/DisplayEvent';
 import { UID } from '@/utils/UniqueIds';
 import Content from './Content';

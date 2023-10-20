@@ -2,7 +2,7 @@ import React from 'react';
 import { useMemo } from 'preact/hooks';
 
 import View from '../View';
-import Feed from '@/dwotr/components/feed/Feed';
+import FeedVirtual from '@/dwotr/components/feed/FeedVirtual';
 
 type Props = {
   path: string;
@@ -32,7 +32,7 @@ const Search: React.FC<Props> = ({ query }) => {
     <View>
       <div className="flex flex-row">
         <div className="flex flex-col w-full">
-          <Feed key={query} filterOptions={filterOptions} />
+          <FeedVirtual key={query} filterOptions={filterOptions} />
         </div>
       </div>
     </View>

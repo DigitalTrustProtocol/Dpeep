@@ -16,7 +16,6 @@ import EventComponent from '../events/EventComponent';
 import eventManager from '@/dwotr/EventManager';
 import { ID } from '@/utils/UniqueIds';
 import { EventContainer } from '@/dwotr/model/DisplayEvent';
-import { useScrollYPosition } from '@/dwotr/hooks/useScrollPosition';
 
 export type FeedProps = {
   filterOptions: FeedOptions[];

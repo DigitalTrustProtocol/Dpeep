@@ -5,7 +5,7 @@ import { Link } from 'preact-router';
 
 import Name from '../../user/Name';
 import Embed from '../index';
-import { InLineQuote } from '@/dwotr/components/events/inline/InlineQuote';
+import InlineQuote from '@/dwotr/components/events/inline/InlineQuote';
 
 const fail = (s: string) => `#[${s}]`;
 
@@ -30,7 +30,7 @@ const InlineMention: Embed = {
         </Link>
       );
     } else if (type === 'e') {
-      return <InLineQuote id={id} key={id} />;
+      return <InlineQuote id={id} key={id} />;
     } else {
       console.log('unknown tag type', type, index, event);
       return <>{fail(match)}</>;

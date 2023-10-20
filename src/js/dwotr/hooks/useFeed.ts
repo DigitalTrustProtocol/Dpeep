@@ -8,7 +8,9 @@ import feedManager from '../FeedManager';
 const useFeed = (opt: FeedOptions | undefined) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isDone, setIsDone] = useState<boolean>(false); 
   const [hasRefresh, setHasRefresh] = useState<boolean>(false);
+
 
   const feedProvider = useRef<FeedProvider>(); // Make sure to get the same provider for the same feedId
   const intervalRef = useRef<any>(undefined);
@@ -50,6 +52,7 @@ const useFeed = (opt: FeedOptions | undefined) => {
       if (!mounted.current) return;
       setEvents(list);
       setHasMore(feedProvider.current?.hasMore() || false);
+      setIsDone(feedProvider.current?.isDone || false);
       loading.current = false;
       cb?.(list);
     });
@@ -70,7 +73,7 @@ const useFeed = (opt: FeedOptions | undefined) => {
     // loadMoreCleanupRef.current = PubSub.subscribe(filter, updateEvents, false, false);
   }, []);
 
-  return { events, hasMore, hasRefresh, loadMore, refresh, loadAll };
+  return { events, hasMore, hasRefresh, isLoading: loading.current, isDone, loadMore, refresh, loadAll, };
 };
 
 export default useFeed;

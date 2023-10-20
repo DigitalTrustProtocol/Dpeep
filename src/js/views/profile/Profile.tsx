@@ -20,7 +20,7 @@ import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
 import { FeedOptions } from '@/dwotr/network/WOTPubSub.ts';
 import { ReactionMemoryCursor } from '@/dwotr/network/ReactionMemoryCursor.ts';
-import Feed from '@/dwotr/components/feed/Feed.tsx';
+import FeedVirtual from '@/dwotr/components/feed/FeedVirtual.tsx';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -171,7 +171,7 @@ function Profile(props) {
         />
         <ProfileCard npub={bech32Key} hexPub={hexPub} />
         <Show when={!blocked}>
-          <Feed key={`posts${hexPub}`} filterOptions={filterOptions} />
+          <FeedVirtual key={`posts${hexPub}`} filterOptions={filterOptions} />
         </Show>
       </div>
     </View>

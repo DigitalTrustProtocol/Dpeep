@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { useEffect, useState } from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Link } from 'preact-router';
@@ -16,7 +17,7 @@ type InlineRepostProps = {
   container?: RepostContainer;
 };
 
-export default function InlineRepost({ container }: InlineRepostProps) {
+const InlineRepost = ({ container }: InlineRepostProps) => {
   const { repostOf, repostCount } = useRepost(container!);
 
   if (!repostOf) return null;
@@ -27,14 +28,16 @@ export default function InlineRepost({ container }: InlineRepostProps) {
       <InlineComponent container={repostOf} />
     </>
   );
-}
+};
+
+export default memo(InlineRepost);
 
 type RepostNameProps = {
   authorId: number;
   repostCount: number;
 };
 
-export const RepostName = ({ authorId, repostCount }: RepostNameProps) => (
+export const RepostName = memo(({ authorId, repostCount }: RepostNameProps) => (
   <div className="flex gap-1 items-center text-sm text-neutral-500 px-2 pt-2">
     <div className="flex flex-row">
       <i className="min-w-[40px] mr-4 mb-2 flex justify-end">
@@ -50,7 +53,7 @@ export const RepostName = ({ authorId, repostCount }: RepostNameProps) => (
       </div>
     </div>
   </div>
-);
+));
 
 export const useRepost = (container: RepostContainer) => {
   const [repostCount, setRepostCount] = useState<number>(0);
