@@ -22,7 +22,7 @@ const Home = () => {
     () => [
       {
         id: 'home',
-        name: t('posts'),
+        name: t('Following'),
         filter: { kinds: [1], authors: followedUsers, limit: 10 } as Filter,
         includeReplies: false,
         includeReposts: false,
@@ -61,7 +61,7 @@ const Home = () => {
       <div className="flex flex-col w-full">
         <OnboardingNotification />
         <FeedSelect selectedOption={selectedOption} feedOptions={options} setOption={setOption} />
-        <hr className="opacity-10" />
+        <hr className="opacity-10 mt-2" />
         {options.map((option) => (
           // Use FeedVirtual with key, to force a re-create of the component when the option changes, otherwise the FeedVirtual will use old data
           option.id == selectedOption?.id && <FeedVirtual key={option.id} feedOption={option}  />
