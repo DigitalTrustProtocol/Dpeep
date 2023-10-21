@@ -4,7 +4,7 @@ import { Event } from 'nostr-tools';
 
 import { seconds, first } from 'hurdak';
 import { getNostrTime } from '../Utils';
-import { FeedOptions } from './WOTPubSub';
+import { FeedOption } from './WOTPubSub';
 import { EPOCH } from '../Utils/Nostr';
 import relaySubscription from './RelaySubscription';
 import { ICursor } from './types';
@@ -23,11 +23,11 @@ export class EventRelayCursor implements ICursor {
 
   timeout = 1000;
 
-  feedOptions: FeedOptions;
+  feedOptions: FeedOption;
 
   buffer: Event[] = [];
 
-  constructor(opts: FeedOptions, size = 50) {
+  constructor(opts: FeedOption, size = 50) {
     this.feedOptions = opts;
     this.limit = size;
   }
@@ -80,7 +80,7 @@ export class EventRelayCursor implements ICursor {
         console.log('Closed Sub Relay', ' - SubID:', subId, " - Since:", new Date(this.since * 1000).toLocaleString(), " - Until:", new Date(this.until * 1000).toLocaleString(), " - Limit:", this.limit, " - Delta:", this.delta, " - Factor:", factor, " - Buffer:", this.buffer.length, " - Done:", this.done);
         //console.log('Relay Feed closed, events loaded', this.buffer.length, 'done', this.done, 'Since: ', new Date(this.since * 1000).toLocaleString(), 'Until: ', this.until ? new Date(this.until * 1000).toLocaleString() : 'undefined');
       },
-    } as FeedOptions;
+    } as FeedOption;
 
     await relaySubscription.once(options, timeOut);
 

@@ -4,9 +4,8 @@ import { Event } from 'nostr-tools';
 import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
 
 import Show from '@/components/helpers/Show';
-import useHistoryState from '@/state/useHistoryState.ts';
 import useFeed from '@/dwotr/hooks/useFeed';
-import { FeedOptions } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import useVirtual from 'react-cool-virtual';
 import eventManager from '@/dwotr/EventManager';
@@ -16,25 +15,12 @@ import useFillViewportHeight from '@/dwotr/hooks/useFillViewportHeight';
 import ToTopButton from './ToTopButton';
 
 export type FeedProps = {
-  filterOptions: FeedOptions[];
+  feedOption?: FeedOption;
+  filterOptions?: FeedOption[];
   showDisplayAs?: boolean;
-  //filterFn?: (event: any) => boolean;
   emptyMessage?: string;
   fetchEvents?: any;
-  // (opts: any) => {
-  //   events: Event[];
-  //   hasMore: boolean;
-  //   hasRefresh: boolean;
-  //   loadMore: () => void;
-  //   refresh: () => void;
-  //   loadAll: () => void;
-  // };
 };
-
-// const Loading = ({ show }) => {
-//   if (!show) return null;
-//   return <div className="item">⏳ Loading...</div>;
-// };
 
 const Loading = () => (
   <div className="justify-center items-center flex w-full mt-4 mb-4">
@@ -42,16 +28,17 @@ const Loading = () => (
   </div>
 );
 
-const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
-  const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
-  const filterOption = filterOptions[filterOptionIndex];
+const FeedVirtual = ({ feedOption }: FeedProps) => {
+
+  //const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
+  
 
   const [viewportRef, viewportHeight] = useFillViewportHeight<HTMLDivElement>();
   //const [scrollRef, isScrolled] = useScrollDetection<HTMLDivElement>();
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
   const { events, hasMore, hasRefresh, isLoading, isDone, loadMore, refresh } =
-    useFeed(filterOption);
+    useFeed(feedOption);
 
   const containers = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
 
@@ -75,7 +62,7 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
     // The callback will be invoked when more data needs to be loaded
     loadMore: (e) => {
       const cb = (list: Event[]) => {
-        console.log('loadMore:list.length:', list.length);
+        //console.log('loadMore:list.length:', list.length);
         if (list.length === 0) return;
 
         batchLoaded.current[e.loadIndex] = true;
@@ -97,7 +84,10 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
     scrollTo({ offset: 0, smooth: true });
   };
 
+  if(!feedOption) return null;
+
   return (
+    <>
     <div
       style={{ height: viewportHeight, overflow: 'auto' }}
       ref={(el) => {
@@ -105,7 +95,7 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
         viewportRef.current = el; // Share the element for viewport calculation
       }}
     >
-      <Show when={filterOptions.length > 1}>
+      {/* <Show when={filterOptions.length > 1}>
         <FilterOptionsSelector
           filterOptions={filterOptions}
           activeOption={filterOption}
@@ -113,7 +103,7 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
             setFilterOptionIndex(index);
           }}
         />
-      </Show>
+      </Show> */}
       <Show when={hasRefresh}>
         <ShowNewEvents onClick={refreshClick} />
       </Show>
@@ -168,7 +158,9 @@ const FeedVirtual = ({ showDisplayAs, filterOptions }: FeedProps) => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
 export default FeedVirtual;
+

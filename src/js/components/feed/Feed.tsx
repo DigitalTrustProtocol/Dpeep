@@ -9,12 +9,12 @@ import Helpers from '@/utils/Helpers';
 
 import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
-import { FeedOptions } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import ShowNewEvents from './ShowNewEvents';
 
 export type FeedProps = {
-  filterOptions: FeedOptions[];
+  filterOptions: FeedOption[];
   showDisplayAs?: boolean;
   //filterFn?: (event: any) => boolean;
   emptyMessage?: string;

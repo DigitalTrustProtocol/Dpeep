@@ -18,7 +18,7 @@ import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import blockManager from '@/dwotr/BlockManager.ts';
 import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
-import { FeedOptions } from '@/dwotr/network/WOTPubSub.ts';
+import { FeedOption } from '@/dwotr/network/WOTPubSub.ts';
 import { ReactionMemoryCursor } from '@/dwotr/network/ReactionMemoryCursor.ts';
 import FeedVirtual from '@/dwotr/components/feed/FeedVirtual.tsx';
 
@@ -116,21 +116,21 @@ function Profile(props) {
         filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
         eventProps: { showRepliedMsg: true },
         source: getSource(uid), // All non followed users are loaded from network
-      } as FeedOptions,
+      } as FeedOption,
       {
         id: 'replies'+hexPub,
         name: t('posts_and_replies'),
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
         eventProps: { showRepliedMsg: true, fullWidth: false },
         source: getSource(uid),
-      } as FeedOptions,
+      } as FeedOption,
       {
         id: 'reactions'+hexPub,
         name: t('likes'),
         filter: { authors: [hexPub], kinds: [7], limit: 10 },
         source: getSource(uid),
         cursor: () => new ReactionMemoryCursor(uid),
-      } as FeedOptions,
+      } as FeedOption,
     ];
   }, [hexPub]);
 

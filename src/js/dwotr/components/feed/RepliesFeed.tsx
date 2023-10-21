@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
-import { FeedOptions } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import { Filter } from 'nostr-tools';
 
 import { ID } from '@/utils/UniqueIds';
@@ -19,7 +19,7 @@ type RepliesFeedProps = {
 
 export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
   const feedTopRef = useRef<HTMLDivElement>(null);
-  const [filterOption, setFilterOption] = useState<FeedOptions>();
+  const [filterOption, setFilterOption] = useState<FeedOption>();
 
   const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
 
@@ -34,7 +34,7 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
         //until: getNostrTime(), // Load events from now
         //since: event.created_at, // Replies cannot be created before the note
       } as Filter,
-    } as FeedOptions;
+    } as FeedOption;
 
     let cursor = new RepliesCursor(opt);
 

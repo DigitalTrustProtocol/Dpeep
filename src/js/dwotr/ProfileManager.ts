@@ -14,7 +14,7 @@ import EventCallbacks from './model/EventCallbacks';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
-import wotPubSub, { FeedOptions } from './network/WOTPubSub';
+import wotPubSub, { FeedOption } from './network/WOTPubSub';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
 
@@ -138,7 +138,7 @@ class ProfileManager {
         since,
       } as Filter,
       onClose,
-    } as FeedOptions;
+    } as FeedOption;
 
     relaySubscription.once(options, 3000);
   }

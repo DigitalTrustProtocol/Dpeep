@@ -22,111 +22,31 @@ type CreateNoteFormProps = {
 
 function CreateNoteForm({
   replyingTo,
-  onSubmit: onFormSubmit,
+  onSubmit,
   placeholder = 'type_a_message',
   class: className,
   autofocus,
   forceAutoFocusMobile,
 }: CreateNoteFormProps) {
-  const [text, setText] = useState('');
-  const [focused, setFocused] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { text, setText, focused, setFocused, submit, onMsgFormSubmit, onClickCancel } =
+    useNostrForm({ onSubmit, replyingTo });
 
-  const onMsgFormSubmit = useCallback(
-    (event) => {
-      event.preventDefault();
-      submit();
-    },
-    [text],
-  );
-
-  const resetText = () => {
-    if (!replyingTo) {
-      localState.get('public').get('draft').put(null);
-    }
-    setText('');
-    setFocused(false);
-  };
-
-  const submit = useCallback(async () => {
-    if (!text.length) return;
-    const msg: any = { text };
-    if (replyingTo) msg.replyingTo = replyingTo;
-
-    await sendNostr(msg);
-    onFormSubmit?.(msg.text);
-
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-
-    resetText();
-  }, [text, replyingTo, onFormSubmit]);
-
-  const attachFileClicked = useCallback((event) => {
-    event.stopPropagation();
-    event.preventDefault();
-
-    // Use the ref to simulate a click on the file input
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  }, []);
-
-  const handleFileAttachments = useCallback((files) => {
-    if (!files) return;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      const formData = new FormData();
-      formData.append('fileToUpload', file);
-
-      fetch('https://nostr.build/api/upload/iris.php', {
-        method: 'POST',
-        body: formData,
-      })
-        .then(async (response) => {
-          const url = await response.json();
-          if (url) {
-            setText((prevText) => (prevText ? `${prevText}\n\n${url}` : url));
-          }
-        })
-        .catch((error) => {
-          console.error('upload error', error);
-        });
-    }
-  }, []);
-
-  const attachmentsChanged = useCallback(
-    (event) => {
-      event.preventDefault();
-      const files = event.target.files || event.dataTransfer.files;
-      handleFileAttachments(files);
-    },
-    [handleFileAttachments],
-  );
-
-  const onClickCancel = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!text || text.split(' ').length < 10 || confirm(t('discard_changes'))) {
-        resetText();
-      }
-    },
-    [text],
-  );
+  const {
+    ref: fileInputRef,
+    onClick: attachFileClicked,
+    onChanged: attachmentsChanged,
+  } = useAttachments({ setText });
 
   return (
     <form autoComplete="off" className={className || ''} onSubmit={(e) => onMsgFormSubmit(e)}>
-      <input
+      {/* <input
         type="file"
         className="hidden"
         accept="image/*, video/*, audio/*"
         multiple
         onChange={attachmentsChanged}
         ref={fileInputRef}
-      />
+      /> */}
       <TextArea
         onFocus={() => setFocused(true)}
         submit={submit}
@@ -140,9 +60,11 @@ function CreateNoteForm({
       />
       <Show when={focused}>
         <div className="flex items-center justify-between mt-4">
-          <button type="button" className="btn btn-sm" onClick={attachFileClicked}>
+          {/* <button type="button" className="btn btn-sm" onClick={attachFileClicked}>
             {Icons.attach}
-          </button>
+          </button> */}
+          <p>Upload images at nostr.build or imgur.com and paste in the url.</p>
+
           <div className="flex flex-row gap-2">
             <button className="btn btn-sm btn-neutral" onClick={onClickCancel}>
               {t('cancel')}
@@ -170,3 +92,97 @@ function CreateNoteForm({
 }
 
 export default CreateNoteForm;
+
+const useNostrForm = ({ onSubmit, replyingTo }) => {
+  const [text, setText] = useState('');
+  const [focused, setFocused] = useState(false);
+
+  const onMsgFormSubmit = useCallback(
+    (event) => {
+      event.preventDefault();
+      submit();
+    },
+    [text],
+  );
+
+  const resetText = () => {
+    if (!replyingTo) {
+      localState.get('public').get('draft').put(null);
+    }
+    setText('');
+    setFocused(false);
+  };
+
+  const submit = useCallback(async () => {
+    if (!text.length) return;
+    const msg: any = { text };
+    if (replyingTo) msg.replyingTo = replyingTo;
+
+    await sendNostr(msg);
+    onSubmit?.(msg.text);
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    resetText();
+  }, [text, replyingTo, onSubmit]);
+
+  const onClickCancel = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!text || text.split(' ').length < 10 || confirm(t('discard_changes'))) {
+        resetText();
+      }
+    },
+    [text],
+  );
+
+  return { text, setText, focused, setFocused, submit, onMsgFormSubmit, onClickCancel };
+};
+
+const useAttachments = ({ setText }) => {
+  const ref = useRef<HTMLInputElement>(null);
+
+  const handleFileAttachments = useCallback((files) => {
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      const formData = new FormData();
+      formData.append('fileToUpload', file);
+
+      fetch('https://nostr.build/api/upload/iris.php', {
+        method: 'POST',
+        body: formData,
+      })
+        .then(async (response) => {
+          const url = await response.json();
+          if (url) {
+            setText?.((prevText) => (prevText ? `${prevText}\n\n${url}` : url));
+          }
+        })
+        .catch((error) => {
+          console.error('upload error', error);
+        });
+    }
+  }, []);
+
+  const onClick = useCallback((event) => {
+    event.preventDefault();
+    // Use the ref to simulate a click on the file input
+    ref?.current?.click();
+  }, []);
+
+  const onChanged = useCallback(
+    (event) => {
+      event.preventDefault();
+      const files = event.target.files || event.dataTransfer.files;
+      handleFileAttachments(files);
+    },
+    [handleFileAttachments],
+  );
+
+  return { ref, onClick, onChanged };
+};

@@ -4,7 +4,7 @@ import { useLayoutEffect, useEffect, useRef } from 'preact/hooks';
 import useHistoryState from '@/state/useHistoryState.ts';
 
 import useFeed from '@/dwotr/hooks/useFeed';
-import { FeedOptions } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/WOTPubSub';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Show from '@/components/helpers/Show';
@@ -13,7 +13,7 @@ import eventManager from '@/dwotr/EventManager';
 import { ID } from '@/utils/UniqueIds';
 
 export type FeedProps = {
-  filterOptions: FeedOptions[];
+  filterOptions: FeedOption[];
   showDisplayAs?: boolean;
   emptyMessage?: string;
   fetchEvents?: any;

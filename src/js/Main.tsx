@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-//import { getCurrentUrl } from 'preact-router';
 import { Helmet } from 'react-helmet';
 import AsyncRoute from 'preact-async-route';
 import { Router, RouterOnChangeArgs } from 'preact-router';
@@ -41,23 +40,8 @@ import NoteNew from './views/NoteNew.tsx';
 import NoteView from './dwotr/views/NoteView.tsx';
 import Empty from './dwotr/views/Empty.tsx';
 
-// Show/Hide The main feed component
-// function showHideMainFeed(route: string) {
-
-//   var divElement = document.getElementById('HomeElement');
-//   if (divElement) {
-//     const isHome = route === '/';
-//     if (isHome) {
-//       divElement.style.display = 'block';
-//     } else {
-//       divElement.style.display = 'none';
-//     }
-//   }
-// }
-
 const Main = () => {
   const [activeRoute] = useLocalState('activeRoute', '');
-  //const [routePath, setRoutePath] = useState(getCurrentUrl());
 
   const [loggedIn] = useLocalState('loggedIn', false);
   const [translationsLoadedState, setTranslationsLoadedState] = useState(false);
@@ -65,9 +49,6 @@ const Main = () => {
 
   const [Initialized, setInitialized] = useState(false);
 
-  // useEffect(() => {
-  //   showHideMainFeed(getCurrentUrl());
-  // }, []);
 
   useEffect(() => {
     translationLoaded.then(() => {

@@ -3,7 +3,7 @@ import {
   OnEvent,
   ReplaceableKinds,
   StreamKinds,
-  FeedOptions,
+  FeedOption,
   OnEose,
 } from './WOTPubSub';
 import getRelayPool from '@/nostr/relayPool';
@@ -77,7 +77,7 @@ class RelaySubscription {
         filter,
         onEvent,
         onEose
-      } as FeedOptions;
+      } as FeedOption;
 
       subs.push(this.map(options));
     }
@@ -111,7 +111,7 @@ class RelaySubscription {
 
       let options = {
         filter
-      } as FeedOptions;
+      } as FeedOption;
 
       subs.push(this.once(options, timeOut));
     }
@@ -184,7 +184,7 @@ class RelaySubscription {
     let options = {
       filter,
       onEvent: cb,
-    } as FeedOptions;
+    } as FeedOption;
 
     return this.once(options);
   }
@@ -192,7 +192,7 @@ class RelaySubscription {
 
   // A Once subscription is used to get events by options.
   // Return a true value when done and false if timed out.
-  async once(options: FeedOptions, timeOut: number = 1000): Promise<boolean> {
+  async once(options: FeedOption, timeOut: number = 1000): Promise<boolean> {
     let stopWatch = Date.now();
 
     let subCounter = ++this.#subCounter;
@@ -270,7 +270,7 @@ class RelaySubscription {
 
   // A Continues subscription is used to get events by options.
     // Return a unsubribe number value, used to unsubscribe.
-  map(options: FeedOptions) : number {
+  map(options: FeedOption) : number {
     let relayIndex = new Map<string, number>();
 
     let relays = relayManager.enabledRelays();
@@ -311,7 +311,7 @@ class RelaySubscription {
 
   // A Continues subscription is used to get replaceable events by options.
   // Return a unsubribe number value, used to unsubscribe.
-  on(options: FeedOptions) : number {
+  on(options: FeedOption) : number {
     let relayIndex = new Map<string, number>();
 
     let relays = relayManager.enabledRelays();

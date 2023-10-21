@@ -83,7 +83,7 @@ export type OnEose = (allEosed: boolean, relayUrl: string, minCreatedAt: number)
 export type OnClose = (subId: number) => void;
 export type OnDone = (subId: number) => void;
 
-export type FeedOptions = {
+export type FeedOption = {
   id?: string;
   name?: string;
   filter: Filter;

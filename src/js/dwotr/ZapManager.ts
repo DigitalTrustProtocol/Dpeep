@@ -2,7 +2,7 @@ import { throttle } from 'lodash';
 import { Event, Filter } from 'nostr-tools';
 import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import wotPubSub, { FeedOptions, OnEvent, ZapKind } from './network/WOTPubSub';
+import wotPubSub, { FeedOption, OnEvent, ZapKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
@@ -135,7 +135,7 @@ class ZapManager {
       filter: { '#e': [STR(id) as string], kinds: [9735] } as Filter,
       onClose: () => this.relayZapsByRequests.delete(id),
       onEvent
-    } as FeedOptions;
+    } as FeedOption;
 
     return relaySubscription.map(opt);
   }

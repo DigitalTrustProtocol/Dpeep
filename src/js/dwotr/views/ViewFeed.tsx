@@ -1,8 +1,7 @@
-import Header from '../components/header/Header.tsx';
-import ErrorBoundary from '../components/helpers/ErrorBoundary.tsx';
-import Show from '../components/helpers/Show';
-
-import Search from './Search';
+import Header from "@/components/header/Header";
+import ErrorBoundary from "@/components/helpers/ErrorBoundary";
+import Show from "@/components/helpers/Show";
+import Search from "@/views/Search";
 
 const View = ({ children, hideHeader = false, hideSideBar = false }) => {
 

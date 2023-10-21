@@ -1,5 +1,5 @@
 import { Event } from 'nostr-tools';
-import { FeedOptions, OnClose, OnDone } from './WOTPubSub';
+import { FeedOption, OnClose, OnDone } from './WOTPubSub';
 import { Events, ICursor } from './types';
 import noteManager from '../NoteManager';
 
@@ -10,7 +10,7 @@ class EventMemoryCursor implements ICursor {
   since: number = 0; // Not needed
 
   done: boolean = false;
-  feedOptions: FeedOptions;
+  feedOptions: FeedOption;
 
   buffer: Events = [];
 
@@ -19,7 +19,7 @@ class EventMemoryCursor implements ICursor {
   #kinds = new Set<number>();
   #ids = new Set<string>();
 
-  constructor(opt: FeedOptions, size = 50) {
+  constructor(opt: FeedOption, size = 50) {
     this.limit = size;
     this.feedOptions = opt;
     this.#valuePointer = noteManager.notes.values(); // Get an iterator to the notes map

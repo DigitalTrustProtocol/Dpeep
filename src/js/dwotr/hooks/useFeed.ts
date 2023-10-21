@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Event } from 'nostr-tools';
 
-import { FeedOptions } from '../network/WOTPubSub';
+import { FeedOption } from '../network/WOTPubSub';
 import { FeedProvider } from '../network/FeedProvider';
 import feedManager from '../FeedManager';
 
-const useFeed = (opt: FeedOptions | undefined) => {
+const useFeed = (opt: FeedOption | undefined) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [isDone, setIsDone] = useState<boolean>(false); 

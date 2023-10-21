@@ -2,7 +2,7 @@ import { Event } from 'nostr-tools';
 import { Events, ICursor, IEventProvider } from './types';
 import { ID, UID } from '@/utils/UniqueIds';
 
-import { FeedOptions } from './WOTPubSub';
+import { FeedOption } from './WOTPubSub';
 import { getNostrTime, toNostrUTCstring } from '../Utils';
 import contextLoader from './DependencyLoader';
 
@@ -79,7 +79,7 @@ export class FeedProvider {
         this.seen.add(ID(event.id));
         return true;
       },
-    } as FeedOptions;
+    } as FeedOption;
 
     if (this.logging)
       console.log(

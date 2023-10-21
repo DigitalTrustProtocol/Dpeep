@@ -1,7 +1,7 @@
 import { Event } from 'nostr-tools';
 import { getNostrTime, toNostrUTCstring } from '../Utils';
 import contextLoader from './DependencyLoader';
-import { FeedOptions } from './WOTPubSub';
+import { FeedOption } from './WOTPubSub';
 import relaySubscription from './RelaySubscription';
 import { first } from 'hurdak';
 import { IEventProvider } from './types';
@@ -12,14 +12,14 @@ export class RelayEventProvider implements IEventProvider {
   buffer: Array<Event> = [];
   subId: number = -1;
 
-  feedOptions: FeedOptions;
+  feedOptions: FeedOption;
 
-    constructor(_feedOptions: FeedOptions) {
+    constructor(_feedOptions: FeedOption) {
         this.feedOptions = _feedOptions;
     }
 
 
-  map(_feedOptions?: FeedOptions) : void {
+  map(_feedOptions?: FeedOption) : void {
 
     if (this.subId != -1) return; // Already subscribed
 
@@ -73,7 +73,7 @@ export class RelayEventProvider implements IEventProvider {
         if (this.logging) console.log('RelayEventProvider:map:onClose', subId);
         this.feedOptions.onClose?.(subId);
       },
-    } as FeedOptions;
+    } as FeedOption;
 
     if (this.logging)
       console.log(

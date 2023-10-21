@@ -1,7 +1,7 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event, Filter } from 'nostr-tools';
 import Key from '@/nostr/Key';
-import wotPubSub, { ContactsKind, FeedOptions, OnEvent } from './network/WOTPubSub';
+import wotPubSub, { ContactsKind, FeedOption, OnEvent } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
 import EventCallbacks from './model/EventCallbacks';
@@ -452,7 +452,7 @@ class FollowManager {
     let opt = {
       filter: { kinds: [ContactsKind], authors: [STR(id) as string] } as Filter,
       onClose: () => this.relayContactsRequests.delete(id)
-    } as FeedOptions;
+    } as FeedOption;
 
     relaySubscription.once(opt);
   }
@@ -467,7 +467,7 @@ class FollowManager {
       filter: { kinds: [ContactsKind], '#p': [STR(id) as string] } as Filter,
       onClose: () => this.relayFollowedByRequests.delete(id),
       onEvent
-    } as FeedOptions;
+    } as FeedOption;
 
     return relaySubscription.map(opt);
   }

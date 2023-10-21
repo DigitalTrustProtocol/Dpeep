@@ -4,7 +4,7 @@ import { Event } from 'nostr-tools';
 
 import { seconds, first } from 'hurdak';
 import { getNostrTime } from '../Utils';
-import { FeedOptions } from './WOTPubSub';
+import { FeedOption } from './WOTPubSub';
 import relaySubscription from './RelaySubscription';
 import { ICursor } from './types';
 
@@ -20,11 +20,11 @@ export class RepliesCursor implements ICursor {
   loading = false;
   done = false;
 
-  feedOptions: FeedOptions;
+  feedOptions: FeedOption;
 
   buffer: Event[] = [];
 
-  constructor(opts: FeedOptions, size = 100) {
+  constructor(opts: FeedOption, size = 100) {
     this.feedOptions = opts;
     this.limit = size;
   }
@@ -56,7 +56,7 @@ export class RepliesCursor implements ICursor {
         onClose?.(subId);
         onDone?.(subId);
       },
-    } as FeedOptions;
+    } as FeedOption;
 
     console.log('RepliesCursor:load:relaySubscription.options:', options)
 

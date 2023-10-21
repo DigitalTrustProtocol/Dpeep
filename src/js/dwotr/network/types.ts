@@ -1,5 +1,5 @@
 import { Event } from 'nostr-tools';
-import { FeedOptions } from './WOTPubSub';
+import { FeedOption } from './WOTPubSub';
 import { Reaction } from '../ReactionManager';
 
 export type Events = Array<Event>;
@@ -48,9 +48,9 @@ export interface IEventProvider {
     buffer: Array<Event>;
     subId: number;
 
-    feedOptions: FeedOptions;
+    feedOptions: FeedOption;
 
-    map(feedOptions: FeedOptions): void;
+    map(feedOptions: FeedOption): void;
     take(n: number): Event[];
     count(): number;
     peek(): Event | undefined;

@@ -41,7 +41,7 @@ export default function Title() {
   return (
     <div className={`flex flex-1 items-center justify-center`} onClick={onClick}>
       {title}
-      <Show when={isFeed}>
+      <Show when={false}>
         <button
           className="ml-2 focus:outline-none rounded-full p-2"
           onClick={(e) => {
