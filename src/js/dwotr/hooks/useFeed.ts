@@ -24,12 +24,12 @@ const useFeed = (opt: FeedOption | undefined) => {
     if (!opt) return; // The options may not be ready yet
 
     feedProvider.current = feedManager.getProvider(opt); // Make sure to get the same provider for the same feedId
-
+      
     let list = feedProvider.current.load();
     setEvents(list);
     setHasMore(feedProvider.current?.hasMore() || false);
     if(list.length < feedProvider.current.pageSize) 
-      loadMore(); // Load more events if we don't have enough after memory load
+      loadMore(); 
 
     // Check regularly for new events
     intervalRef.current = setInterval(() => {
@@ -61,11 +61,13 @@ const useFeed = (opt: FeedOption | undefined) => {
 
   // Load events in front of the event list
   const refresh = useCallback(() => {
-    if (!feedProvider.current?.hasNew()) return;
+    if (!feedProvider.current?.hasNew()) return 0;
 
-    setEvents(feedProvider.current.mergeNew());
+    let list = feedProvider.current.load();
+    setEvents(list);
     setHasRefresh(false);
     setHasMore(feedProvider.current.hasMore());
+    return list.length;
   }, []);
 
   const loadAll = useCallback(() => {

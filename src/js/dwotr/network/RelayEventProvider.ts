@@ -34,35 +34,9 @@ export class RelayEventProvider implements IEventProvider {
         // The event has been added to eventHandler memory, but not yet to the buffer
         // if(this.seen.has(ID(event.id))) return; // Filter out events that have already been seen
         // this.seen.add(ID(event.id));
-
-        if (this.logging)
-          console.log(
-            'RelayEventProvider:map:onEvent:newEvent found',
-            ' - ID:',
-            event.id,
-            ' - Kinds:',
-            event.kind,
-            ' - afterEose:',
-            afterEose,
-            ' - relayUrl:',
-            relayUrl,
-          );
-
         if (this.feedOptions.filterFn?.(event) === false) return; // Filter out events that don't match the filterFn, undefined means match
 
         contextLoader.resolve([event]).then(() => {
-          if (this.logging)
-            console.log(
-              'RelayEventProvider:map:onEvent:peekBuffer.push',
-              ' - ID:',
-              event.id,
-              ' - Kinds:',
-              event.kind,
-              ' - afterEose:',
-              afterEose,
-              ' - relayUrl:',
-              relayUrl,
-            );
           this.buffer.push(event);
         });
 

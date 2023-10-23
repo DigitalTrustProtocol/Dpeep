@@ -20,11 +20,17 @@ export interface ICursor {
     since: number;
     done: boolean;
 
+    preLoad(): Event[];
     load(): Promise<number>;
     take(n: number): Event[];
     count(): number;
+    newCount(): number;
     peek(): Event | undefined;
     pop(): Event | undefined;
+
+    subscribe(): void;
+    unsubscribe(): void;
+    reset(): void;
    
   }
 

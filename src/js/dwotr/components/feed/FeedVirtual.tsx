@@ -1,8 +1,6 @@
 import { useRef, Fragment } from 'react';
 import { Event } from 'nostr-tools';
 
-import FilterOptionsSelector from '@/components/feed/FilterOptionsSelector';
-
 import Show from '@/components/helpers/Show';
 import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOption } from '@/dwotr/network/WOTPubSub';
@@ -13,6 +11,7 @@ import { ID } from '@/utils/UniqueIds';
 import EventComponent from '../events/EventComponent';
 import useFillViewportHeight from '@/dwotr/hooks/useFillViewportHeight';
 import ToTopButton from './ToTopButton';
+import { set } from 'lodash';
 
 export type FeedProps = {
   feedOption?: FeedOption;
@@ -20,6 +19,8 @@ export type FeedProps = {
   showDisplayAs?: boolean;
   emptyMessage?: string;
   fetchEvents?: any;
+  children?: any;
+  setScope?: any;
 };
 
 const Loading = () => (
@@ -28,7 +29,7 @@ const Loading = () => (
   </div>
 );
 
-const FeedVirtual = ({ feedOption }: FeedProps) => {
+const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
 
   //const [filterOptionIndex, setFilterOptionIndex] = useHistoryState(0, 'filterOptionIndex');
   
@@ -45,7 +46,7 @@ const FeedVirtual = ({ feedOption }: FeedProps) => {
   const batchLoaded = useRef<Array<boolean>>([]);
 
   //  const [comments, setComments] = useState([]);
-  const { outerRef, innerRef, items, scrollTo } = useVirtual<HTMLDivElement, HTMLDivElement>({
+  const { outerRef, innerRef, items, scrollTo, startItem } = useVirtual<HTMLDivElement, HTMLDivElement>({
     // Provide the number of comments
     itemCount: events.length,
     itemSize: 150,
@@ -80,8 +81,10 @@ const FeedVirtual = ({ feedOption }: FeedProps) => {
   });
 
   const refreshClick = (e) => {
-    refresh(); // Add new events
+    let count = refresh(); // Add new events
+    startItem(count);
     scrollTo({ offset: 0, smooth: true });
+    //setScope('local'+Date.now()); // force re-render
   };
 
   if(!feedOption) return null;
@@ -95,15 +98,8 @@ const FeedVirtual = ({ feedOption }: FeedProps) => {
         viewportRef.current = el; // Share the element for viewport calculation
       }}
     >
-      {/* <Show when={filterOptions.length > 1}>
-        <FilterOptionsSelector
-          filterOptions={filterOptions}
-          activeOption={filterOption}
-          onOptionClick={(index) => {
-            setFilterOptionIndex(index);
-          }}
-        />
-      </Show> */}
+      {children} {/* Render the children within the scroll window */}
+
       <Show when={hasRefresh}>
         <ShowNewEvents onClick={refreshClick} />
       </Show>

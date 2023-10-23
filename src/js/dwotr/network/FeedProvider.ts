@@ -22,15 +22,20 @@ export class FeedProvider {
 
   //peekCursor: ICursor;
   cursor: ICursor;
-  eventProvider: IEventProvider;
 
   loading: boolean = false;
   isDone: boolean = false;
 
-  constructor(_id:string, _cursor: ICursor, _eventProvider: IEventProvider, size = 10) {
-    this.id = _id;
-    this.cursor = _cursor;
-    this.eventProvider = _eventProvider;
+  options: FeedOption;
+
+
+  constructor(opt: FeedOption, size = 10) {
+    this.options = opt;
+    this.id = opt.id!;
+    
+    this.cursor = new opt.cursor(opt, this.seen);
+    this.cursor.subscribe();
+
     this.pageSize = size;
   }
 
@@ -47,77 +52,67 @@ export class FeedProvider {
   }
 
   hasNew(): boolean {
-    return this.eventProvider.count() > 0;
+    return this.cursor.newCount() > 0;
   }
+
 
   load() {
-    this.viewStart = 0;
-    this.viewEnd = 0;
 
-    if (this.logging) console.log('FeedProvider:load:START');
-
-    this.mapNew(); // Subscribe to new events
-
-    // Return what we have in the buffer right now
-    this.#loadToBuffer(false); // Don't call the cursor's relays, we want to load the buffer with what we have in memory
-    return this.#increaseView();
-  }
-
-  mapNew() {
-    let feedOptions = this.eventProvider.feedOptions;
-
-    let since = this.#getUntil(this.buffer) ?? this.cursor.until; // Ensure is that only the new events are loaded
-    if(!since)
-      since = getNostrTime(); // If no events are in the buffer, load the latest events
-
-    let options = {
-      ...feedOptions,
-      filter: { ...feedOptions.filter, since, until: undefined, limit: undefined },
-      filterFn: (event: Event) => {
-        if (feedOptions?.filterFn && !feedOptions.filterFn?.(event)) return false; // Filter out events that don't match the filterFn, undefined means match
-        if (this.seen.has(ID(event.id))) return false; // Filter out events that have already been seen
-        this.seen.add(ID(event.id));
-        return true;
-      },
-    } as FeedOption;
-
-    if (this.logging)
-      console.log(
-        'FeedProvider:mapNew',
-        ' - Since:',
-        toNostrUTCstring(since),
-        ' - Options:',
-        options,
-      );
-
-    this.eventProvider.map(options);
-  }
-
-  off(): void {
-    this.eventProvider.off();
-  }
-
-  // Unsubscribe
-  unmount(): void {
-    this.off();
-  }
-
-  mergeNew(): Array<Event> {
-    let events = this.eventProvider.take(this.eventProvider.count());
-
-    this.#sort(events);
-
-    this.buffer = [...events, ...this.buffer];
+    let events = this.cursor.preLoad();
+    this.preLoad(events);
 
     this.viewStart = 0;
     this.viewEnd = this.pageSize;
 
-    let view = this.buffer.slice(this.viewStart, this.viewEnd);
-
-    return view;
+    return this.#increaseView();
   }
 
-  
+  // off(): void {
+  //   this.eventProvider.off();
+  // }
+
+  // Unsubscribe
+  unmount(): void {
+    this.cursor.unsubscribe();
+  }
+
+
+  // Resets the cursor
+  reset() {
+    //let events = this.eventProvider.take(this.eventProvider.count());
+
+    //this.#sort(events);
+
+    //this.buffer = [...events, ...this.buffer];
+    
+    this.cursor.reset();
+
+    this.viewStart = 0;
+    this.viewEnd = this.pageSize;
+    
+    this.buffer = [];
+    this.seen.clear();
+
+
+    //return this.nextPage();
+  }
+
+  // Pre loads events into the buffer
+  preLoad(events: Array<Event>) {
+
+    let filteredEvents: Array<Event> = [];
+    for(let event of events) {
+      if (this.seen.has(ID(event.id))) continue;
+      this.seen.add(ID(event.id));
+      filteredEvents.push(event);
+    }
+
+    this.#sort(filteredEvents);
+
+    this.buffer = [...filteredEvents, ...this.buffer];
+  }
+
+
 
 
   // Gets called by the UI once when it needs more events, therefore be sure to return new events
@@ -187,37 +182,37 @@ export class FeedProvider {
     items.sort((a, b) => b.created_at - a.created_at);
   }
 
-  #timeLogger() {
-    let items: String[] = [];
-    let since = new Date(this.cursor.since * 1000);
-    let until = new Date(this.cursor.until! * 1000);
+  // #timeLogger() {
+  //   let items: String[] = [];
+  //   let since = new Date(this.cursor.since * 1000);
+  //   let until = new Date(this.cursor.until! * 1000);
 
-    items.push(' - Since:');
-    items.push(since.toLocaleString());
+  //   items.push(' - Since:');
+  //   items.push(since.toLocaleString());
 
-    items.push(' - Until:');
-    items.push(until.toLocaleString());
+  //   items.push(' - Until:');
+  //   items.push(until.toLocaleString());
 
-    let span = (this.cursor.until! - this.cursor.since) * 1000;
-    let spanMin = Math.floor(span / 1000 / 60);
-    items.push(' - Span:');
-    items.push(spanMin + ' minutes');
+  //   let span = (this.cursor.until! - this.cursor.since) * 1000;
+  //   let spanMin = Math.floor(span / 1000 / 60);
+  //   items.push(' - Span:');
+  //   items.push(spanMin + ' minutes');
 
-    let delta = this.cursor.delta * 1000;
-    let deltaMin = Math.floor(delta / 1000 / 60);
-    items.push(' - Delta:');
-    items.push(deltaMin + ' minutes');
+  //   let delta = this.cursor.delta * 1000;
+  //   let deltaMin = Math.floor(delta / 1000 / 60);
+  //   items.push(' - Delta:');
+  //   items.push(deltaMin + ' minutes');
 
-    return items;
-  }
+  //   return items;
+  // }
 
-  #getSince(list: Events): number | undefined {
-    if (list.length == 0) return;
-    return list[list.length - 1].created_at;
-  }
+  // #getSince(list: Events): number | undefined {
+  //   if (list.length == 0) return;
+  //   return list[list.length - 1].created_at;
+  // }
 
-  #getUntil(list: Events): number | undefined {
-    if (list.length == 0) return;
-    return list[0].created_at;
-  }
+  // #getUntil(list: Events): number | undefined {
+  //   if (list.length == 0) return;
+  //   return list[0].created_at;
+  // }
 }

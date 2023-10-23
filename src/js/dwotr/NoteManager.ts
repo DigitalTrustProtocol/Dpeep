@@ -21,7 +21,7 @@ const sortCreated_at = (a: [UID, Event], b: [UID, Event]) => {
   return b[1].created_at - a[1].created_at;
 };
 
-class NoteManager {
+export class NoteManager {
   logging = false;
   notes: SortedMap<UID, Event> = new SortedMap([], sortCreated_at);
 

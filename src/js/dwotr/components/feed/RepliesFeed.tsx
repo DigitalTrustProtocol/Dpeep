@@ -27,21 +27,23 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
     let opt = {
       id: 'repliesFeed' + eventId, // Unique ID for this feed
       name: 'Replies',
+      eventId: ID(eventId),
       filter: {
         '#e': [eventId],
         kinds: [1],
         limit: 1000,
-        //until: getNostrTime(), // Load events from now
-        //since: event.created_at, // Replies cannot be created before the note
+        // until: getNostrTime(), // Load events from now
+        // since: event.created_at, // Replies cannot be created before the note
       } as Filter,
+      cursor: RepliesCursor,
     } as FeedOption;
 
-    let cursor = new RepliesCursor(opt);
+    // let cursor = new RepliesCursor(opt);
+    
+    // // Preload replies to the cursor buffer, if any
+    // cursor.buffer = replyManager.getEventReplies(ID(eventId));
 
-    // Preload replies to the cursor buffer, if any
-    cursor.buffer = replyManager.getEventReplies(ID(eventId));
-
-    opt.cursor = () => cursor;
+    // opt.cursor = () => cursor;
 
     setFilterOption(opt);
   }, [eventId]);

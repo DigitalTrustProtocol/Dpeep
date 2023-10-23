@@ -3,7 +3,7 @@
 import { Event } from 'nostr-tools';
 
 import { first } from 'hurdak';
-import { FeedOption } from './WOTPubSub';
+import { FeedOption, ReactionKind } from './WOTPubSub';
 import relaySubscription from './RelaySubscription';
 import NotesCursor from './NotesCursor';
 import { ID, UID } from '@/utils/UniqueIds';
@@ -11,15 +11,29 @@ import replyManager from '../ReplyManager';
 import eventManager from '../EventManager';
 import { NoteContainer } from '../model/DisplayEvent';
 import noteManager from '../NoteManager';
+import reactionManager from '../ReactionManager';
 
-export class RepliesCursor extends NotesCursor {
+export class LikesCursor extends NotesCursor {
   loading: boolean = false;
 
   constructor(opts: FeedOption, seen?: Set<UID>) {
     super(opts, seen);
-    this.kinds.add(1);
     // Load from memory
-    this.preBuffer = replyManager.getEventReplies(opts.eventId!);
+    this.kinds.add(ReactionKind);
+
+    this.#preLoad();
+  }
+
+  #preLoad() {
+    // Load from memory
+    let reactions = reactionManager.authors.get(this.options.user!);
+
+    for(let reaction of reactions?.values() ?? []) {
+      let container = eventManager.containers.get(reaction.subjectEventId);
+      if(!container) continue;
+
+      this.preBuffer.push(container?.event!);
+    }
   }
 
   eventHandler(event: Event) {

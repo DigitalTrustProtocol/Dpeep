@@ -372,4 +372,12 @@ export default class Graph {
     }
     return vertices;
   }
+
+  *filterVertices(filter: (v:Vertice) => boolean): Generator<Vertice> {
+    for (const key in this.vertices) {
+      const v = this.vertices[key] as Vertice;
+
+      if(filter(v)) yield v;
+    }
+  }
 }

@@ -8,6 +8,7 @@ import eventManager from '../EventManager';
 import { STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 import { ICursor } from './types';
+import { EventContainer } from '../model/DisplayEvent';
 
 // Wot Custom
 export const Trust1Kind: number = 32010;
@@ -83,13 +84,19 @@ export type OnEose = (allEosed: boolean, relayUrl: string, minCreatedAt: number)
 export type OnClose = (subId: number) => void;
 export type OnDone = (subId: number) => void;
 
+
+
 export type FeedOption = {
   id?: string;
   name?: string;
+  user?: UID;
+  eventId?: UID;
+  size?: number;
   filter: Filter;
   includeReposts?: boolean;
   includeReplies?: boolean;
   filterFn?: (event: Event) => boolean;
+  postFilter?: (container: EventContainer) => boolean;
   onEvent?: OnEvent;
   onEose?: OnEose;
   onClose?: OnClose;
@@ -98,7 +105,7 @@ export type FeedOption = {
   eventProps?: any;
   mergeReposts?: boolean;
   source?: 'network' | 'memory' | undefined;
-  cursor?: () => ICursor;
+  cursor?: any;
 };
 
 class WOTPubSub {

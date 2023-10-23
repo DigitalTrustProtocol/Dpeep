@@ -3,7 +3,6 @@ import { route } from 'preact-router';
 
 import SimpleImageModal from '@/components/modal/Image.tsx';
 
-import { getEventReplyingTo, isRepost } from '@/nostr/utils.ts';
 import useLocalState from '@/state/useLocalState.ts';
 import ProfileHelmet from '@/views/profile/Helmet.tsx';
 
@@ -19,8 +18,9 @@ import blockManager from '@/dwotr/BlockManager.ts';
 import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
 import { FeedOption } from '@/dwotr/network/WOTPubSub.ts';
-import { ReactionMemoryCursor } from '@/dwotr/network/ReactionMemoryCursor.ts';
-import FeedVirtual from '@/dwotr/components/feed/FeedVirtual.tsx';
+import ProfileNotesCursor from '@/dwotr/network/ProfileNotesCursor.ts';
+import { Feed } from '@/dwotr/components/feed/Feed.tsx';
+import { LikesCursor } from '@/dwotr/network/LikesCursor.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -30,7 +30,7 @@ function getNpub(id: string) {
 
 function getSource(profileId: UID) {
   if (profileId === ID(Key.getPubKey())) return 'memory'; // My profile
-  
+
   return followManager.isAllowed(profileId) ? 'memory' : 'network';
 }
 
@@ -105,31 +105,38 @@ function Profile(props) {
     };
   }, [npub]);
 
-  
-
-  const filterOptions = useMemo(() => {
+  const options = useMemo(() => {
     return [
       {
-        id: 'posts'+hexPub,
+        id: 'posts' + hexPub,
         name: t('posts'),
+        user: uid,
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
-        filterFn: (event) => !getEventReplyingTo(event) || isRepost(event),
-        eventProps: { showRepliedMsg: true },
-        source: getSource(uid), // All non followed users are loaded from network
+        includeReplies: false,
+        includeReposts: true,
+        mergeReposts: true,
+        cursor: ProfileNotesCursor,
       } as FeedOption,
       {
         id: 'replies'+hexPub,
         name: t('posts_and_replies'),
         filter: { authors: [hexPub], kinds: [1, 6], limit: 10 },
         eventProps: { showRepliedMsg: true, fullWidth: false },
-        source: getSource(uid),
+        user: uid,
+        includeReplies: true,
+        includeReposts: true,
+        mergeReposts: true,
+        cursor: ProfileNotesCursor,
       } as FeedOption,
       {
         id: 'reactions'+hexPub,
         name: t('likes'),
         filter: { authors: [hexPub], kinds: [7], limit: 10 },
-        source: getSource(uid),
-        cursor: () => new ReactionMemoryCursor(uid),
+        user: uid,
+        includeReplies: true,
+        includeReposts: true,
+        mergeReposts: true,
+        cursor: LikesCursor,
       } as FeedOption,
     ];
   }, [hexPub]);
@@ -146,19 +153,8 @@ function Profile(props) {
     profile.about || ''
   }`;
 
-  const showBanner = banner && !blocked;
-
   return (
     <View>
-      <div
-        className={`mb-4 h-48 bg-cover bg-center ${showBanner ? 'cursor-pointer' : ''}`}
-        style={{
-          backgroundImage: showBanner
-            ? `url(${banner})`
-            : 'linear-gradient(120deg, #010101 0%, #1f0f26 50%, #010101 100%)',
-        }}
-        onClick={() => showBanner && setBannerModalOpen(true)}
-      ></div>
       <Show when={bannerModalOpen}>
         <SimpleImageModal imageUrl={profile.banner} onClose={() => setBannerModalOpen(false)} />
       </Show>
@@ -169,13 +165,30 @@ function Profile(props) {
           picture={profile.picture}
           ogTitle={ogTitle}
         />
-        <ProfileCard npub={bech32Key} hexPub={hexPub} />
-        <Show when={!blocked}>
-          <FeedVirtual key={`posts${hexPub}`} filterOptions={filterOptions} />
-        </Show>
+
+        <Feed scope="profile" options={options}>
+          <ShowBanner banner={banner} blocked={blocked} setBannerModalOpen={setBannerModalOpen} />
+          <ProfileCard npub={bech32Key} hexPub={hexPub} />
+        </Feed>
       </div>
     </View>
   );
 }
 
 export default Profile;
+
+const ShowBanner = ({ banner, blocked, setBannerModalOpen }) => {
+  const showBanner = banner && !blocked;
+
+  return (
+    <div
+      className={`mb-4 h-48 bg-cover bg-center ${showBanner ? 'cursor-pointer' : ''}`}
+      style={{
+        backgroundImage: showBanner
+          ? `url(${banner})`
+          : 'linear-gradient(120deg, #010101 0%, #1f0f26 50%, #010101 100%)',
+      }}
+      onClick={() => showBanner && setBannerModalOpen(true)}
+    ></div>
+  );
+}

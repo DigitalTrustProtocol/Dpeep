@@ -172,6 +172,8 @@ class ReactionManager {
     }
   }
 
+
+  
   #getLikes(eventId: UID): Set<UID> {
     let likes = this.likes.get(eventId);
     if (!likes) {

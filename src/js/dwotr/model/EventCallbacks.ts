@@ -4,6 +4,9 @@ import { UID } from '@/utils/UniqueIds';
 
 // Its uses a counter for each callback and a key to identify the same group of callbacks.
 export default class EventCallbacks {
+
+  static GENERIC_KEY = 0;
+
   private callbacks = new Map<UID, Set<Function>>();
   
   has(key: UID) {
@@ -19,12 +22,19 @@ export default class EventCallbacks {
     this.callbacks.get(key)!.add(callback);
   }
 
+  addGenericListener(callback: Function) {
+    this.addListener(EventCallbacks.GENERIC_KEY, callback);
+  }
 
   // Remove a callback from the list of callbacks for the given key.
   removeListener(key: UID, callback: Function) {
     this.callbacks.get(key)?.delete(callback);
     if (this.callbacks.get(key)?.size === 0) 
       this.callbacks.delete(key);
+  }
+
+  removeGenericListener(callback: Function) {
+    this.removeListener(EventCallbacks.GENERIC_KEY, callback);
   }
 
 
@@ -38,6 +48,10 @@ export default class EventCallbacks {
 
   // Dispatch an event to all callbacks for the given key.
   dispatch(key: UID, value: any) {
+
+    if(key != EventCallbacks.GENERIC_KEY)
+      this.dispatch(EventCallbacks.GENERIC_KEY, value); // Dispatch to generic listeners
+
     if (!this.callbacks.has(key)) return;
 
     let list = this.callbacks.get(key)!;
