@@ -104,7 +104,7 @@ class NotesCursor implements ICursor {
     if(!container) return false;
     //if(this.#seen?.has(container.id)) return false; // Filter out events that have already been seen
     let note = container.event!;
-    if (note.created_at > this.until) return false; // E.g.: since <= note.created_at <= until
+    //if (note.created_at > this.until) return false; // E.g.: since <= note.created_at <= until
     if (note.created_at < this.since) return false; // E.g.: since <= note.created_at <= until
     if(!this.authors.has(container?.authorId!)) return false; // If user is not following the author, skip
     if(!this.kinds.has(note.kind)) return false; // Only show reposts and notes

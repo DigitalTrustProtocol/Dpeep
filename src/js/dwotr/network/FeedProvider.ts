@@ -1,9 +1,8 @@
 import { Event } from 'nostr-tools';
-import { Events, ICursor, IEventProvider } from './types';
+import { ICursor } from './types';
 import { ID, UID } from '@/utils/UniqueIds';
 
 import { FeedOption } from './WOTPubSub';
-import { getNostrTime, toNostrUTCstring } from '../Utils';
 import contextLoader from './DependencyLoader';
 
 export class FeedProvider {
@@ -172,7 +171,7 @@ export class FeedProvider {
     }
     this.loading = false;
 
-    //this.#sort(filteredItems);
+    this.#sort(filteredItems);
     this.buffer.push(...filteredItems);
 
     return filteredItems;
