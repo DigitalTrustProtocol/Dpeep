@@ -34,7 +34,7 @@ const EventComponent = ({
 
   // If no focusId is provided, use the container id as starting point
   // This way the first component will know it is the first one
-  if(focusId == 0) focusId = container.id;
+  //if(focusId == 0) focusId = container.id;
 
   let Component: any = null;
   if (container.kind == 1) {

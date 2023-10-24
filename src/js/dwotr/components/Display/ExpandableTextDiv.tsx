@@ -12,6 +12,8 @@ const ExpandableTextDiv: React.FC = ({ children }) => {
     }
   }, [children]);
 
+
+  
   return (
     <div className="relative">
       <div
@@ -22,7 +24,8 @@ const ExpandableTextDiv: React.FC = ({ children }) => {
       </div>
       {isOverflowing && (
         <div className="mt-2">
-          {!isExpanded ? (
+          <span className="text-sm link mb-2">... more</span>
+          {/* {!isExpanded ? (
             <a
               href="#expand"
               className="text-sm link mb-2"
@@ -44,7 +47,7 @@ const ExpandableTextDiv: React.FC = ({ children }) => {
             >
               ... Hide
             </a>
-          )}
+          )} */}
         </div>
       )}
     </div>

@@ -37,7 +37,7 @@ const ReactionButtons = (props) => {
 
   return (
     <>
-      {props.standalone && (
+      <Show when={standalone}>
         <ReactionsList
           event={event}
           wot={wot}
@@ -46,25 +46,27 @@ const ReactionButtons = (props) => {
           formattedZapAmount={formattedZapAmount}
           reposts={reposts}
         />
-      )}
+      </Show>
       <div className="flex">
         <ReplyButton event={event} standalone={standalone} />
         <Show when={settings.showReposts !== false}>
           <Repost event={event} />
         </Show>
         <Show when={settings.showLikes !== false}>
-          <Like standalone={props.standalone} likedBy={likes} onLike={onLike} />
+          <Like standalone={standalone} likedBy={likes} onLike={onLike} />
         </Show>
         <Show when={settings.showZaps !== false}>
           <Zap event={event} />
         </Show>
         <TrustReactionButtons event={event} />
+        <Show when={standalone}>
         <Globe
           onClick={setLoadGlobal}
           size={20}
           title="Load events from outside your network"
           className="btn flex justify-end"
         />
+        </Show>
       </div>
     </>
   );

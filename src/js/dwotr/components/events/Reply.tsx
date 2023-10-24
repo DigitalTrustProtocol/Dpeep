@@ -23,10 +23,6 @@ const Reply: React.FC<ReplyProps> = ({
 
   if(!repliedTo) return null;
   
-  if(!isThread && container.id != focusId) isThread = true;
-
-  //let isRoot = container?.rootId! === repliedTo.id;
-
   return (
     <>
       <Show when={showReplies > 0}>
@@ -37,15 +33,7 @@ const Reply: React.FC<ReplyProps> = ({
           focusId={focusId}
         />
       </Show>
-      <Note container={container} isThread={isThread} focusId={0} />
-      {/* <Show when={!isRoot}>
-        <Link
-          className="text-iris-blue text-sm block mb-2"
-          href={`/${BECH32(container.id!, 'note')}`}
-        >
-          {t('show_thread')}
-        </Link>
-      </Show> */}
+      <Note container={container} isThread={isThread} focusId={focusId} />
     </>
   );
 };

@@ -17,7 +17,6 @@ import { Feed } from '@/dwotr/components/feed/Feed';
 //import FeedInView from '@/dwotr/components/feed/FeedInView';
 
 const Home = () => {
-  const [selectedOption, setOption] = useState<FeedOption>();
   const followedUsers = useFollows();
 
   const options = useMemo(

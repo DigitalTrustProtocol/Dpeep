@@ -23,7 +23,7 @@ const Repost = ({ container, focusId, showReplies, isThread }: RepostProps) => {
       <EventComponent container={repostOf}
             showReplies={showReplies}
             isThread={isThread}
-            focusId={0}
+            focusId={focusId}
       />
     </>
   );

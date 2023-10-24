@@ -23,6 +23,8 @@ const Content = ({ container, translatedText }: Props) => {
     '',
   ) as any;
 
+  
+
   let event = container?.event!;
   let text = event.content || '';
 
