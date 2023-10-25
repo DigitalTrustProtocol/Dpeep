@@ -1,6 +1,6 @@
 import { Event } from 'nostr-tools';
 import { getNostrTime, toNostrUTCstring } from '../Utils';
-import contextLoader from './DependencyLoader';
+import contextLoader from './embed/EmbedLoader';
 import { FeedOption } from './WOTPubSub';
 import relaySubscription from './RelaySubscription';
 import { first } from 'hurdak';

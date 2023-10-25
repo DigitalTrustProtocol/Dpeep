@@ -54,7 +54,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, onNameChange, onShowSwi
       }}
     >
       <img className="w-20 h-20 mx-auto" src="/img/android-chrome-192x192.png" alt="iris" />
-      <h1 className="text-2xl font-bold">iris</h1>
+      <h1 className="text-2xl font-bold">Dpeep</h1>
       <input
         className={`input centered-placeholder ${name.length ? 'text-center' : ''}`}
         onInput={(e: any) => {

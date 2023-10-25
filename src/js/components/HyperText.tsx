@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import reactStringReplace from 'react-string-replace';
 import { Event } from 'nostr-tools';
 
@@ -43,4 +42,4 @@ const HyperText =
     return <>{processedChildren}</>;
   }
 
-export default memo(HyperText);
+export default HyperText;

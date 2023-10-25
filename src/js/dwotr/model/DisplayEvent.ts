@@ -48,10 +48,6 @@ export type EventContainer = {
 
 export type NoteContainer = EventContainer & {
   subtype?: number;
-  //content?: string; // the content of the event
-  // reposters?: Set<UID>; // The id for each reposter (event) of this repost
-  // repliers?: Set<UID>; // The id for each replier (event) of this reply
-  // likes?: Set<UID>; // The id for each liker (event) of this note
 }
 
 export type ReplyContainer = NoteContainer & {
@@ -64,6 +60,15 @@ export type ReplyContainer = NoteContainer & {
 export type RepostContainer = NoteContainer & {
   repostOf?: UID;
 }
+
+
+export type ReactionContainer = EventContainer & {
+  subjectEventId: UID;
+  subjectAuthorId?: UID;
+  value: number;
+}
+
+
 export type ZapContainer = EventContainer & {
   targetId?: UID;
   zapperId?: UID;

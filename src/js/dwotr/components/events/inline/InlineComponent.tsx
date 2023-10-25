@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import { NoteContainer } from '@/dwotr/model/DisplayEvent';
 import { RepostKind } from '@/dwotr/network/WOTPubSub';
 import InlineReply from './InlineReply';
@@ -41,4 +40,4 @@ const InlineComponent = ({ container }: EventComponentProps) => {
   );
 };
 
-export default memo(InlineComponent);
+export default InlineComponent;

@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import Show from '@/components/helpers/Show';
 import HyperText from '@/components/HyperText';
 import Helpers from '@/utils/Helpers';
@@ -59,4 +58,4 @@ const InlineContent = ({ container, translatedText, showTools = false }: Props) 
   );
 };
 
-export default memo(InlineContent);
+export default InlineContent;

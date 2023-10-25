@@ -3,7 +3,7 @@ import { ICursor } from './types';
 import { ID, UID } from '@/utils/UniqueIds';
 
 import { FeedOption } from './WOTPubSub';
-import contextLoader from './DependencyLoader';
+import contextLoader from './embed/EmbedLoader';
 
 export class FeedProvider {
   id: string = 'default';

@@ -14,7 +14,7 @@ import Repost from './Repost';
 import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
-import contextLoader from '@/dwotr/network/DependencyLoader';
+import contextLoader from '@/dwotr/network/embed/EmbedLoader';
 import eventManager from '@/dwotr/EventManager';
 
 declare global {
