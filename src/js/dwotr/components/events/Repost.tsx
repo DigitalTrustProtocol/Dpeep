@@ -1,7 +1,7 @@
 
 import { memo } from 'preact/compat';
 import EventComponent from './EventComponent';
-import { RepostContainer } from '@/dwotr/model/DisplayEvent';
+import { RepostContainer } from '@/dwotr/model/ContainerTypes';
 
 import { RepostName, useRepost } from './inline/InlineRepost';
 

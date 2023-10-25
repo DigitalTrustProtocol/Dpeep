@@ -4,7 +4,7 @@ import { Link } from 'preact-router';
 
 import Name from '../Name';
 import RelativeTime from '@/components/RelativeTime';
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import { BECH32, STR } from '@/utils/UniqueIds';
 import MyAvatar from '@/components/user/Avatar';
 import Show from '@/components/helpers/Show';

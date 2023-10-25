@@ -14,7 +14,7 @@ import noteManager from '@/dwotr/NoteManager';
 import { ID, STR } from '@/utils/UniqueIds';
 import repostManager from '@/dwotr/RepostManager';
 import eventManager from '@/dwotr/EventManager';
-import { RepostContainer } from '@/dwotr/model/DisplayEvent';
+import { RepostContainer } from '@/dwotr/model/ContainerTypes';
 
 interface Props {
   event: Event;

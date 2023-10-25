@@ -6,7 +6,7 @@ import { Link } from 'preact-router';
 import { translate as t } from '../../../../translations/Translation.mjs';
 
 import repostManager from '@/dwotr/RepostManager';
-import { RepostContainer } from '@/dwotr/model/DisplayEvent';
+import { RepostContainer } from '@/dwotr/model/ContainerTypes';
 
 import eventManager from '@/dwotr/EventManager';
 import { BECH32 } from '@/utils/UniqueIds';

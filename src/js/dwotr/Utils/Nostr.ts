@@ -11,6 +11,44 @@ export const userKinds = personKinds.concat([10000, 30001, 30078]);
 export const EPOCH = 1635724800;
 
 
+// long-form posts 30023
+// indexing of file headers (kind:1063)
+// badge definitions (kind:30009),
+// stalls and products (30017,18),
+// music tracks from zapstr (31337), 
+// and reports (1984)
+
+// Highlights 9802
+// https://highlighter.com/load?url=https%3A%2F%2Fblog.lopp.net%2Fhal-finney-was-not-satoshi-nakamoto%2F
+
+
+// {"created_at":1698234128,
+// "content":"The problem is, of course, that all of these platforms are platforms, which is to say, walled gardens that imprison readers and writers alike. Worse than that: they are fiat platforms, which means that permissionless
+//  value-flows are not only absent from their DNA, they are outright impossible.",
+//  "tags":[
+//   ["a","30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599"],
+//   ["e","1a1fe6c838400f3347f97a9adce08c10068f3bc35a279520c911b025c387b061"],
+//   ["p","6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93"],
+//   ["p","6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93"],
+//   ["p","b9e76546ba06456ed301d9e52bc49fa48e70a6bf2282be7a1ae72947612023dc"],
+//   ["context","The problem is, of course, that all of these platforms are platforms, which is to say, walled gardens that imprison readers and writers alike. Worse than that: they are fiat platforms, which means that permissionless value-flows are not only absent from their DNA, they are outright impossible.[^2]"],
+//   ["t","nostr"],
+//   ["t","reading"],
+//   ["t","writing"],
+//   ["t","readability"],
+//   ["t","highlights"],
+//   ["t","pocket"],
+//   ["t","instapaper"],
+//   ["t","readwise"],
+//   ["t","disqus"],
+//   ["t","v4v"],
+//   ["alt","\"The problem is, of course, that all of these platforms are platforms, which is to say, walled gardens that imprison readers and writers alike. Worse than that: they are fiat platforms, which means that permissionless value-flows are not only absent from their DNA, they are outright impossible.\"\n\nThis is a highlight created on https://highlighter.com"],["zap","6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93","wss://purplepag.es","2"],
+//   ["zap","fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52","wss://purplepag.es","1"]],
+//   "kind":9802,
+//   "pubkey":"fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52",
+//   "id":"de5b9003f3556ce22b60cdc62c07269b9b9b811761ecb752665ef923b7963b64",
+//   "sig":"fcd98d9bef056d78f5db9c66c359b80a5833bfb9f8ebb45ab962ccbb4427433cc43aa71a0d2c399aaa2e5be36677b81853de19e271a0c84269069d385ac161f0"}
+
 
 
 export class Tags {

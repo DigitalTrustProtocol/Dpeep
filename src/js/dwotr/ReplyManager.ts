@@ -9,7 +9,7 @@ import eventDeletionManager from './EventDeletionManager';
 import Key from '@/nostr/Key';
 import followManager from './FollowManager';
 import { BulkStorage } from './network/BulkStorage';
-import { ReplyContainer } from './model/DisplayEvent';
+import { ReplyContainer } from './model/ContainerTypes';
 import noteManager from './NoteManager';
 
 

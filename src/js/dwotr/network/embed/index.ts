@@ -9,6 +9,8 @@ import NostrNote from './nostr/NostrNote';
 export class EmbedData {
   authors: Set<UID> = new Set<UID>();
   events: Set<UID> = new Set<UID>();
+  relays: Map<UID, string> = new Map<UID, string>(); // UID (event|profile) -> Relay url string
+
 
   add(embedEvent: EmbedData) {
     for (let author of embedEvent.authors) {

@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat';
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import { UID } from '@/utils/UniqueIds';
 import Content from './Content';
 import ReactionButtons from '@/components/events/buttons/ReactionButtons';

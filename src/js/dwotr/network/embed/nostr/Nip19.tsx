@@ -12,6 +12,7 @@ const NostrNip19: Embed = {
     try {
       match = match.replace('nostr:', '');
       const { type, data } = nip19.decode(match);
+      
       if (type === 'nprofile') {
         r.authors.add(ID(data.pubkey));
       } else if (type === 'nevent') {
@@ -50,3 +51,6 @@ export default NostrNip19;
 //     ]
 //   ]
 // }
+
+// -> EventID: aeb88fdc2a4f5b699bbdfe68497113a8a88fc30a8a6bbe618c9fd9270b310f6f
+// "I’m constantly surprised that, even though most people do read a lot online, very few people seem to have a reading workflow or reading tools."

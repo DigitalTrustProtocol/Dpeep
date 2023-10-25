@@ -15,7 +15,7 @@ import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import EventComponent from '../events/EventComponent';
 import eventManager from '@/dwotr/EventManager';
 import { ID } from '@/utils/UniqueIds';
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import InViewComponent from '../display/InViewComponent';
 import { Fragment } from 'preact/jsx-runtime';
 

@@ -4,7 +4,7 @@ import HyperText from '@/components/HyperText';
 import Helpers from '@/utils/Helpers';
 
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import ExpandableTextDiv from '../display/ExpandableTextDiv';
 
 const MSG_TRUNCATE_LENGTH = 500;

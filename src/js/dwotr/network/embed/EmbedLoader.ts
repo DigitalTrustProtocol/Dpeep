@@ -3,7 +3,7 @@ import { ID, STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from '../RelaySubscription';
 import { DisplayKinds, MetadataKind } from '../WOTPubSub';
 import { Events } from '../types';
-import { EventContainer } from '@/dwotr/model/DisplayEvent';
+import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import eventManager from '@/dwotr/EventManager';
 import { EmbedProcessor } from './EmbedProcessor';
 import { EmbedData } from '.';

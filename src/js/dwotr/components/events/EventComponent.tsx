@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat';
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import Reply from './Reply';
 import Repost from './Repost';
 import Note from './Note';

@@ -1,20 +1,18 @@
-import { memo } from 'preact/compat';
 import { route } from 'preact-router';
-
-import { NoteContainer } from '@/dwotr/model/ContainerTypes';
+import { HighlightContainer } from '@/dwotr/model/ContainerTypes';
 import { BECH32, UID } from '@/utils/UniqueIds';
 import InlineAuthor from './InlineAuthor';
 import Show from '@/components/helpers/Show';
 import ReactionButtons from '@/components/events/buttons/ReactionButtons';
 import InlineContent from './InlineContent';
 
-interface NoteProps {
-  container: NoteContainer; // Define the proper type
+interface HighlightProps {
+  container: HighlightContainer; // Define the proper type
   showTools?: boolean;
   focusId?: UID;
 }
 
-const InlineNote = ({ container, showTools = false, focusId = 0 }: NoteProps) => {
+const InlineHighlight = ({ container, showTools = false, focusId = 0 }: HighlightProps) => {
   return (
     <>
       <div
@@ -26,7 +24,14 @@ const InlineNote = ({ container, showTools = false, focusId = 0 }: NoteProps) =>
           container={container}
           translatedText={undefined}
           showTools={showTools}
+          className="italic"
+          insertQuotes={true}
         />
+        <Show when={container.soureUrl}>
+        <div>
+          Source: <a href={container.soureUrl} target="_blank" rel="noopener noreferrer" title={container.title}>{container.soureUrl}</a>
+        </div>
+        </Show>
         <Show when={showTools}>
           <ReactionButtons
             key={container.id + 'reactions'}
@@ -39,7 +44,7 @@ const InlineNote = ({ container, showTools = false, focusId = 0 }: NoteProps) =>
   );
 };
 
-export default memo(InlineNote);
+export default InlineHighlight;
 
 export const messageClicked = (clickEvent, eventId, standalone) => {
   if (standalone) {
@@ -52,9 +57,8 @@ export const messageClicked = (clickEvent, eventId, standalone) => {
     return;
   }
   clickEvent.stopPropagation();
-  // if ( event.kind === 7) {
-  //   const likedId = event.tags?.reverse().find((t) => t[0] === 'e')[1];
-  //   return route(`/${likedId}`);
-  // }
+
+  // Send to destination open in new tab
   route(`/${BECH32(eventId, 'note')}`);
+
 };

@@ -9,7 +9,7 @@ import eventDeletionManager from './EventDeletionManager';
 import { BulkStorage } from './network/BulkStorage';
 import { RepostKind } from './network/WOTPubSub';
 import noteManager from './NoteManager';
-import { RepostContainer } from './model/DisplayEvent';
+import { RepostContainer } from './model/ContainerTypes';
 
 
 // Decorate the event with the repost_of meta data

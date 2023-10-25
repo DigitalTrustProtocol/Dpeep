@@ -3,7 +3,7 @@ import { FeedOption } from './WOTPubSub';
 import { ID, UID } from '@/utils/UniqueIds';
 import NotesCursor from './NotesCursor';
 import eventManager from '../EventManager';
-import { NoteContainer } from '../model/DisplayEvent';
+import { NoteContainer } from '../model/ContainerTypes';
 import noteManager from '../NoteManager';
 
 

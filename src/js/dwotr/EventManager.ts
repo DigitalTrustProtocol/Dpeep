@@ -26,16 +26,15 @@ import noteManager from './NoteManager';
 import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
 import repostManager from './RepostManager';
-import { EventContainer } from './model/DisplayEvent';
+import { EventContainer } from './model/ContainerTypes';
 import relayManager from './RelayManager';
+import { noteKinds } from './Utils/Nostr';
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
   eventIndex: Map<UID, Event> = new Map();
 
-  
   containers: Map<UID, EventContainer> = new Map(); // Index of all containers, eventid, eventcontainer
-
 
   metrics = {
     TotalMemory: 0,
@@ -43,8 +42,7 @@ class EventManager {
     HandleEvents: 0,
   };
 
-  
-  parse(event: Event, relayUrl?: string) : EventContainer {
+  parse(event: Event, relayUrl?: string): EventContainer {
     let eventId = ID(event.id);
     let container = {
       id: eventId,
@@ -60,7 +58,6 @@ class EventManager {
   // addContainer(container: EventContainer) {
   //   this.containers.set(container.id, container);
   // }
-
 
   createTrustEvent(
     entityPubkey: string,
@@ -159,48 +156,48 @@ class EventManager {
     return verifySignature(event);
   }
 
-
   doRelayEvent(event: Event): boolean {
     if (!event?.id) return false;
     let eventId = ID(event.id); // add Event ID to UniqueIds
 
-
     if (this.seenRelayEvents.has(eventId)) {
       return false; // already seen this event, skip it
-    } 
+    }
 
     // Relay-pool do not validate events, so we need to do it here.
     // Validate an event takes about 14ms, so this is a big performance boost avoid validating events that we have already seen
-    if(!validateEvent(event) || !verifySignature(event)) return false;
+    if (!validateEvent(event) || !verifySignature(event)) return false;
 
     this.seenRelayEvents.add(eventId);
     return true;
   }
 
   async eventCallback(event: Event, afterEose?: boolean, url?: string | undefined) {
-    if(!event) return false;
+    if (!event) return false;
     eventManager.addSeen(ID(event.id));
 
     // Check if the event has been ordered deleted
-    if(EventDeletionManager.deleted.has(ID(event.id))) return false;
+    if (EventDeletionManager.deleted.has(ID(event.id))) return false;
 
     eventManager.metrics.HandleEvents++;
+
+    if (noteManager.supportedKinds.has(event.kind)) return noteManager.handle(event, url); // Handle the event as a note
 
     switch (event.kind) {
       case MetadataKind:
         profileManager.handle(event, url);
         break;
 
-      case TextKind:
+      // case TextKind:
 
-        noteManager.handle(event, url); // Handle the event as a note
-        break;
-        
+      //   noteManager.handle(event, url); // Handle the event as a note
+      //   break;
+
       case RepostKind:
         repostManager.handle(event);
         break;
 
-      case ContactsKind: 
+      case ContactsKind:
         followManager.handle(event);
         break;
 
@@ -226,17 +223,14 @@ class EventManager {
         zapManager.handle(event);
         break;
       default:
-        //Events.handle(event, false, true); 
+        //Events.handle(event, false, true);
         break;
-
     }
 
     return true;
   }
 
-
   async trustEvent(event: Event) {
-
     let { p: pTags, e: eTags, val, pubKey, note, context, timestamp } = this.parseTrustEvent(event);
 
     // Add the trust to the local graph, and update the score
@@ -244,27 +238,11 @@ class EventManager {
     // and only process the event if it is newer than the current data
 
     for (const p of pTags) {
-      graphNetwork.setTrustAndProcess(
-        p,
-        pubKey,
-        EntityType.Key,
-        val,
-        note,
-        context,
-        timestamp,
-      );
+      graphNetwork.setTrustAndProcess(p, pubKey, EntityType.Key, val, note, context, timestamp);
     }
 
     for (const e of eTags) {
-      graphNetwork.setTrustAndProcess(
-        e,
-        pubKey,
-        EntityType.Item,
-        val,
-        note,
-        context,
-        timestamp,
-      );
+      graphNetwork.setTrustAndProcess(e, pubKey, EntityType.Item, val, note, context, timestamp);
     }
   }
 

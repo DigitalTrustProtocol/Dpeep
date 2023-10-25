@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat';
-import { ReplyContainer } from '@/dwotr/model/DisplayEvent';
+import { ReplyContainer } from '@/dwotr/model/ContainerTypes';
 import { BECH32, UID } from '@/utils/UniqueIds';
 import { Link } from 'preact-router';
 import { translate as t } from '../../../../translations/Translation.mjs';

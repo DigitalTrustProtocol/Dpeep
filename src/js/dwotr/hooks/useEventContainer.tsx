@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
-import { EventContainer } from '../model/DisplayEvent';
+import { EventContainer } from '../model/ContainerTypes';
 import { UID } from '@/utils/UniqueIds';
 import eventManager from '../EventManager';
 

@@ -1,8 +1,9 @@
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer, NoteSubtype } from '@/dwotr/model/ContainerTypes';
 import { RepostKind } from '@/dwotr/network/WOTPubSub';
 import InlineReply from './InlineReply';
 import InlineNote from './InlineNote';
 import InlineRepost from './InlineRepost';
+import InlineHighlight from './InlineHighlight';
 
 export interface EventComponentProps {
   container?: NoteContainer;
@@ -22,6 +23,12 @@ const InlineComponent = ({ container }: EventComponentProps) => {
       case 3:
         Component = InlineRepost;
         break;
+
+      case NoteSubtype.Highlight:
+        Component = InlineHighlight;
+        break;
+      
+      
       default:
         Component = InlineNote;
         break;

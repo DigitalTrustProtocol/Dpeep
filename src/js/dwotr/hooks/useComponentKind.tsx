@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 
 import Note from "../components/events/Note";
 import Repost from "../components/events/Repost";
-import { EventContainer, NoteContainer } from "../model/DisplayEvent";
+import { EventContainer, NoteContainer } from "../model/ContainerTypes";
 import Reply from '../components/events/Reply';
 
 const COMPONENTS_BY_EVENT_KIND = {

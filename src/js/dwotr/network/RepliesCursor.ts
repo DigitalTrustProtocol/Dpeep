@@ -9,7 +9,7 @@ import NotesCursor from './NotesCursor';
 import { ID, UID } from '@/utils/UniqueIds';
 import replyManager from '../ReplyManager';
 import eventManager from '../EventManager';
-import { NoteContainer } from '../model/DisplayEvent';
+import { NoteContainer } from '../model/ContainerTypes';
 import noteManager from '../NoteManager';
 
 export class RepliesCursor extends NotesCursor {

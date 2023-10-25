@@ -8,7 +8,7 @@ import {
   NoteContainer,
   ReplyContainer,
   RepostContainer,
-} from '../../model/DisplayEvent';
+} from '../../model/ContainerTypes';
 import { ExstractEmbeds } from '.';
 
 export class EmbedProcessor extends EmbedData {

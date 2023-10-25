@@ -6,7 +6,7 @@ import { EPOCH } from '../Utils/Nostr';
 import { ID, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 import eventManager from '../EventManager';
-import { NoteContainer } from '../model/DisplayEvent';
+import { NoteContainer } from '../model/ContainerTypes';
 
 class NotesCursor implements ICursor {
   limit = 50;

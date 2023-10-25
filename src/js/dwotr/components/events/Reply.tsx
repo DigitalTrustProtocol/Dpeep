@@ -1,6 +1,6 @@
 import { memo } from 'preact/compat';
 import Show from '@/components/helpers/Show';
-import { ReplyContainer } from '@/dwotr/model/DisplayEvent';
+import { ReplyContainer } from '@/dwotr/model/ContainerTypes';
 import EventComponent from './EventComponent';
 import { useEventContainer } from '@/dwotr/hooks/useEventContainer';
 import Note from './Note';

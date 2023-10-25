@@ -1,6 +1,6 @@
 import { route } from 'preact-router';
 
-import { NoteContainer, RepostContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer, RepostContainer } from '@/dwotr/model/ContainerTypes';
 import Reply from '../Reply';
 import Note from '../Note';
 import { RepostKind } from '@/dwotr/network/WOTPubSub';

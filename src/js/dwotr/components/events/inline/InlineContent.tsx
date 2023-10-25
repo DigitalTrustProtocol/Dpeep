@@ -3,7 +3,7 @@ import HyperText from '@/components/HyperText';
 import Helpers from '@/utils/Helpers';
 
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
-import { NoteContainer } from '@/dwotr/model/DisplayEvent';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import Helmet from '@/components/events/note/Helmet';
 import { processText } from '../Content';
 import profileManager from '@/dwotr/ProfileManager';
@@ -13,9 +13,11 @@ type Props = {
   container: NoteContainer;
   translatedText?: string;
   showTools?: boolean;
+  className?: string;
+  insertQuotes?: boolean;
 };
 
-const InlineContent = ({ container, translatedText, showTools = false }: Props) => {
+const InlineContent = ({ container, translatedText, showTools = false, className, insertQuotes }: Props) => {
   const wot = useVerticeMonitor(
     container ? container.id : 0,
     ['badMessage', 'neutralMessage', 'goodMessage'],
@@ -44,9 +46,16 @@ const InlineContent = ({ container, translatedText, showTools = false }: Props) 
         <div
           className={`preformatted-wrap pb-1 ${
             emojiOnly && 'text-3xl'
-          } full-width-note ${wot?.option}`}
+          } full-width-note ${wot?.option}
+          ${className}
+          `}
+
+          style="font-style: italic;"
         >
+          {insertQuotes && '\u201C'}
           <HyperText event={event}>{text}</HyperText>
+          {insertQuotes && '\u201D'}
+
           <Show when={translatedText}>
             <p>
               <i>{translatedText}</i>

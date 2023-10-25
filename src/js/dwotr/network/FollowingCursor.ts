@@ -5,7 +5,7 @@ import NotesCursor from './NotesCursor';
 import followManager from '../FollowManager';
 import noteManager from '../NoteManager';
 import eventManager from '../EventManager';
-import { NoteContainer } from '../model/DisplayEvent';
+import { NoteContainer } from '../model/ContainerTypes';
 
 
 class FollowingCursor extends NotesCursor {

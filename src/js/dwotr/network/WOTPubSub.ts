@@ -8,7 +8,7 @@ import eventManager from '../EventManager';
 import { STR, UID } from '@/utils/UniqueIds';
 import { getNostrTime } from '../Utils';
 import { ICursor } from './types';
-import { EventContainer } from '../model/DisplayEvent';
+import { EventContainer } from '../model/ContainerTypes';
 
 // Wot Custom
 export const Trust1Kind: number = 32010;
@@ -35,6 +35,7 @@ export const BlankKind: number = 255; // Blank
 export const ReportKind: number = 1984; // Report
 export const ZapRequestKind: number = 9734; // ZapRequest
 export const ZapKind: number = 9735; // Zap
+export const highlightKind: number = 9802; // Text
 export const RelayListKind: number = 10002; // RelayList
 export const ClientAuthKind: number = 22242; // ClientAuth
 export const HttpAuthKind: number = 27235; // HttpAuth
