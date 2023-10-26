@@ -3,7 +3,7 @@ import { ICursor } from './types';
 import { ID, UID } from '@/utils/UniqueIds';
 
 import { FeedOption } from './WOTPubSub';
-import contextLoader from './embed/EmbedLoader';
+import embedLoader from './embed/EmbedLoader';
 
 export class FeedProvider {
   id: string = 'default';
@@ -126,7 +126,7 @@ export class FeedProvider {
     if (neededLength > this.buffer.length) {
       // Only load more if the buffer is running low
       let deltaItems = await this.#loadToBuffer(true);
-      await contextLoader.resolve(deltaItems);
+      await embedLoader.resolve(deltaItems);
     }
 
     this.isDone = this.cursor.done && this.cursor.count() == 0;

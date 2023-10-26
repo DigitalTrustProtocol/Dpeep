@@ -47,6 +47,23 @@ export class ReplyManager {
     return preBuffer.concat(afterBuffer);
   }
 
+  getReplies(parentId: UID) : Array<ReplyContainer> {
+    let preBuffer: Array<ReplyContainer> = [];
+    let afterBuffer: Array<ReplyContainer> = [];
+
+    for (const replyId of replyManager.replies.get(parentId) || []) {
+      let container = eventManager.containers.get(replyId) as ReplyContainer;
+      let event = container?.event;
+      if (event) {
+        if (event.pubkey == Key.getPubKey()) preBuffer.unshift(container); // Put my replies at the top
+        else if (followManager.isAllowed(ID(event.pubkey)))
+          preBuffer.push(container); // Put known users replies at the top'ish
+        else afterBuffer.push(container);
+      }
+    }
+    return preBuffer.concat(afterBuffer);
+  }
+
   handleContainer(container: ReplyContainer) {
     
     this.metrics.RelayEvents++;

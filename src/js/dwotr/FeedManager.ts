@@ -1,7 +1,5 @@
 import { FeedProvider } from "./network/FeedProvider";
 import { FeedOption } from "./network/WOTPubSub";
-import { RelayEventProvider } from "./network/RelayEventProvider";
-import { ICursor } from "./network/types";
 
 
 class FeedManager {

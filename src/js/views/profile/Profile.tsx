@@ -18,9 +18,9 @@ import blockManager from '@/dwotr/BlockManager.ts';
 import { ID, UID } from '@/utils/UniqueIds.ts';
 import followManager from '@/dwotr/FollowManager.ts';
 import { FeedOption } from '@/dwotr/network/WOTPubSub.ts';
-import ProfileNotesCursor from '@/dwotr/network/ProfileNotesCursor.ts';
+import ProfileNotesCursor from '@/dwotr/network/provider/ProfileNotesCursor.ts';
 import { Feed } from '@/dwotr/components/feed/Feed.tsx';
-import { LikesCursor } from '@/dwotr/network/LikesCursor.ts';
+import { LikesCursor } from '@/dwotr/network/provider/LikesCursor.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile

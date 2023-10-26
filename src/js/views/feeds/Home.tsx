@@ -1,19 +1,16 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 
-import { Filter } from 'nostr-tools';
 
 import OnboardingNotification from '@/components/onboarding/OnboardingNotification';
-import { getEventReplyingTo, isRepost } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
 //import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { useFollows } from '@/dwotr/hooks/useFollows';
 import { FeedOption as FeedOption } from '@/dwotr/network/WOTPubSub';
 //import FeedTanStack from '@/dwotr/components/feed/FeedTanStack';
-import FeedVirtual from '@/dwotr/components/feed/FeedVirtual';
-import FollowingCursor from '@/dwotr/network/FollowingCursor';
-import { FeedSelect } from '@/dwotr/components/feed/FeedSelect';
 import { Feed } from '@/dwotr/components/feed/Feed';
+import FollowingCursor from '@/dwotr/network/provider/FollowingCursor';
+import TrustNetworkCursor from '@/dwotr/network/provider/TrustNetworkCursor';
 //import FeedInView from '@/dwotr/components/feed/FeedInView';
 
 const Home = () => {
@@ -36,7 +33,7 @@ const Home = () => {
         includeReplies: false,
         includeReposts: true,
         mergeReposts: true,
-        cursor: FollowingCursor,
+        cursor: TrustNetworkCursor,
       } as FeedOption,
       // {
       //   id: 'global',

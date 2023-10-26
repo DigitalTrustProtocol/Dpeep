@@ -1,16 +1,13 @@
 import { useRef, Fragment } from 'react';
-import { Event } from 'nostr-tools';
 
 import Show from '@/components/helpers/Show';
-import useFeed from '@/dwotr/hooks/useFeed';
 import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import useVirtual from 'react-cool-virtual';
-import eventManager from '@/dwotr/EventManager';
-import { ID } from '@/utils/UniqueIds';
 import EventComponent from '../events/EventComponent';
 import useFillViewportHeight from '@/dwotr/hooks/useFillViewportHeight';
-import ToTopButton from './ToTopButton';
+import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
+import { EventContainer } from '@/dwotr/model/ContainerTypes';
 
 export type FeedProps = {
   feedOption?: FeedOption;
@@ -32,16 +29,15 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
   const [viewportRef, viewportHeight] = useFillViewportHeight<HTMLDivElement>();
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
-  const { events, hasMore, hasRefresh, isLoading, isDone, loadMore, refresh } = useFeed(feedOption);
-
-  const containers = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
+  //const { events, hasMore, hasRefresh, isLoading, isDone, loadMore, refresh } = useFeed(feedOption);
+  const { containers, status, hasMore, hasNew, loadNext } = useFeedProvider(feedOption);
 
   const batchLoaded = useRef<Array<boolean>>([]);
 
   //  const [comments, setComments] = useState([]);
   const { outerRef, innerRef, items } = useVirtual<HTMLDivElement, HTMLDivElement>({
     // Provide the number of comments
-    itemCount: events.length + (children ? 1 : 0),
+    itemCount: containers.length + (children ? 1 : 0),
     itemSize: 150,
     //itemCount: 10,
     // Starts to pre-fetch data when the user scrolls within every 5 items
@@ -55,14 +51,13 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
     },
     // The callback will be invoked when more data needs to be loaded
     loadMore: (e) => {
-      const cb = (list: Event[]) => {
-        //console.log('loadMore:list.length:', list.length);
+      const cb = (list: EventContainer[]) => {
         if (list.length === 0) return;
 
         batchLoaded.current[e.loadIndex] = true;
       };
 
-      loadMore(cb); // Loads more data into the items array
+      loadNext(cb); // Loads more data into the items array
     },
 
     //scrollDuration: (distance) => distance * 0.05,
@@ -73,15 +68,12 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
     },
   });
 
-  const refreshClick = (e) => {
-    refresh(); // Add new events
-    //startItem(count);
-    //scrollTo({ offset: 0, smooth: true });
-    setScope('local' + Date.now()); // force re-render
+  const refreshClick = () => {
+    //reset(); // Reset the provider, to load new data
+    setScope('local' + Date.now()); // force re-render, reload the data and feed
   };
 
   if (!feedOption) return null;
-
 
   return (
     <>
@@ -92,55 +84,45 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
           viewportRef.current = el; // Share the element for viewport calculation
         }}
       >
-        <Show when={hasRefresh}>
+        <Show when={hasNew}>
           <ShowNewEvents onClick={refreshClick} />
         </Show>
         <hr className="opacity-10" />
         <div ref={innerRef}>
           {children}
-          {items.length ? (
-            items.map(({ index, size, width, measureRef }) => {
-              const isEndOfList = index === containers.length - 1;
-              const showLoading = hasMore && isEndOfList;
-              const showNoMore = !hasMore && isEndOfList;
+          {items.map(({ index, size, width, measureRef }) => {
+            // const isEndOfList = index === containers.length - 1;
+            // const showLoading = hasMore && isEndOfList;
+            // const showNoMore = !hasMore && isEndOfList;
 
-              let container = containers[index];
-              if (!container) return null;
+            let container = containers[index];
+            if (!container) return null;
 
-              return (
-                <div
-                  key={'FeedItem' + index}
-                  ref={measureRef}
-                  style={{ minHeight: size, minWidth: width }}
-                >
-                  <Fragment key={`Virtual${container?.id!}`}>
-                    <EventComponent container={container} />
-                    <hr className="opacity-10 mb-2 mt-2" />
-                    <Show when={showNoMore}>
-                      <p className="text-center">
-                        <b>No more messages</b>&nbsp;
-                        {/* <ToTopButton onClick={() => scrollTo({ offset: 0, smooth: true })} /> */}
-                      </p>
-                    </Show>
-                    <Show when={showLoading}>
-                      <Loading />
-                    </Show>
-                  </Fragment>
-                </div>
-              );
-            })
-          ) : (
-            <>
-              <Show when={isLoading}>
-                <Loading />
-              </Show>
-              <Show when={isDone}>
-                <p className="text-center">
-                  <b>No messages</b>
-                </p>
-              </Show>
-            </>
-          )}
+            return (
+              <div
+                key={'FeedItem' + index}
+                ref={measureRef}
+                style={{ minHeight: size, minWidth: width }}
+              >
+                <Fragment key={`Virtual${container?.id!}`}>
+                  <EventComponent container={container} />
+                  <hr className="opacity-10 mb-2 mt-2" />
+                </Fragment>
+              </div>
+            );
+          })}
+          <Show when={status == 'loading'}>
+            <Loading />
+          </Show>
+          <p className="text-center">
+            <Show when={items.length && !hasMore}>
+              <b>No more messages</b>&nbsp;
+              {/* <ToTopButton onClick={() => scrollTo({ offset: 0, smooth: true })} /> */}
+            </Show>
+            <Show when={!items.length && !hasMore}>
+              <b>No messages</b>
+            </Show>
+          </p>
         </div>
       </div>
     </>

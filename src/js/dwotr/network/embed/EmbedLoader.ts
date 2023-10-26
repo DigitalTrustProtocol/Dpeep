@@ -92,5 +92,5 @@ export class EmbedLoader {
 
 }
 
-const contextLoader = new EmbedLoader();
-export default contextLoader;
+const embedLoader = new EmbedLoader();
+export default embedLoader;

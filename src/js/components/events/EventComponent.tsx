@@ -14,7 +14,7 @@ import Repost from './Repost';
 import Zap from './Zap';
 import blockManager from '@/dwotr/BlockManager';
 import { ID } from '@/utils/UniqueIds';
-import contextLoader from '@/dwotr/network/embed/EmbedLoader';
+import embedLoader from '@/dwotr/network/embed/EmbedLoader';
 import eventManager from '@/dwotr/EventManager';
 
 declare global {
@@ -75,7 +75,7 @@ const EventComponent = (props: EventComponentProps) => {
       let e = eventManager.eventIndex.get(ID(hex));
       if(!e) {
         // Failsafe in case the event is not in the DB, should only happen rarely
-        contextLoader.getEventsByIdWithContext([ID(hex)]).then((list: Array<Event>) => {
+        embedLoader.getEventsByIdWithContext([ID(hex)]).then((list: Array<Event>) => {
           setEvent(list[0]);
         });
       } else 
