@@ -9,7 +9,7 @@ import Name from '../user/Name';
 import muteManager from '@/dwotr/MuteManager';
 import { ID } from '@/utils/UniqueIds';
 
-const SmallEvent = memo(({ event }: { event: Event }) => (
+const SmallEvent = ({ event }: { event: Event }) => (
   <div key={event.id} className="flex gap-4 w-full break-words">
     <div className="flex-shrink-0 min-w-[30px] min-h-[30px]" alt="">
       <Link href={`/${nip19.npubEncode(event.pubkey)}`}>
@@ -28,7 +28,7 @@ const SmallEvent = memo(({ event }: { event: Event }) => (
       </span>
     </Link>
   </div>
-));
+);
 
 const SmallFeed = ({ events }: { events: Event[] }) => {
   return (
@@ -51,4 +51,4 @@ const SmallFeed = ({ events }: { events: Event[] }) => {
   );
 };
 
-export default memo(SmallFeed);
+export default SmallFeed;

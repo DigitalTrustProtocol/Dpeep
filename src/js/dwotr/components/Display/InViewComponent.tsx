@@ -48,4 +48,4 @@ const InViewComponent = ({ children, id, onInView }: InViewComponentProps) => {
   );
 };
 
-export default memo(InViewComponent);
+export default InViewComponent;

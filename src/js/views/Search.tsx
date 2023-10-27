@@ -13,7 +13,7 @@ import { useProfile } from '../dwotr/hooks/useProfile';
 import useCachedFetch from '@/utils/useCachedFetch';
 import { ID } from '@/utils/UniqueIds.ts';
 
-const SuggestionProfile = memo(({ pubkey }: { pubkey: string }) => {
+const SuggestionProfile = ({ pubkey }: { pubkey: string }) => {
   const { profile } = useProfile(ID(pubkey || Key.getPubKey())) as any;
 
   if(!profile) return null; // Will not render before profile is ready
@@ -42,9 +42,9 @@ const SuggestionProfile = memo(({ pubkey }: { pubkey: string }) => {
       </span>
     </Link>
   );
-});
+};
 
-const FollowSuggestionsAPI = memo(() => {
+const FollowSuggestionsAPI = () => {
   const url = `https://api.nostr.band/v0/suggested/profiles/${Key.getPubKey()}`;
   const suggestions = useCachedFetch(url, 'followSuggestions', (data) => data.profiles || []);
 
@@ -68,7 +68,7 @@ const FollowSuggestionsAPI = memo(() => {
       </div>
     </div>
   );
-});
+};
 
 const Search = (props: any) => {
   const url = 'https://api.nostr.band/v0/trending/notes';
@@ -99,4 +99,4 @@ const Search = (props: any) => {
   );
 };
 
-export default memo(Search);
+export default Search;

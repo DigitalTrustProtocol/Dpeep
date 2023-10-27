@@ -28,6 +28,7 @@ export class EmbedLoader {
 
   async resolve(events: Array<Event>): Promise<void> {
     if (events.length == 0) return;
+
     // The number of events should not be more than between 10-50, so we can load all context in one go
     if (events.length > 50) throw new Error('Too many events to load context for');
 

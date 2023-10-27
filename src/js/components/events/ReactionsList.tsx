@@ -26,7 +26,7 @@ type ReactionsListProps = {
   reposts: Set<string>;
 };
 
-const Reaction = memo(({ data }: { data: ReactionData }) => {
+const Reaction = ({ data }: { data: ReactionData }) => {
   const npub = data.pubkey.startsWith('npub') ? data.pubkey : nip19.npubEncode(data.pubkey);
   return (
     <Link href={`/${npub}`} className="flex items-center gap-4">
@@ -37,7 +37,7 @@ const Reaction = memo(({ data }: { data: ReactionData }) => {
       </div>
     </Link>
   );
-});
+};
 
 const ReactionsList = ({
   event,

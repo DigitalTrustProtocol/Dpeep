@@ -1,5 +1,3 @@
-
-import { memo } from 'preact/compat';
 import EventComponent from './EventComponent';
 import { RepostContainer } from '@/dwotr/model/ContainerTypes';
 
@@ -29,4 +27,4 @@ const Repost = ({ container, focusId, showReplies, isThread }: RepostProps) => {
   );
 }
 
-export default memo(Repost);
+export default Repost;

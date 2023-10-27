@@ -15,9 +15,8 @@ import { STR, UID } from '../../utils/UniqueIds.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import { useIsMounted } from '@/dwotr/hooks/useIsMounted.tsx';
 import followManager, { FollowItem } from '@/dwotr/FollowManager.ts';
-import { Event } from 'nostr-tools';
 
-const FollowedUser = memo(({ id }: { id: UID }) => {
+const FollowedUser = ({ id }: { id: UID }) => {
   const hexKey = STR(id) as string;
   const npub = Key.toNostrBech32Address(hexKey, 'npub') || '';
   return (
@@ -37,7 +36,7 @@ const FollowedUser = memo(({ id }: { id: UID }) => {
       {Key.isMine(hexKey) && <Follow id={hexKey} />}
     </div>
   );
-});
+};
 
 type Props = {
   id?: string;

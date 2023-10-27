@@ -155,4 +155,4 @@ const Content = ({ standalone, isQuote, fullWidth, asInlineQuote, event, isPrevi
   );
 };
 
-export default memo(Content);
+export default Content;

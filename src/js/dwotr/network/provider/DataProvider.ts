@@ -12,12 +12,13 @@ export class DataProvider {
 
   id: string = 'default';
   logging = false;
-  pageSize = 10;
+
+  batchSize = 10;
 
   seen: Set<UID> = new Set<UID>();
   buffer: Array<EventContainer> = [];
 
-  constructor(opt: FeedOption, listeners?: DataProviderEvents<EventContainer>, size = 10) {
+  constructor(opt: FeedOption, listeners?: DataProviderEvents<EventContainer>, batchSize = 15) {
     this.listeners = listeners;
 
     this.options = opt;
@@ -25,7 +26,7 @@ export class DataProvider {
 
     this.cursor = new opt.cursor(this.options);
 
-    this.pageSize = size;
+    this.batchSize = batchSize;
   }
 
   private setStatus(status: ProviderStatus) {
@@ -91,9 +92,9 @@ export class DataProvider {
 
       // Failsafe in async senario
       if (this.status != 'loading') return []; // If the status has changed, then exit and return empty array
-    
+
       // If there are no new items, then don't do anything
-      if (items.length == 0) return []; 
+      if (items.length == 0) return [];
 
       this.buffer = this.buffer.concat(items); // Add the new items to the buffer, creating a new array
       this.listeners?.onDataLoaded?.(items);
@@ -103,17 +104,16 @@ export class DataProvider {
 
       this.setStatus('idle');
       return items;
-
     } catch (error) {
       this.setError(error);
     }
     return [];
   }
 
-  async fetchItems(size = this.pageSize): Promise<EventContainer[]> {
+  async fetchItems(): Promise<EventContainer[]> {
     let items: EventContainer[] = [];
 
-    while (items.length < size) {
+    while (items.length < this.batchSize) {
       //if (!this.hasNext()) break;
 
       const data = await this.cursor.next();
@@ -133,10 +133,11 @@ export class DataProvider {
   static getProvider(
     opt: FeedOption,
     listeners?: DataProviderEvents<EventContainer>,
+    batchSize = 15,
   ): DataProvider | undefined {
     let provider = DataProvider.providers.get(opt.id!);
     if (!provider) {
-      provider = new DataProvider(opt, listeners);
+      provider = new DataProvider(opt, listeners, batchSize);
       this.providers.set(opt.id!, provider);
     }
     return provider;

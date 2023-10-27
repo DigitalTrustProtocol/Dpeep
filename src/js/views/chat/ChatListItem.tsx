@@ -53,4 +53,4 @@ const ChatListItem = ({ chat, active = false, latestMsg = {} as any, name }) => 
   );
 };
 
-export default memo(ChatListItem);
+export default ChatListItem;

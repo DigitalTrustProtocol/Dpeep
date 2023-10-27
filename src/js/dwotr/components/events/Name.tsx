@@ -28,4 +28,4 @@ const Name = ({ id, placeholder, hideBadge }: Props) => {
   );
 };
 
-export default memo(Name);
+export default Name;

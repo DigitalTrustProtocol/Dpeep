@@ -85,7 +85,7 @@ const ProfileStats = ({ address }) => {
   );
 };
 
-export default memo(ProfileStats);
+export default ProfileStats;
 
 const useProfileFollows = (profileId: UID, myId: UID, loadGlobal: boolean) => {
   const [contactsCount, setContactsCount] = useState<number>(0);

@@ -42,11 +42,6 @@ export class EmbedProcessor extends EmbedData {
     }
   }
 
-  addAuthor(id: UID) {
-    if (this.authors.has(id)) return; // Already seen
-
-    this.authors.add(id);
-  }
 
   addEvent(id: UID): boolean {
     if (eventManager.seen(id)) return false; // Already seen
@@ -75,7 +70,20 @@ export class EmbedProcessor extends EmbedData {
       return;
     }
 
-    this.add(ExstractEmbeds(container?.event!.content || '', container.event!));
+    this.#doNoteEmbeds(container);
+  }
+
+  #doNoteEmbeds(container: NoteContainer) {
+    let embedEvent = ExstractEmbeds(container?.event!.content || '', container.event!);
+
+    for (let author of embedEvent.authors) {
+      if(eventManager.seen(author)) continue; // Already seen
+      this.authors.add(author);
+    }
+    for (let event of embedEvent.events) {
+      if(eventManager.seen(event)) continue; // Already seen
+      this.events.add(event);
+    }
   }
 
   //   #doReactions(event: ReactionEvent) {
@@ -115,6 +123,8 @@ export class EmbedProcessor extends EmbedData {
   #addProfile(uid: UID) {
     if (this.#hasProfile(uid)) return;
 
-    this.addAuthor(uid);
+    this.authors.add(uid);
   }
+
+
 }

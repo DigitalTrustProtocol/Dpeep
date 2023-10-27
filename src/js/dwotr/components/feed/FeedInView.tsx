@@ -165,4 +165,4 @@ const FeedInView = ({ showDisplayAs, filterOptions }: FeedProps) => {
   );
 };
 
-export default React.memo(FeedInView);
+export default FeedInView;

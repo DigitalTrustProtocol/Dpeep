@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import { route } from 'preact-router';
 
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
@@ -39,7 +38,7 @@ const InlineNote = ({ container, showTools = false, focusId = 0 }: NoteProps) =>
   );
 };
 
-export default memo(InlineNote);
+export default InlineNote;
 
 export const messageClicked = (clickEvent, eventId, standalone) => {
   if (standalone) {

@@ -19,4 +19,4 @@ const NoteHelmet = ({ attachments, name, text }) => {
   );
 };
 
-export default memo(NoteHelmet);
+export default NoteHelmet;

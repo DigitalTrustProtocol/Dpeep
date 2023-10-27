@@ -7,7 +7,6 @@ import RelativeTime from '@/components/RelativeTime';
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import { BECH32, STR } from '@/utils/UniqueIds';
 import MyAvatar from '@/components/user/Avatar';
-import Show from '@/components/helpers/Show';
 import EventDropdown from '@/components/events/EventDropdown';
 
 type Props = {
@@ -42,16 +41,16 @@ const InlineAuthor = ({ container, showTools = false }: Props) => {
           </Link>
         </small>
       </div>
-      <Show when={showTools}>
+      {showTools &&
         <div className="flex-1 flex items-center justify-end">
           <EventDropdown id={container!.event!.id} event={container!.event} />
         </div>
-      </Show>
+      }
     </div>
   );
 };
 
-export default memo(InlineAuthor);
+export default InlineAuthor;
 
 export const authorDates = (created_at: number) => {
   const t = new Date(created_at * 1000);

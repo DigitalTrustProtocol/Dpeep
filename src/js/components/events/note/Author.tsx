@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Link } from 'preact-router';
 
 import Key from '../../../nostr/Key';
-import Show from '../../helpers/Show';
 import RelativeTime from '../../RelativeTime';
 import Name from '../../user/Name';
 import EventDropdown from '../EventDropdown';
@@ -36,9 +35,9 @@ const Author = ({ event, fullWidth, isQuote, standalone, setTranslatedText, isPr
 
   return (
     <div className="flex items-center">
-      <Show when={fullWidth}>
+      {fullWidth &&
         <Avatar event={event} isQuote={isQuote} standalone={standalone} fullWidth={fullWidth} />
-      </Show>
+      }
       <div className="flex flex-col">
         <div>
           <Link href={`/${Key.toNostrBech32Address(event.pubkey, 'npub')}`} className="font-bold">
@@ -56,11 +55,11 @@ const Author = ({ event, fullWidth, isQuote, standalone, setTranslatedText, isPr
           </small>
         </div>
       </div>
-      <Show when={!isQuote && !isPreview}>
+      {!isQuote && !isPreview && (
         <div className="flex-1 flex items-center justify-end">
           <EventDropdown id={event.id} event={event} onTranslate={setTranslatedText} />
         </div>
-      </Show>
+      )}
     </div>
   );
 };

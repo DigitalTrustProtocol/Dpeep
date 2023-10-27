@@ -132,4 +132,4 @@ const EventComponent = (props: EventComponentProps) => {
   );
 };
 
-export default memo(EventComponent);
+export default EventComponent;

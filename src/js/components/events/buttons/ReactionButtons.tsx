@@ -1,7 +1,6 @@
 import { memo } from 'preact/compat';
 import { useEffect, useState, useCallback } from 'preact/hooks';
 import { Event } from 'nostr-tools';
-import Show from '@/components/helpers/Show';
 import localState from '@/state/LocalState.ts';
 
 import ReactionsList from '../ReactionsList';
@@ -37,7 +36,7 @@ const ReactionButtons = (props) => {
 
   return (
     <>
-      <Show when={standalone}>
+      { standalone &&
         <ReactionsList
           event={event}
           wot={wot}
@@ -46,33 +45,33 @@ const ReactionButtons = (props) => {
           formattedZapAmount={formattedZapAmount}
           reposts={reposts}
         />
-      </Show>
+      }
       <div className="flex">
         <ReplyButton event={event} standalone={standalone} />
-        <Show when={settings.showReposts !== false}>
+        {  settings.showReposts !== false && 
           <Repost event={event} />
-        </Show>
-        <Show when={settings.showLikes !== false}>
+        }
+        {settings.showLikes !== false &&
           <Like standalone={standalone} likedBy={likes} onLike={onLike} />
-        </Show>
-        <Show when={settings.showZaps !== false}>
+        }
+        { settings.showZaps !== false && 
           <Zap event={event} />
-        </Show>
+        }
         <TrustReactionButtons event={event} />
-        <Show when={standalone}>
+        {standalone && 
         <Globe
           onClick={setLoadGlobal}
           size={20}
           title="Load events from outside your network"
           className="btn flex justify-end"
         />
-        </Show>
+        }
       </div>
     </>
   );
 };
 
-export default memo(ReactionButtons);
+export default ReactionButtons;
 
 const useLikes = (messageId: string, author: string, loadGlobal: boolean) => {
   const [likes, setLikes] = useState(new Set<UID>());

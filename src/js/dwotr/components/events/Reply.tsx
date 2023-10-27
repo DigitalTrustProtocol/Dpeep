@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import Show from '@/components/helpers/Show';
 import { ReplyContainer } from '@/dwotr/model/ContainerTypes';
 import EventComponent from './EventComponent';
@@ -38,4 +37,4 @@ const Reply: React.FC<ReplyProps> = ({
   );
 };
 
-export default memo(Reply);
+export default Reply;

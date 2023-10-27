@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import { UID } from '@/utils/UniqueIds';
 import Content from './Content';
@@ -13,20 +12,20 @@ interface NoteProps {
   focusId?: UID;
 }
 
-const Note: React.FC<NoteProps> = ({ container, isThread = false, focusId = 0 }: NoteProps) => {
+const Note = ({ container, isThread = false, focusId = 0 }: NoteProps) => {
+  // key={container.id + 'note'}
+ //
   return (
-    <>
       <div
-        key={container.id + 'note'}
         className={`px-2 md:px-4 pb-2 flex flex-col`}
-        onClick={(e) => messageClicked(e, container.id, false)}
+        onClick={(e) => messageClicked(e, container.id, false)}     
       >
         <InlineAuthor container={container} showTools={true} />
         <div className="flex flex-row">
           <div className="flex flex-col items-center flex-shrink-0 min-w-[40px] min-h-[40px] mr-2">
-            <Show when={isThread}>
+            {isThread && 
               <div className="border-l-2 border-neutral-700 h-full"></div>
-            </Show>
+            }
           </div>
 
           <div className={`flex-grow`}>
@@ -35,11 +34,10 @@ const Note: React.FC<NoteProps> = ({ container, isThread = false, focusId = 0 }:
               key={container.id + 'reactions'}
               standalone={container.id === focusId}
               event={container.event}
-            />
+            /> 
           </div>
         </div>
       </div>
-    </>
   );
 };
 

@@ -1,9 +1,5 @@
-import { useEffect } from 'preact/hooks';
-import { useEventContainer } from '@/dwotr/hooks/useEventContainer';
 import { useKey } from '@/dwotr/hooks/useKey';
 import InlineComponent from './InlineComponent';
-import relaySubscription from '@/dwotr/network/RelaySubscription';
-import { STR } from '@/utils/UniqueIds';
 import eventManager from '@/dwotr/EventManager';
 
 type InLineQuoteProps = {
@@ -13,20 +9,22 @@ type InLineQuoteProps = {
 const InLineQuote = ({ id }: InLineQuoteProps) => {
   const { uid } = useKey(id);
 
-  const { container, setContainer } = useEventContainer(uid);
 
-  useEffect(() => {
-    if(container) return;
+  const container = eventManager.containers.get(uid);
+  //const { container, setContainer } = useEventContainer(uid);
 
-    relaySubscription.getEventByIds([STR(uid) as string]).then((events) => {
-      if(events.length > 0) {
-        let temp = eventManager.containers.get(uid);
-        if(!temp) return;
-        setContainer(temp);
-      }
-    });
+  // useEffect(() => {
+  //   if(container) return;
 
-  }, [container]);
+  //   relaySubscription.getEventByIds([STR(uid) as string]).then((events) => {
+  //     if(events.length > 0) {
+  //       let temp = eventManager.containers.get(uid);
+  //       if(!temp) return;
+  //       setContainer(temp);
+  //     }
+  //   });
+
+  // }, [container]);
 
 
   return (

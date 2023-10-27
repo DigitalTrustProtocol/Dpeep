@@ -104,4 +104,4 @@ const PrivateMessage = ({ event, selfAuthored, showName }: Props) => {
   );
 };
 
-export default memo(PrivateMessage);
+export default PrivateMessage;

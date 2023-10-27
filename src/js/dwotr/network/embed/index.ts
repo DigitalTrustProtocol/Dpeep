@@ -4,7 +4,7 @@ import { UID } from '@/utils/UniqueIds';
 import InlineMention from './nostr/InlineMention';
 import NostrNip19 from './nostr/Nip19';
 import NostrNpub from './nostr/NostrNpub';
-import NostrNote from './nostr/NostrNote';
+//import NostrNote from './nostr/NostrNote';
 
 export class EmbedData {
   authors: Set<UID> = new Set<UID>();

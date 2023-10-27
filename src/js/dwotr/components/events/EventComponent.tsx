@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import Reply from './Reply';
 import Repost from './Repost';
@@ -6,15 +5,15 @@ import Note from './Note';
 import { RepostKind } from '@/dwotr/network/WOTPubSub';
 import { UID } from '@/utils/UniqueIds';
 
-export type CompnentContext = {
-  noteView: boolean; // False if the event is displayed in a feed
-  foucsId: UID; // The id of the event that is currently focused (noteView)
+// export type CompnentContext = {
+//   noteView: boolean; // False if the event is displayed in a feed
+//   foucsId: UID; // The id of the event that is currently focused (noteView)
 
 
-  // isQuote?: boolean;
-  // asInlineQuote?: boolean;
-  // showReplies?: number;
-};
+//   // isQuote?: boolean;
+//   // asInlineQuote?: boolean;
+//   // showReplies?: number;
+// };
 
 
 export interface EventComponentProps {
@@ -66,4 +65,4 @@ const EventComponent = ({
   );
 };
 
-export default memo(EventComponent);
+export default EventComponent;

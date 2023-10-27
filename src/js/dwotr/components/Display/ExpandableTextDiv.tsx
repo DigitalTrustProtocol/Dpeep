@@ -54,4 +54,4 @@ const ExpandableTextDiv: React.FC = ({ children }) => {
   );
 };
 
-export default memo(ExpandableTextDiv);
+export default ExpandableTextDiv;

@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import Show from '@/components/helpers/Show';
 import HyperText from '@/components/HyperText';
 import Helpers from '@/utils/Helpers';
@@ -53,7 +52,7 @@ const Content = ({ container, translatedText }: Props) => {
   );
 };
 
-export default memo(Content);
+export default Content;
 
 export const processText = (content: string, doTruncate: boolean = false) => {
   let text = content || '';

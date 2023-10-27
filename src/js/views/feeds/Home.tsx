@@ -29,7 +29,6 @@ const Home = () => {
       {
         id: 'wot',
         name: t('trust network'),
-        //filter: { kinds: [1, 6], authors: followedUsers, limit: 10 },
         includeReplies: false,
         includeReposts: true,
         mergeReposts: true,

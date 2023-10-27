@@ -30,14 +30,14 @@ const InlineRepost = ({ container }: InlineRepostProps) => {
   );
 };
 
-export default memo(InlineRepost);
+export default InlineRepost;
 
 type RepostNameProps = {
   authorId: number;
   repostCount: number;
 };
 
-export const RepostName = memo(({ authorId, repostCount }: RepostNameProps) => (
+export const RepostName = ({ authorId, repostCount }: RepostNameProps) => (
   <div className="flex gap-1 items-center text-sm text-neutral-500 px-2 pt-2">
     <div className="flex flex-row">
       <i className="min-w-[40px] mr-4 mb-2 flex justify-end">
@@ -53,7 +53,7 @@ export const RepostName = memo(({ authorId, repostCount }: RepostNameProps) => (
       </div>
     </div>
   </div>
-));
+);
 
 export const useRepost = (container: RepostContainer) => {
   const [repostCount, setRepostCount] = useState<number>(0);

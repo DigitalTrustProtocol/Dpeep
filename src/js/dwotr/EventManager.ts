@@ -145,6 +145,7 @@ class EventManager {
   }
 
   seen(eventId: UID) {
+    if(eventId == 0) return true; // 0 is a special case, as representing null event, therefore it is always seen
     return this.seenRelayEvents.has(eventId);
   }
 

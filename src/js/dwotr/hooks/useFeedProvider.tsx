@@ -5,11 +5,13 @@ import { DataProvider } from '../network/provider/DataProvider';
 import { NoteContainer } from '../model/ContainerTypes';
 import { ProviderStatus } from '../network/provider';
 
-const useFeedProvider = (opt: FeedOption | undefined) => {
+const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
   const [containers, setContainers] = useState<NoteContainer[]>([]);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [hasNew, setHasNew] = useState<boolean>(false);
   const [status, setStatus] = useState<ProviderStatus>('idle');
+  const batchLoaded = useRef<Array<boolean>>([]);
+
 
 
   const dataProvider = useRef<DataProvider>(); // Make sure to get the same provider for the same feedId
@@ -29,19 +31,19 @@ const useFeedProvider = (opt: FeedOption | undefined) => {
       }
     }
 
-    dataProvider.current = DataProvider.getProvider(opt, listener); // Make sure to get the same provider for the same feedId
+    dataProvider.current = DataProvider.getProvider(opt, listener, batchSize); // Make sure to get the same provider for the same feedId
     dataProvider.current!.mount();    
     dataProvider.current!.preLoad();
 
     let list = dataProvider.current!.getBuffer();
     setContainers(list);
 
-    if(list.length < dataProvider.current!.pageSize) 
+    if(list.length < dataProvider.current!.batchSize) 
        loadNext(); 
 
     // Check regularly for new events
     intervalRef.current = setInterval(() => {
-      setHasNew(dataProvider.current?.hasNew() || false);
+      setHasNew(!!dataProvider.current?.hasNew());
     }, 3000);
 
     return () => {
@@ -52,7 +54,7 @@ const useFeedProvider = (opt: FeedOption | undefined) => {
   }, [opt]);
 
 
-  const loadNext = useCallback((cb?: (list: NoteContainer[]) => void) => {
+  const loadNext = useCallback((e?: any, cb?: (list: NoteContainer[]) => void) => {
     if (!dataProvider.current || !mounted.current) return;
     if (loading.current == true) return;
     loading.current = true; // Prevent multiple loads from happening at once
@@ -60,7 +62,7 @@ const useFeedProvider = (opt: FeedOption | undefined) => {
     dataProvider.current?.nextPage().then((items) => {
       if (!dataProvider.current || !mounted.current) return 0;
       setContainers(dataProvider.current.getBuffer());
-      setHasMore(!dataProvider.current.isDone() || true);
+      setHasMore(!dataProvider.current.isDone());
       loading.current = false;
       cb?.(items);
     });
@@ -74,15 +76,15 @@ const useFeedProvider = (opt: FeedOption | undefined) => {
 
     dataProvider.current.reset();
     dataProvider.current.preLoad();
-    setHasMore(!dataProvider.current?.isDone() || true);
-    setHasNew(dataProvider.current?.hasNew() || false);
+    setHasMore(!dataProvider.current?.isDone());
+    setHasNew(!!dataProvider.current?.hasNew());
 
     loadNext();
 
     setContainers(dataProvider.current!.getBuffer());
   }, []);
 
-  return { containers, status, hasMore, hasNew, loadNext, reset };
+  return { containers, status, hasMore, hasNew, batchLoaded: batchLoaded.current, loadNext, reset };
 };
 
 export default useFeedProvider;

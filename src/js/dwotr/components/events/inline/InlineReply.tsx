@@ -1,4 +1,3 @@
-import { memo } from 'preact/compat';
 import { ReplyContainer } from '@/dwotr/model/ContainerTypes';
 import { BECH32, UID } from '@/utils/UniqueIds';
 import { Link } from 'preact-router';
@@ -25,14 +24,14 @@ const InlineReply: React.FC<ReplyProps> = ({ container }: ReplyProps) => {
   );
 };
 
-export default memo(InlineReply);
+export default InlineReply;
 
 type RepliedToNameProps = {
   replyToAuthorId: UID;
   replyToEventId: UID;
 };
 
-const RepliedToName = memo(({ replyToAuthorId, replyToEventId }: RepliedToNameProps) => (
+const RepliedToName = ({ replyToAuthorId, replyToEventId }: RepliedToNameProps) => (
   <div className="flex gap-1 items-center text-sm text-neutral-500 px-2 pt-2">
     <div className="flex flex-row">
       <i className="min-w-[40px] mr-4 mb-2 flex justify-end">
@@ -54,4 +53,4 @@ const RepliedToName = memo(({ replyToAuthorId, replyToEventId }: RepliedToNamePr
       </div>
     </div>
   </div>
-));
+);
