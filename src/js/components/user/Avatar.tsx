@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import React, { useEffect, useState } from 'react';
 
 import Show from '../helpers/Show';
@@ -85,5 +86,5 @@ const MyAvatar: React.FC<Props> = (props) => {
 };
 
 
-export default MyAvatar;
+export default memo(MyAvatar);
 

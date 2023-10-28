@@ -17,26 +17,27 @@ import { ID, UID } from '@/utils/UniqueIds';
 import reactionManager from '@/dwotr/ReactionManager';
 import Events from '@/nostr/Events';
 import { useZaps } from '@/dwotr/hooks/useZaps';
-
+import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
+import { useKey } from '@/dwotr/hooks/useKey';
 
 let settings: any = {};
 localState.get('settings').on((s) => (settings = s));
 
-const ReactionButtons = (props) => {
-  const event = props.event as Event;
-  const standalone = props.standalone;
-  const wot = props?.wot;
+type Props = {
+  event: any;
+  standalone?: boolean;
+  wot?: any;
+};
 
+const ReactionButtons = ({ event, standalone, wot }: Props) => {
+  const { uid: eventId, myId } = useKey(event.id);
   const [loadGlobal, setLoadGlobal] = useState<boolean>(false);
-  const { likes, onLike } = useLikes(event.id, event.pubkey, loadGlobal);
   const { zapAmountByUser, formattedZapAmount } = useZaps(event.id, loadGlobal);
-  const reposts = useReposts(event.id, loadGlobal);
-
-
+  //const reposts = useReposts(event.id, loadGlobal);
 
   return (
     <>
-      { standalone &&
+      {/* { standalone &&
         <ReactionsList
           event={event}
           wot={wot}
@@ -45,73 +46,36 @@ const ReactionButtons = (props) => {
           formattedZapAmount={formattedZapAmount}
           reposts={reposts}
         />
-      }
+      } */}
       <div className="flex">
-        <ReplyButton event={event} standalone={standalone} />
-        {  settings.showReposts !== false && 
-          <Repost event={event} />
-        }
-        {settings.showLikes !== false &&
-          <Like standalone={standalone} likedBy={likes} onLike={onLike} />
-        }
-        { settings.showZaps !== false && 
-          <Zap event={event} />
-        }
-        <TrustReactionButtons event={event} />
-        {standalone && 
-        <Globe
-          onClick={setLoadGlobal}
-          size={20}
-          title="Load events from outside your network"
-          className="btn flex justify-end"
-        />
-        }
+        <ReplyButton eventId={eventId} standalone={standalone} />
+        {settings.showReposts !== false && (
+          <Repost eventId={eventId} authorId={myId} loadGlobal={loadGlobal} />
+        )}
+        {settings.showLikes !== false && (
+          <Like
+            eventId={eventId}
+            eventAuthor={event.pubkey}
+            standalone={standalone}
+            loadGlobal={loadGlobal}
+          />
+        )}
+        {settings.showZaps !== false && <Zap event={event} />}
+        <TrustReactionButtons eventId={event.id} wot={wot} standalone={standalone} />
+        {standalone && (
+          <Globe
+            onClick={setLoadGlobal}
+            size={20}
+            title="Load events from outside your network"
+            className="btn flex justify-end"
+          />
+        )}
       </div>
     </>
   );
 };
 
-export default ReactionButtons;
-
-const useLikes = (messageId: string, author: string, loadGlobal: boolean) => {
-  const [likes, setLikes] = useState(new Set<UID>());
-  const isMounted = useIsMounted();
-
-  const onLike = useCallback(
-    (active: boolean) => {
-      const value = active ? 1 : 0;
-      reactionManager.submitLike(messageId, author, value);
-      setLikes(new Set(reactionManager.getLikes(ID(messageId))));
-    },
-    [messageId],
-  );
-
-  useEffect(() => {
-    const setLikesThrottle = throttle((likes: Set<UID>) => {
-      if (!isMounted()) return;
-      setLikes(new Set(likes)); // Update likes state with new likes set
-    }, 500);
-
-    const handleLikes = (likes: Set<UID>, downVotes: Set<UID>) => {
-      setLikesThrottle(likes);
-    };
-
-    // Set initial likes
-    setLikesThrottle(reactionManager.getLikes(ID(messageId)));
-
-    if (!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
-    // Subscribe
-    let unsub = reactionManager.subscribeRelays(messageId, handleLikes);
-
-    // Return cleanup function
-    return () => {
-      unsub?.();
-    };
-  }, [messageId, loadGlobal]);
-
-  return { likes, onLike };
-};
-
+export default memo(ReactionButtons);
 
 const useReposts = (messageId: string, loadGlobal: boolean) => {
   const [reposts, setReposts] = useState(new Set<string>());

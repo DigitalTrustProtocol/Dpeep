@@ -96,7 +96,7 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
           if (!container) return null;
           return (
             <>
-              <EventComponent key={`${container?.id!}RF`} container={container} showReplies={0} />
+              <EventComponent key={`${container?.id!}RF`} id={container.id} showReplies={0} />
               <hr className="opacity-10 mb-2 mt-2" />
             </>
           );

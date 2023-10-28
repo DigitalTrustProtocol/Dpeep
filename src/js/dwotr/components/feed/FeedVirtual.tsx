@@ -1,15 +1,16 @@
-import { memo } from 'preact/compat';
-import { Fragment, useCallback } from 'react';
+//import { memo } from 'preact/compat';
+import { Fragment, useCallback, useRef } from 'react';
 
 import { FeedOption } from '@/dwotr/network/WOTPubSub';
-import ShowNewEvents from '@/components/feed/ShowNewEvents';
+//import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import useVirtual from 'react-cool-virtual';
 import EventComponent from '../events/EventComponent';
 import useFillViewportHeight from '@/dwotr/hooks/useFillViewportHeight';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
-import Show from '@/components/helpers/Show';
+import { NoteContainer } from '@/dwotr/model/ContainerTypes';
+//import Show from '@/components/helpers/Show';
 
-const BATCH_COUNT = 10; // The number of items to load at once
+const BATCH_COUNT = 20; // The number of items to load at once
 
 export type FeedProps = {
   feedOption?: FeedOption;
@@ -29,6 +30,7 @@ const Loading = () => (
 
 const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
   const [viewportRef, viewportHeight] = useFillViewportHeight<HTMLDivElement>();
+  const containerCheck = useRef<NoteContainer[]>([]);
 
   // when giving params to Feed, be careful that they don't unnecessarily change on every render
   //const { events, hasMore, hasRefresh, isLoading, isDone, loadMore, refresh } = useFeed(feedOption);
@@ -40,9 +42,11 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
   //  const [comments, setComments] = useState([]);
   const { outerRef, innerRef, items } = useVirtual<HTMLDivElement, HTMLDivElement>({
     // Provide the number of comments
-    itemCount: containers.length + (children ? 1 : 0),
+    itemCount: containers.length, // + (children ? 1 : 0),
     itemSize: 150, // Set default size for all items
-
+    overscanCount: 5, // (default = 5) The number of items (rows or columns) to render before and after the visible items
+    //useIsScrolling: true, // (default = false) Set it to `true` if you want to optimize the render for scrolling
+    //useIsScrolling: (speed) => speed > 50, // Use it based on the scroll speed (more user friendly)
     // Starts to pre-fetch data when the user scrolls within every 5 items
     // e.g. 1 - 5, 6 - 10 and so on (default = 15)
     loadMoreCount: BATCH_COUNT,
@@ -72,12 +76,12 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
       if (hasMore) loadNext(e); // Loads more data into the items array
     },
 
-    //scrollDuration: (distance) => distance * 0.05,
-    scrollDuration: 1500,
+    scrollDuration: (distance) => distance * 0.05,
+    //scrollDuration: 1500,
     // Using "easeInOutBack" effect (default = easeInOutSine), see: https://easings.net/#easeInOutSine
-    scrollEasingFunction: (x) => {
-      return 1 - Math.pow(1 - x, 5);
-    },
+    // scrollEasingFunction: (x) => {
+    //   return 1 - Math.pow(1 - x, 5);
+    // },
   });
 
   const refreshClick = () => {
@@ -86,38 +90,61 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
   };
 
   const RenderContainer = useCallback(
-    ({ index, size, width, measureRef }) => {
+    ({ index, size, width, measureRef, isScrolling = false }) => {
       const isFirstItem = index === 0;
       const isEndOfList = index === containers.length - 1;
       // key={'container' + container.id}
 
       let container = containers[index];
-      
+
+      // if (isScrolling)
+      //   return (
+      //     <Fragment key={index}>
+      //       <div> Scrolling... </div>
+      //     </Fragment>
+      //   );
+
       return (
-        <Fragment key={'container' + container.id}>
-          {isFirstItem && children}
+        <Fragment key={index}>
+          {/* {isFirstItem && children} */}
           <div ref={measureRef} style={{ minHeight: size, minWidth: width }}>
-            <EventComponent container={container} />
+            <EventComponent id={container.id} />
             <hr className="opacity-10 mb-2 mt-2" />
           </div>
-          {isEndOfList && <RenderStatus />}
+          {/* {isEndOfList && <RenderStatus />} */}
         </Fragment>
       );
     },
     [containers],
   );
 
-  const RenderStatus = useCallback(() => {
-    return (
-      <>
-        {status == 'loading' && <Loading />}
-        <p className="text-center">
-          {items.length && !hasMore && <b>End of feed</b>}
-          {!items.length && !hasMore && <b>No messages</b>}
-        </p>
-      </>
-    );
-  }, [status, items, hasMore]);
+  // const RenderStatus = useCallback(() => {
+  //   return (
+  //     <>
+  //       {status == 'loading' && <Loading />}
+  //       <p className="text-center">
+  //         {items.length && !hasMore && <b>End of feed</b>}
+  //         {!items.length && !hasMore && <b>No messages</b>}
+  //       </p>
+  //     </>
+  //   );
+  // }, [status, items, hasMore]);
+
+  console.log(
+    'StartIndex:',
+    items[0]?.index,
+    ' - EndIndex:',
+    items[items.length - 1]?.index,
+    ' - Total:',
+    items.length,
+    ' - Containers:',
+    containers.length,
+  );
+
+  if (containerCheck.current !== containers) {
+    console.log('Container changed:Length:', containers.length);
+    containerCheck.current = containers;
+  }
 
   return (
     <div
@@ -133,9 +160,7 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
       {/* <hr className="opacity-10" /> */}
       <div ref={innerRef}>
         {items.length > 0 ? (
-          items
-            .filter(({ index }) => index < containers.length)
-            .map(RenderContainer)
+          items.filter(({ index }) => index < containers.length).map(RenderContainer)
         ) : (
           <p>Items.length == 0</p>
         )}
@@ -165,17 +190,16 @@ export default FeedVirtual;
 //   );
 // };
 
-
 // if (!container)
-      //   return (
-      //     <Fragment>
-      //       <div
-      //         key={'container' + index}
-      //         ref={measureRef}
-      //         style={{ minHeight: size, minWidth: width }}
-      //       >
-      //         <p>No container</p>
-      //         <hr className="opacity-10 mb-2 mt-2" />
-      //       </div>
-      //     </Fragment>
-      //   ); // stop rendering when we reach the end of the containers
+//   return (
+//     <Fragment>
+//       <div
+//         key={'container' + index}
+//         ref={measureRef}
+//         style={{ minHeight: size, minWidth: width }}
+//       >
+//         <p>No container</p>
+//         <hr className="opacity-10 mb-2 mt-2" />
+//       </div>
+//     </Fragment>
+//   ); // stop rendering when we reach the end of the containers

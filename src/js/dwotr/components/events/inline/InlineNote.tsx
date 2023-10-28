@@ -11,9 +11,10 @@ interface NoteProps {
   container: NoteContainer; // Define the proper type
   showTools?: boolean;
   focusId?: UID;
+  wot?: any;
 }
 
-const InlineNote = ({ container, showTools = false, focusId = 0 }: NoteProps) => {
+const InlineNote = ({ container, showTools = false, focusId = 0, wot }: NoteProps) => {
   return (
     <>
       <div
@@ -31,6 +32,7 @@ const InlineNote = ({ container, showTools = false, focusId = 0 }: NoteProps) =>
             key={container.id + 'reactions'}
             standalone={focusId == container.id}
             event={container.event}
+            wot={wot}
           />
         </Show>
       </div>

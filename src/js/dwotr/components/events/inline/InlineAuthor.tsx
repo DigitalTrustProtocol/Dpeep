@@ -50,7 +50,7 @@ const InlineAuthor = ({ container, showTools = false }: Props) => {
   );
 };
 
-export default InlineAuthor;
+export default memo(InlineAuthor);
 
 export const authorDates = (created_at: number) => {
   const t = new Date(created_at * 1000);

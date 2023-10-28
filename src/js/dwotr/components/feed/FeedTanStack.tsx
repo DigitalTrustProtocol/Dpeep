@@ -93,7 +93,7 @@ const FeedTanStack = ({ filterOptions }: FeedProps) => {
                 >
                   <Show when={!isLoaderRow}>
                     <>
-                      <EventComponent key={`${container?.id!}TanStack`} container={container} />
+                      <EventComponent key={`${container?.id!}TanStack`} id={container?.id} />
                       <hr className="opacity-10 mb-2 mt-2" />
                     </>
                   </Show>

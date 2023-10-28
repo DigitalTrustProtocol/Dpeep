@@ -1,64 +1,84 @@
+import { memo } from 'preact/compat';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'preact/hooks';
 
 import Events from '../../../nostr/Events';
-import Key from '../../../nostr/Key';
+import { STR, UID } from '@/utils/UniqueIds';
+import { throttle } from 'lodash';
+import repostManager from '@/dwotr/RepostManager';
+import { RepostContainer } from '@/dwotr/model/ContainerTypes';
+import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 
-const Repost = ({ event }) => {
-  const [state, setState] = useState({
-    reposts: Events.repostsByMessageId.get(event.id)?.size || 0,
-    reposted: false,
-    repostedBy: new Set<string>(),
-  });
+type RepostProps = {
+  eventId: UID;
+  authorId: UID;
+  loadGlobal: boolean;
+};
 
-  useEffect(() => {
-    return Events.getReposts(event.id, handleReposts);
-  }, [event]);
-
-  const handleReposts = (repostedBy) => {
-    const myPub = Key.getPubKey();
-    setState((prevState) => ({
-      ...prevState,
-      reposts: repostedBy.size,
-      reposted: repostedBy.has(myPub),
-      repostedBy,
-    }));
-  };
-
-  const repostBtnClicked = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    repost(!state.reposted);
-  };
-
-  const repost = (reposted = true) => {
-    if (reposted) {
-      const author = event.pubkey;
-      const hexId = Key.toNostrHexAddress(event.id);
-      if (hexId) {
-        Events.publish({
-          kind: 6,
-          tags: [
-            ['e', hexId, '', 'mention'],
-            ['p', author],
-          ],
-          content: '',
-        });
-      }
-    }
-  };
+const Repost = ({ eventId, authorId, loadGlobal }: RepostProps) => {
+  const { reposts, selected } = useReposts(eventId, authorId, loadGlobal);
 
   return (
     <a
       className={`btn-ghost btn-sm hover:bg-transparent btn content-center rounded-none ${
-        state.reposted ? 'text-iris-green' : 'hover:text-iris-green text-neutral-500'
+        selected ? 'text-iris-green' : 'hover:text-iris-green text-neutral-500'
       }`}
-      onClick={(e) => repostBtnClicked(e)}
+      onClick={(e) => doRepost(e, eventId, authorId)}
     >
       <ArrowPathIcon width={18} />
-      {state.reposts || ''}
+      {reposts.size || ''}
     </a>
   );
 };
 
-export default Repost;
+export default memo(Repost);
+
+const doRepost = (e, eventId: UID, authorId: UID) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (repostManager.hasIndex(eventId, authorId)) return; // Direct check to avoid waiting for the event to be updated
+
+  Events.publish({
+    kind: 6,
+    tags: [
+      ['e', STR(eventId) as string, '', 'mention'],
+      ['p', STR(authorId) as string],
+    ],
+    content: '',
+  });
+
+  repostManager.addIndex(eventId, authorId); // Quick update to avoid waiting for the event to be updated
+};
+
+export const useReposts = (eventId: UID, myId: UID, loadGlobal: boolean) => {
+  const [reposts, setReposts] = useState<Set<RepostContainer>>(new Set());
+  const [selected, setSelected] = useState<boolean>(false);
+  const isMounted = useIsMounted();
+
+  useEffect(() => {
+    let onUpdated = throttle(
+      () => {
+        if (!isMounted()) return;
+        setReposts(new Set(repostManager.reposts.get(eventId)));
+        setSelected(repostManager.index.get(myId)?.has(eventId) || false);
+      },
+      1000,
+      { leading: true, trailing: false },
+    );
+
+    onUpdated(); // Set initial Replies count.
+    repostManager.onEvent.addListener(eventId, onUpdated);
+
+    if (!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
+
+    // Subscribe
+    //let unsub = Events.getReposts(eventId, handleReposts);
+
+    return () => {
+      repostManager.onEvent.removeListener(eventId, onUpdated);
+    };
+  }, [eventId]);
+
+  return { reposts, selected };
+};

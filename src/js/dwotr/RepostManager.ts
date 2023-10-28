@@ -27,6 +27,7 @@ class RepostManager {
   // Index of all reposts of an specific events,
   // ID is subject event, set is all reposts of that event
   reposts: Map<UID, Set<RepostContainer>> = new Map();
+  index: Map<UID, Set<UID>> = new Map();
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
@@ -114,6 +115,17 @@ class RepostManager {
     return container;
   }
 
+  addIndex(eventId: UID, authorId: UID) {
+    let repostIndex = this.index.get(authorId) || this.index.set(authorId, new Set()).get(authorId);
+    repostIndex!.add(eventId);
+  }
+
+  hasIndex(eventId: UID, authorId: UID) {
+    let repostIndex = this.index.get(authorId);
+    if(!repostIndex) return false;
+
+    return repostIndex.has(eventId);
+  }
 
   // ---- Private methods ----
 
@@ -138,9 +150,12 @@ class RepostManager {
     let repostOf = container.repostOf!;
 
     let repostSet = this.reposts.get(repostOf) || this.reposts.set(repostOf, new Set()).get(repostOf);
-
     repostSet!.add(container);
+
+    this.addIndex(repostOf, container.authorId!);
   }
+
+
 
 
   async tableCount() {

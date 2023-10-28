@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { BoltIcon } from '@heroicons/react/24/outline';
 import { useState } from 'preact/hooks';
 
@@ -75,4 +76,4 @@ const Zap = ({ event }) => {
   ) : null;
 };
 
-export default Zap;
+export default memo(Zap);

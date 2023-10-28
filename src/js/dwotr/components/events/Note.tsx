@@ -10,11 +10,11 @@ interface NoteProps {
   container: NoteContainer; // Define the proper type
   isThread?: boolean;
   focusId?: UID;
+  wot: any;
 }
 
-const Note = ({ container, isThread = false, focusId = 0 }: NoteProps) => {
-  // key={container.id + 'note'}
- //
+const Note = ({ container, isThread = false, focusId = 0, wot }: NoteProps) => {
+  
   return (
       <div
         className={`px-2 md:px-4 pb-2 flex flex-col`}
@@ -31,9 +31,9 @@ const Note = ({ container, isThread = false, focusId = 0 }: NoteProps) => {
           <div className={`flex-grow`}>
             <Content container={container} />
             <ReactionButtons
-              key={container.id + 'reactions'}
               standalone={container.id === focusId}
               event={container.event}
+              wot={wot}
             /> 
           </div>
         </div>

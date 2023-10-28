@@ -1,34 +1,45 @@
+import { memo } from 'react';
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import Reply from './Reply';
 import Repost from './Repost';
 import Note from './Note';
 import { RepostKind } from '@/dwotr/network/WOTPubSub';
 import { UID } from '@/utils/UniqueIds';
+import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
+import eventManager from '@/dwotr/EventManager';
+import { useEventContainer } from '@/dwotr/hooks/useEventContainer';
 
 // export type CompnentContext = {
 //   noteView: boolean; // False if the event is displayed in a feed
 //   foucsId: UID; // The id of the event that is currently focused (noteView)
-
 
 //   // isQuote?: boolean;
 //   // asInlineQuote?: boolean;
 //   // showReplies?: number;
 // };
 
-
 export interface EventComponentProps {
-  container?: NoteContainer;
-  isThread?: boolean,
+  id?: UID;
+  isThread?: boolean;
   showReplies?: number;
   focusId?: UID;
 }
 
 const EventComponent = ({
-  container,
+  id,
   showReplies = 1, // Show 1 level of replies by default
   isThread = false,
   focusId = 0,
 }: EventComponentProps) => {
+
+  const { container } = useEventContainer<NoteContainer>(id!);
+
+  const wot = useVerticeMonitor(
+    id! || 0,
+    ['badMessage', 'neutralMessage', 'goodMessage'],
+    '',
+  ) as any;
+
   if (!container) return null;
 
   // If no focusId is provided, use the container id as starting point
@@ -37,7 +48,6 @@ const EventComponent = ({
 
   let Component: any = null;
   if (container.kind == 1) {
-
     switch (container?.subtype!) {
       case 2:
         Component = Reply;
@@ -51,9 +61,9 @@ const EventComponent = ({
     }
   }
 
-  if(container.kind == RepostKind) Component = Repost;
-  
-  if (!Component) return null;
+  if (container.kind == RepostKind) Component = Repost;
+
+  if (!Component && Component != Note) return null;
 
   return (
     <Component
@@ -61,8 +71,9 @@ const EventComponent = ({
       showReplies={showReplies}
       isThread={isThread}
       focusId={focusId}
+      wot={wot}
     />
   );
 };
 
-export default EventComponent;
+export default memo(EventComponent);

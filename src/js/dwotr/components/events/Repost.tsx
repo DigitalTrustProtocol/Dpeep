@@ -18,7 +18,7 @@ const Repost = ({ container, focusId, showReplies, isThread }: RepostProps) => {
   return (
     <>
       <RepostName authorId={container?.authorId!} repostCount={repostCount} />
-      <EventComponent container={repostOf}
+      <EventComponent id={repostOf.id}
             showReplies={showReplies}
             isThread={isThread}
             focusId={focusId}

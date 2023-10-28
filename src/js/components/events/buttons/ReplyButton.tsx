@@ -1,64 +1,64 @@
+import { memo } from 'preact/compat';
 import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
-import { Event } from 'nostr-tools';
 
-import Key from '../../../nostr/Key';
-import { ID } from '@/utils/UniqueIds';
+import { BECH32, UID } from '@/utils/UniqueIds';
 import replyManager from '@/dwotr/ReplyManager';
 import { throttle } from 'lodash';
+import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 
 type ReplyButtonProps = {
-  event: Event;
+  eventId: UID;
   standalone?: boolean;
 };
 
-const ReplyButton = (props: ReplyButtonProps) => {
-  const { replyCount } = useReplies(props.event.id);
-
-  const onReplyBtnClicked = () => {
-    if (props.standalone) {
-      document.querySelector('textarea')?.focus();
-    } else {
-      route(`/${Key.toNostrBech32Address(props.event.id, 'note')}`);
-    }
-  };
+const ReplyButton = ({ eventId, standalone }: ReplyButtonProps) => {
+  const { replies } = useReplies(eventId);
 
   return (
     <a
       className="btn-ghost btn-sm hover:bg-transparent hover:text-iris-blue btn content-center rounded-none text-neutral-500"
-      onClick={() => onReplyBtnClicked()}
+      onClick={() => onReplyBtnClicked(eventId, !!standalone)}
     >
       <ChatBubbleOvalLeftIcon width={18} />
-      <span>{replyCount || ''}</span>
+      <span>{replies?.size || ''}</span>
     </a>
   );
 };
 
-export default ReplyButton;
+export default memo(ReplyButton);
 
-const useReplies = (eventId: string) => {
-  const [replyCount, setReplyCount] = useState<number>(0);
+const onReplyBtnClicked = (eventId: UID, standalone: boolean) => {
+  if (standalone) {
+    document.querySelector('textarea')?.focus();
+  } else {
+    route(`/${BECH32(eventId, 'note')}`);
+  }
+};
+
+
+const useReplies = (eventId: UID) => {
+  const [replies, setReplies] = useState<Set<UID>>(new Set());
+  const isMounted = useIsMounted();
 
   useEffect(() => {
-    let id = ID(eventId);
-
     let onUpdated = throttle(
       () => {
-        let count = replyManager.replies.get(id)?.size || 0;
-        setReplyCount(count);
+        if (!isMounted()) return;
+        setReplies(new Set(replyManager.replies.get(eventId)));
       },
       1000,
       { leading: true, trailing: false },
     );
 
     onUpdated(); // Set initial Replies count.
-    replyManager.updated.addListener(id, onUpdated);
+    replyManager.updated.addListener(eventId, onUpdated);
 
     return () => {
-      replyManager.updated.removeListener(id, onUpdated);
+      replyManager.updated.removeListener(eventId, onUpdated);
     };
   }, [eventId]);
 
-  return { replyCount };
+  return { replies };
 };

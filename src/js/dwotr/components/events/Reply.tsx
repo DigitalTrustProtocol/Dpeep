@@ -9,6 +9,7 @@ type ReplyProps = {
   isThread?: boolean;
   showReplies?: number;
   focusId?: number;
+  wot?: any;
 };
 
 const Reply: React.FC<ReplyProps> = ({
@@ -16,6 +17,7 @@ const Reply: React.FC<ReplyProps> = ({
   isThread,
   showReplies = 1,
   focusId = 0,
+  wot,
 }: ReplyProps) => {
 
   const { container:repliedTo } = useEventContainer(container?.repliedTo! || container?.rootId!);
@@ -26,13 +28,13 @@ const Reply: React.FC<ReplyProps> = ({
     <>
       <Show when={showReplies > 0}>
         <EventComponent
-          container={repliedTo}
+          id={repliedTo.id}
           isThread={true}
           showReplies={showReplies - 1}
           focusId={focusId}
         />
       </Show>
-      <Note container={container} isThread={isThread} focusId={focusId} />
+      <Note container={container} isThread={isThread} focusId={focusId} wot={wot} />
     </>
   );
 };

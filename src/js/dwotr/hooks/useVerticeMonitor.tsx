@@ -12,7 +12,7 @@ const useVerticeMonitor = (id: UID, options?: any, option?: any) => {
     useEffect(() => {
         if(!id) return; // No id, no monitor. id = 0 is a non existing id cause by the use of ID("") in the code
 
-        function findOption(vertice: Vertice) {
+        const findOption = (vertice: Vertice) => {
             let option = verticeMonitor.findOption(vertice, options);
             setState({ id, options, option, vertice }); 
         }

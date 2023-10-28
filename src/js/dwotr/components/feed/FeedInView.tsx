@@ -153,7 +153,7 @@ const FeedInView = ({ showDisplayAs, filterOptions }: FeedProps) => {
             return (
               <Fragment key={'Feed' + item.id}>
                 <InViewComponent id={item.id} onInView={onInView}>
-                  <EventComponent key={`${item?.id!}ECT`} container={item} />
+                  <EventComponent key={`${item?.id!}ECT`} id={item.id} />
                   <hr className="opacity-10 mb-2 mt-2" />
                 </InViewComponent>
               </Fragment>

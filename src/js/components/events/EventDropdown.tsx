@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { Event } from 'nostr-tools';
 import { useState } from 'preact/hooks';
 
@@ -29,6 +30,8 @@ const EventDropdown = (props: EventDropdownProps) => {
 
   const [muted, setMuted] = useState<boolean>(false); // TODO setMuted
   const [showingDetails, setShowingDetails] = useState(false);
+  const [bechUrl, _] = useState<string>(`https://iris.to/${Key.toNostrBech32Address(id, 'note')}` || '');
+
 
   const closeModal = () => setShowingDetails(false);
 
@@ -101,12 +104,11 @@ const EventDropdown = (props: EventDropdownProps) => {
     }
   };
 
-  const url = `https://iris.to/${Key.toNostrBech32Address(id, 'note')}`;
 
   return (
     <div>
       <Dropdown>
-        <Copy className="btn btn-sm" key={`${id!}copy_link`} text={t('copy_link')} copyStr={url} />
+        <Copy className="btn btn-sm" key={`${id!}copy_link`} text={t('copy_link')} copyStr={bechUrl} />
         <Copy
           className="btn btn-sm"
           key={`${id!}copy_id`}
@@ -175,4 +177,4 @@ const EventDropdown = (props: EventDropdownProps) => {
   );
 };
 
-export default EventDropdown;
+export default memo(EventDropdown);

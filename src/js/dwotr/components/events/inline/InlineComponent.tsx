@@ -4,6 +4,7 @@ import InlineReply from './InlineReply';
 import InlineNote from './InlineNote';
 import InlineRepost from './InlineRepost';
 import InlineHighlight from './InlineHighlight';
+import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
 
 export interface EventComponentProps {
   container?: NoteContainer;
@@ -11,7 +12,15 @@ export interface EventComponentProps {
 
 const InlineComponent = ({ container }: EventComponentProps) => {
 
+
+  const wot = useVerticeMonitor(
+    container?.id! || 0,
+    ['badMessage', 'neutralMessage', 'goodMessage'],
+    '',
+  ) as any;
+
   if(!container) return null;
+
 
   let Component: any = null;
   if (container.kind == 1) {
@@ -43,6 +52,7 @@ const InlineComponent = ({ container }: EventComponentProps) => {
   return (
     <Component
       container={container}
+      wot={wot}
     />
   );
 };
