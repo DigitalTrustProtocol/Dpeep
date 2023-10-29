@@ -1,7 +1,9 @@
 import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import { useState } from 'preact/hooks';
 import { FeedSelect } from './FeedSelect';
-import FeedVirtual from './FeedVirtual';
+//import FeedVirtual from './FeedVirtual';
+import FeedInView from './FeedInView';
+import FeedInfinity from './FeedInfinity';
 
 type FeedProps = {
   scope: string;
@@ -15,7 +17,7 @@ export const Feed = ({ children, options, scope }: FeedProps) => {
 
   return (
     <>
-      <FeedVirtual key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope}>
+    <FeedInfinity key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope}>
         <>
           {children}
           <FeedSelect
@@ -25,7 +27,29 @@ export const Feed = ({ children, options, scope }: FeedProps) => {
           />
           <hr className="opacity-10 mt-2" />
         </>
-      </FeedVirtual>
+    </FeedInfinity>
+    {/* <FeedInView key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope}>
+        <>
+          {children}
+          <FeedSelect
+            selectedOption={selectedOption}
+            feedOptions={options}
+            setOption={setOption}
+          />
+          <hr className="opacity-10 mt-2" />
+        </>
+    </FeedInView> */}
+      {/* <FeedVirtual key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope}>
+        <>
+          {children}
+          <FeedSelect
+            selectedOption={selectedOption}
+            feedOptions={options}
+            setOption={setOption}
+          />
+          <hr className="opacity-10 mt-2" />
+        </>
+      </FeedVirtual> */}
     </>
   );
 };

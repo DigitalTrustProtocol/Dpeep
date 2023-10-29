@@ -10,7 +10,7 @@ import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 //import Show from '@/components/helpers/Show';
 
-const BATCH_COUNT = 20; // The number of items to load at once
+const BATCH_COUNT = 30; // The number of items to load at once
 
 export type FeedProps = {
   feedOption?: FeedOption;
@@ -44,12 +44,12 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
     // Provide the number of comments
     itemCount: containers.length, // + (children ? 1 : 0),
     itemSize: 150, // Set default size for all items
-    overscanCount: 5, // (default = 5) The number of items (rows or columns) to render before and after the visible items
+    overscanCount: 2, // (default = 5) The number of items (rows or columns) to render before and after the visible items
     //useIsScrolling: true, // (default = false) Set it to `true` if you want to optimize the render for scrolling
     //useIsScrolling: (speed) => speed > 50, // Use it based on the scroll speed (more user friendly)
     // Starts to pre-fetch data when the user scrolls within every 5 items
     // e.g. 1 - 5, 6 - 10 and so on (default = 15)
-    loadMoreCount: BATCH_COUNT,
+    loadMoreCount: 1,
     // Provide the loaded state for a batch items to tell the hook
     // whether the `loadMore` should be triggered or not
     isItemLoaded: (loadIndex) => {
@@ -72,7 +72,7 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
     },
     // The callback will be invoked when more data needs to be loaded
     loadMore: (e) => {
-      console.log('loadMore2: ', e.loadIndex, ' - hasMore: ', hasMore);
+      //console.log('loadMore2: ', e.loadIndex, ' - hasMore: ', hasMore);
       if (hasMore) loadNext(e); // Loads more data into the items array
     },
 
@@ -130,21 +130,21 @@ const FeedVirtual = ({ children, feedOption, setScope }: FeedProps) => {
   //   );
   // }, [status, items, hasMore]);
 
-  console.log(
-    'StartIndex:',
-    items[0]?.index,
-    ' - EndIndex:',
-    items[items.length - 1]?.index,
-    ' - Total:',
-    items.length,
-    ' - Containers:',
-    containers.length,
-  );
+  // console.log(
+  //   'StartIndex:',
+  //   items[0]?.index,
+  //   ' - EndIndex:',
+  //   items[items.length - 1]?.index,
+  //   ' - Total:',
+  //   items.length,
+  //   ' - Containers:',
+  //   containers.length,
+  // );
 
-  if (containerCheck.current !== containers) {
-    console.log('Container changed:Length:', containers.length);
-    containerCheck.current = containers;
-  }
+  // if (containerCheck.current !== containers) {
+  //   console.log('Container changed:Length:', containers.length);
+  //   containerCheck.current = containers;
+  // }
 
   return (
     <div
