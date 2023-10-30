@@ -3,27 +3,25 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import EventComponent from '../events/EventComponent';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
-import { throttle } from 'lodash';
+import ShowNewEvents from '@/components/feed/ShowNewEvents';
+import { set } from 'lodash';
 
 const BATCH_COUNT = 10; // The number of items to load at once
 
 export type FeedProps = {
   feedOption?: FeedOption;
-  children?: any;
   setScope?: any;
+  children?: any;
 };
 
-const FeedInfinity = ({ children, feedOption, setScope }: FeedProps) => {
-  const {
-    containers: items,
-    status,
-    hasMore,
-    hasNew,
-    loadNext,
-  } = useFeedProvider(feedOption, BATCH_COUNT);
+const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
+  const { containers, status, hasMore, hasNew, loadNext, reset } = useFeedProvider(
+    feedOption,
+    BATCH_COUNT,
+  );
 
-  const { visibleItems, topHeight, bottomHeight, measureRef } = useInfiniteScroll({
-    items,
+  const { items, topHeight, bottomHeight, measureRef } = useInfiniteScroll({
+    itemCount: containers.length,
     loadMore: () => {
       if (hasMore && status == 'idle') {
         console.log('FeedInfinity:loadMore');
@@ -32,63 +30,91 @@ const FeedInfinity = ({ children, feedOption, setScope }: FeedProps) => {
     },
   });
 
+  const loadNew = useCallback((e) => {
+    e.preventDefault();
 
-  useEffect(() => {
-    loadNext();
-  }, []);
+    setScope('local'+Date.now()); // Force a new scope to trigger a reload
+  }, [items]);
 
 
   return (
     <>
       <div style={{ height: `${topHeight}px` }} />
-      {visibleItems.map((item) => (
-        <div key={item.id} data-index={item.id} ref={measureRef}>
-          <EventComponent id={item.id} />
-          <hr className="opacity-10 mb-2 mt-2" />
-        </div>
-      ))}
+      {items.map((item) => {
+
+        let id = containers[item.index]?.id;
+        if (id == undefined) return null;
+
+        return (
+          <div key={id} data-index={item.index} ref={measureRef} style={{ minHeight: item.height }}>
+            <EventComponent id={id} />
+            <hr className="opacity-10 mb-2 mt-2" />
+          </div>
+        );
+      })}
       <div style={{ height: `${bottomHeight}px` }} />
+      {status == 'loading' && (
+        <div className="justify-center items-center flex w-full mt-4 mb-4">
+          <div className="loading">🔄</div>
+        </div>
+      )}
+      {!hasMore && items.length > 0 && 
+        <p style={{ textAlign: 'center' }}>
+          <b>No more notes</b>
+        </p>
+      }
+      {!items.length && !hasMore && 
+        <p style={{ textAlign: 'center' }}>
+          <b>No notes</b>
+        </p>
+      }
+      {hasNew && <ShowNewEvents onClick={loadNew} />}
     </>
-  );};
+  );
+};
 
 export default FeedInfinity;
 
-// interface InfiniteListProps {
-//   items: NoteContainer[];
-//   hasMore?: boolean;
-//   hasNew?: boolean;
-//   status?: string;
-//   loadMore: () => void;
-// }
-
-// const InfiniteList: React.FC<InfiniteListProps> = ({ items, loadMore }) => {
-
-// };
-
 interface UseInfiniteScrollProps {
-  items: any[];
+  itemCount: number;
   loadMore: any;
-  offset?: number;
+  loadMoreWithin?: number;
 }
 
 interface UseInfiniteScrollResult {
-  visibleItems: any[];
+  items: Item[];
   topHeight: number;
   bottomHeight: number;
   measureRef: (node: HTMLElement | null) => void;
 }
 
+class Item {
+  index: number;
+  height: number = 0;
+  width: number = 0;
+  top: number = 0;
+  bottom: number = 0;
+  inView: boolean = false;
+  constructor(index: number) {
+    this.index = index;
+  }
+
+  setTop(top: number) {
+    this.top = top;
+    this.bottom = top + this.height;
+  }
+}
+
 const useInfiniteScroll = ({
-  items,
+  itemCount,
   loadMore,
-  offset = 50,
+  loadMoreWithin = 3,
 }: UseInfiniteScrollProps): UseInfiniteScrollResult => {
-  const [visibleItems, setVisibleItems] = useState<string[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [topHeight, setTopHeight] = useState(0);
   const [bottomHeight, setBottomHeight] = useState(0);
-  const itemHeights = useRef<Map<number, number>>(new Map());
+  const itemMap = useRef<Map<number, Item>>(new Map());
   const observer = useRef<ResizeObserver | null>(null);
-
 
   const updateVisibleItems = useCallback(() => {
     const viewportTop = window.scrollY || document.documentElement.scrollTop;
@@ -96,45 +122,59 @@ const useInfiniteScroll = ({
 
     let newTopHeight = 0;
     let newBottomHeight = 0;
-    let newVisibleItems: any[] = [];
+    let inViewItems: Item[] = [];
     let itemTop = 0;
     let itemBottom = 0;
+    let inViewItemsChanged = false;
+    //let inViewHeight = 0;
 
-    items.forEach((item) => {
-      const itemHeight = itemHeights.current.get(item.id) || 0; // 0 if not yet measured
+    for (let index = 0; index < itemCount; index++) {
+      const item = getItem(index);
 
-      itemBottom += itemHeight;
+      itemBottom += item.height;
 
-      if (itemBottom < viewportTop) newTopHeight += itemHeight;
-      else if (itemTop >= viewportBottom) newBottomHeight += itemHeight;
-      else newVisibleItems.push(item);
+      //item.top = itemTop;
+      //item.bottom = itemBottom;
 
-      itemTop += itemHeight;
-    });
+      let isInView = false;
 
-    let visibleItemsChanged = false;
-    if (visibleItems.length !== newVisibleItems.length) {
-      visibleItemsChanged = true;
-    } else {
-      for (let i = 0; i < visibleItems.length; i++) {
-        if ((visibleItems[i] as any).id !== newVisibleItems[i].id) {
-          visibleItemsChanged = true;
-          break;
-        }
+      if (itemBottom < viewportTop) newTopHeight += item.height;
+      else if (itemTop >= viewportBottom) newBottomHeight += item.height;
+      else {
+        inViewItems.push(item);
+        isInView = true;
       }
+
+      if (item.inView !== isInView) inViewItemsChanged = true;
+      item.inView = isInView;
+      //if(isInView) inViewHeight += item.height;
+
+      itemTop += item.height;
     }
 
-    if(visibleItemsChanged) { // Only update if changed, expensive to update UI
-      setVisibleItems(newVisibleItems);
+    if (inViewItemsChanged) {
+      // Only update if changed, expensive to update UI
+      setItems(inViewItems);
     }
 
     setTopHeight(newTopHeight); //Can change on every scroll
     setBottomHeight(newBottomHeight);
 
-    if (viewportBottom + offset >= itemBottom) {
-        loadMore();
+    if (getItem(itemCount - loadMoreWithin).inView) {
+      loadMore();
     }
 
+    //let itemBottom = getItem(itemCount - 1).bottom - getItem(0).top;
+    //let totalHeight = itemBottom;
+    // let sumHeight = newTopHeight + newBottomHeight + inViewHeight + 48;
+    // let viewportHeight = viewportBottom - viewportTop;
+    // const scrollHeight = Math.max(
+    //   document.documentElement.clientHeight,
+    //   document.documentElement.scrollHeight,
+    //   document.documentElement.offsetHeight
+    // );
+    // if (sumHeight - 1 > scrollHeight || sumHeight + 1 < scrollHeight) {
+    //   console.log('ViewportHeight:', viewportHeight, ' - SumHeight:', sumHeight, ' - scrollHeight:', scrollHeight, ' - inViewItemChanged:', inViewItemsChanged );
     // console.log(
     //   'Viewport',
     //   ':Top:',
@@ -149,14 +189,28 @@ const useInfiniteScroll = ({
     //   newTopHeight,
     //   ' - BottomHeight:',
     //   newBottomHeight,
-    //   ' - ItemsHeight:',
+    //   ' - inViewHeight:',
     //   itemBottom - (newTopHeight + newBottomHeight),
     //   ' - ViewItems:',
-    //   newVisibleItems.length,
+    //   inViewItems.length,
     //   ' - TotalItems:',
-    //   items.length,
+    //   itemCount,
     // );
-  }, [items, loadMore, offset]);
+    //}
+  }, [itemCount, loadMore, loadMoreWithin]);
+
+  const getItem = useCallback(
+    (index: number, height = 0): Item => {
+      let item = itemMap.current.get(index);
+      if (!item) {
+        item = new Item(index);
+        item.height = height;
+        if (index >= 0) itemMap.current.set(index, item);
+      }
+      return item;
+    },
+    [updateVisibleItems],
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -174,20 +228,19 @@ const useInfiniteScroll = ({
   }, [updateVisibleItems]);
 
   const setHeight = useCallback(
-    (id: number, height: number) => {
-      if (id === 0) return;
-      
-      const prevHeight = itemHeights.current.get(id) || 0;
-      if (prevHeight >= height) return;
+    (index: number, newHeight: number) => {
+      const item = getItem(index);
+      if (item.height >= newHeight) return;
 
-      itemHeights.current.set(id, height);
+      item.height = newHeight;
+      //item.bottom = item.top + newHeight;
     },
     [updateVisibleItems],
   );
 
   useEffect(() => {
     updateVisibleItems(); // Run once to set initial state
-  }, [items]);
+  }, [itemCount]);
 
   useEffect(() => {
     //Create a single observer to handle all items
@@ -222,7 +275,7 @@ const useInfiniteScroll = ({
   );
 
   return {
-    visibleItems,
+    items,
     topHeight,
     bottomHeight,
     measureRef,
