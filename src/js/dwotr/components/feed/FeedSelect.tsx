@@ -1,28 +1,21 @@
-import { useEffect } from 'react';
 import { FeedOption } from "@/dwotr/network/WOTPubSub";
 
 type FeedSelectProps = {
-    selectedOption?: FeedOption;
+    selectedOptionId?: string;
     feedOptions: FeedOption[];
-    setOption: (option: FeedOption) => void;
+    setOptionId: any; //(id: string | string) => void;
+    
   };
   
-export  const FeedSelect = ({ selectedOption, feedOptions, setOption }: FeedSelectProps) => {
-  
-    useEffect(() => {
-      if (!selectedOption) {
-        setOption(feedOptions[0]);
-      }
-    }, [feedOptions]);
-  
+export  const FeedSelect = ({ selectedOptionId, feedOptions, setOptionId }: FeedSelectProps) => {
   
     const OptionLink = ({ option }: { option: FeedOption }) => {
       return (
         <button 
-          className={'flex-1 ' + (option.id == selectedOption?.id ? 'graphlink active' : 'graphlink')}
+          className={'flex-1 ' + (option.id == selectedOptionId ? 'graphlink active' : 'graphlink')}
           onClick={(e) => {
             e.preventDefault();
-            setOption(option);
+            setOptionId(option.id);
           }}
         >
           {option.name}
@@ -32,7 +25,7 @@ export  const FeedSelect = ({ selectedOption, feedOptions, setOption }: FeedSele
   
     return (
       <div className="flex gap-4 w-full">
-        {feedOptions.map((option) => (
+        {feedOptions?.map((option) => (
           <OptionLink key={option.id} option={option} />
         ))}
       </div>

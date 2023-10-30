@@ -9,13 +9,13 @@ import debounce from 'lodash/debounce';
 // window.addEventListener('popstate', listener);
 
 export function useScrollYPosition() {
-  const [positionY, setScrollYPosition] = useState<number>(window.scrollY);
+  const [scrollY, setScrollY] = useState<number|undefined>(undefined);
 
   useEffect(() => {
      const restoreScrollPosition = () => {
       const currentHistoryState = window.history.state;
       const position = currentHistoryState?.scrollPosition || 0;
-      setScrollYPosition(position);
+      setScrollY(position);
     };
 
     restoreScrollPosition();
@@ -43,7 +43,7 @@ export function useScrollYPosition() {
     };
   }, []);
 
-  return positionY;
+  return scrollY;
 }
 
 // export function useScrollXPosition(): number {

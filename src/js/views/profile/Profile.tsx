@@ -15,8 +15,7 @@ import View from '../View.tsx';
 import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import blockManager from '@/dwotr/BlockManager.ts';
-import { ID, UID } from '@/utils/UniqueIds.ts';
-import followManager from '@/dwotr/FollowManager.ts';
+import { ID } from '@/utils/UniqueIds.ts';
 import { FeedOption } from '@/dwotr/network/WOTPubSub.ts';
 import ProfileNotesCursor from '@/dwotr/network/provider/ProfileNotesCursor.ts';
 import { Feed } from '@/dwotr/components/feed/Feed.tsx';
@@ -28,11 +27,6 @@ function getNpub(id: string) {
   return '';
 }
 
-function getSource(profileId: UID) {
-  if (profileId === ID(Key.getPubKey())) return 'memory'; // My profile
-
-  return followManager.isAllowed(profileId) ? 'memory' : 'network';
-}
 
 function Profile(props) {
   const [npub, setNpub] = useState(getNpub(props.id));

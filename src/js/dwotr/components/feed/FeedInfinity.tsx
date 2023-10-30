@@ -4,6 +4,7 @@ import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import EventComponent from '../events/EventComponent';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
+import { useScrollYPosition } from '@/dwotr/hooks/useScrollPosition';
 
 const BATCH_COUNT = 10; // The number of items to load at once
 
@@ -191,6 +192,8 @@ const useInfiniteScroll = ({
   useEffect(() => {
     updateVisibleItems(); // Run once to set initial state
   }, [itemCount]);
+
+
 
   useEffect(() => {
     //Create a single observer to handle all items

@@ -1,9 +1,8 @@
+import { useState, useEffect } from 'preact/hooks';
 import { FeedOption } from '@/dwotr/network/WOTPubSub';
-import { useState } from 'preact/hooks';
 import { FeedSelect } from './FeedSelect';
-//import FeedVirtual from './FeedVirtual';
-import FeedInView from './FeedInView';
 import FeedInfinity from './FeedInfinity';
+import useHistoryState from '@/state/useHistoryState';
 
 type FeedProps = {
   scope: string;
@@ -12,38 +11,39 @@ type FeedProps = {
 };
 
 export const Feed = ({ children, options, scope }: FeedProps) => {
-  const [selectedOption, setOption] = useState<FeedOption>(options[0]);
+  const { selectedOption, selectedOptionId, setSelectedOptionId } = useOptionsState(options, options[0]?.id, scope);
   const [localScope, setScope] = useState<string>('local');
 
   return (
     <>
       {children}
-      <FeedSelect selectedOption={selectedOption} feedOptions={options} setOption={setOption} />
+      <FeedSelect
+        selectedOptionId={selectedOptionId}
+        feedOptions={options}
+        setOptionId={setSelectedOptionId}
+      />
       <hr className="opacity-10 mt-2" />
-      <FeedInfinity key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope} />
-
-      {/* <FeedInView key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope}>
-        <>
-          {children}
-          <FeedSelect
-            selectedOption={selectedOption}
-            feedOptions={options}
-            setOption={setOption}
-          />
-          <hr className="opacity-10 mt-2" />
-        </>
-    </FeedInView> */}
-      {/* <FeedVirtual key={scope + localScope + selectedOption?.id} feedOption={selectedOption} setScope={setScope}>
-        <>
-          {children}
-          <FeedSelect
-            selectedOption={selectedOption}
-            feedOptions={options}
-            setOption={setOption}
-          />
-          <hr className="opacity-10 mt-2" />
-        </>
-      </FeedVirtual> */}
+      <FeedInfinity
+        key={scope + localScope + selectedOptionId}
+        feedOption={selectedOption}
+        setScope={setScope}
+      />
     </>
   );
+};
+
+const useOptionsState = (
+  options: FeedOption[],
+  initialId: string | undefined,
+  key = 'FeedOptionState',
+) => {
+  const [selectedOptionId, setSelectedOptionId] = useHistoryState(initialId || '', key);
+  const [selectedOption, setSelectedOption] = useState<FeedOption | undefined>();
+
+  useEffect(() => {
+    let option = options.find((o) => o.id == selectedOptionId);
+    setSelectedOption(option);
+  }, [selectedOptionId, options]);
+
+  return { selectedOption, selectedOptionId, setSelectedOptionId };
 };
