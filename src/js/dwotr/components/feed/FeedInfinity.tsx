@@ -4,7 +4,6 @@ import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import EventComponent from '../events/EventComponent';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import { set } from 'lodash';
 
 const BATCH_COUNT = 10; // The number of items to load at once
 
@@ -126,15 +125,11 @@ const useInfiniteScroll = ({
     let itemTop = 0;
     let itemBottom = 0;
     let inViewItemsChanged = false;
-    //let inViewHeight = 0;
 
     for (let index = 0; index < itemCount; index++) {
       const item = getItem(index);
 
-      itemBottom += item.height;
-
-      //item.top = itemTop;
-      //item.bottom = itemBottom;
+      itemBottom += item.top + item.height;
 
       let isInView = false;
 
@@ -147,13 +142,11 @@ const useInfiniteScroll = ({
 
       if (item.inView !== isInView) inViewItemsChanged = true;
       item.inView = isInView;
-      //if(isInView) inViewHeight += item.height;
 
       itemTop += item.height;
     }
 
-    if (inViewItemsChanged) {
-      // Only update if changed, expensive to update UI
+    if (inViewItemsChanged) { // Only update if changed, expensive to update UI
       setItems(inViewItems);
     }
 
@@ -164,39 +157,6 @@ const useInfiniteScroll = ({
       loadMore();
     }
 
-    //let itemBottom = getItem(itemCount - 1).bottom - getItem(0).top;
-    //let totalHeight = itemBottom;
-    // let sumHeight = newTopHeight + newBottomHeight + inViewHeight + 48;
-    // let viewportHeight = viewportBottom - viewportTop;
-    // const scrollHeight = Math.max(
-    //   document.documentElement.clientHeight,
-    //   document.documentElement.scrollHeight,
-    //   document.documentElement.offsetHeight
-    // );
-    // if (sumHeight - 1 > scrollHeight || sumHeight + 1 < scrollHeight) {
-    //   console.log('ViewportHeight:', viewportHeight, ' - SumHeight:', sumHeight, ' - scrollHeight:', scrollHeight, ' - inViewItemChanged:', inViewItemsChanged );
-    // console.log(
-    //   'Viewport',
-    //   ':Top:',
-    //   viewportTop,
-    //   ', Bottom:',
-    //   viewportBottom,
-    //   ', Height:',
-    //   viewportBottom - viewportTop,
-    //   ' - totalHeight:',
-    //   itemBottom,
-    //   ' - TopHeight:',
-    //   newTopHeight,
-    //   ' - BottomHeight:',
-    //   newBottomHeight,
-    //   ' - inViewHeight:',
-    //   itemBottom - (newTopHeight + newBottomHeight),
-    //   ' - ViewItems:',
-    //   inViewItems.length,
-    //   ' - TotalItems:',
-    //   itemCount,
-    // );
-    //}
   }, [itemCount, loadMore, loadMoreWithin]);
 
   const getItem = useCallback(
@@ -227,16 +187,6 @@ const useInfiniteScroll = ({
     };
   }, [updateVisibleItems]);
 
-  const setHeight = useCallback(
-    (index: number, newHeight: number) => {
-      const item = getItem(index);
-      if (item.height >= newHeight) return;
-
-      item.height = newHeight;
-      //item.bottom = item.top + newHeight;
-    },
-    [updateVisibleItems],
-  );
 
   useEffect(() => {
     updateVisibleItems(); // Run once to set initial state
@@ -246,8 +196,17 @@ const useInfiniteScroll = ({
     //Create a single observer to handle all items
     observer.current = new ResizeObserver((entries) => {
       for (let entry of entries) {
+
+        let node = entry.target as HTMLElement;
+        let index = node.getAttribute('data-index') || 0;
+
         const { height } = entry.contentRect;
-        setHeight(Number(entry.target.getAttribute('data-index') || 0), height);
+
+        let item = getItem(Number(index));
+        if (item.height < height)
+          item.height = height;
+  
+        item.top = node.offsetTop;
       }
     });
 
@@ -262,8 +221,14 @@ const useInfiniteScroll = ({
       const index = node.getAttribute('data-index');
       if (index == null) return;
 
-      const height = node.getBoundingClientRect().height;
-      setHeight(Number(index), height);
+      const { height } = node.getBoundingClientRect();
+
+      let item = getItem(Number(index));
+      if (item.height < height)
+        item.height = height;
+
+      item.top = node.offsetTop;
+
       observer.current?.observe(node);
 
       return () => {
