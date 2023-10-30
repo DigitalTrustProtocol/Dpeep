@@ -24,7 +24,6 @@ import Follows from './views/profile/Follows.tsx';
 import Profile from './views/profile/Profile.tsx';
 import Search from './views/Search';
 import LogoutConfirmation from './views/settings/LogoutConfirmation.tsx';
-import Subscribe from './views/Subscribe';
 
 import '@fontsource/lato/400.css';
 import '@fontsource/lato/700.css';
@@ -133,13 +132,13 @@ const RouterSection = ({ }) => {
     <>
       <Helmet titleTemplate={titleTemplate} defaultTitle={defaultTitle}>
         <title>{title}</title>
-        <meta name="description" content="Connecting People" />
+        <meta name="description" content="Decentralized Web of Trust" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content={title} />
-        <meta property="og:description" content="Connecting People" />
-        <meta property="og:image" content="https://iris.to/assets/img/irisconnects.png" />
+        <meta property="og:description" content="Decentralized Web of Trust" />
+        <meta property="og:image" content="https://dpeep.com/img/dpeepconnects.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://iris.to/assets/img/irisconnects.png" />
+        <meta name="twitter:image" content="https://dpeep.com/img/dpeepconnects.png" />
       </Helmet>
 
       <Router onChange={(e) => handleRoute(e)}>
@@ -150,10 +149,10 @@ const RouterSection = ({ }) => {
         <SearchFeed path="/search/:query" />
         <Login path="/login" fullScreen={true} />
         <Notifications path="/notifications" />
-        <AsyncRoute
+        {/* <AsyncRoute
           path="/chat/:id?"
           getComponent={() => import('./views/chat/Chat').then((module) => module.default)}
-        />
+        /> */}
         <NoteNew path="/post/new" />
         <NoteView path="/post/:id+" />
         <About path="/about" />
@@ -163,7 +162,6 @@ const RouterSection = ({ }) => {
         />
         <LogoutConfirmation path="/logout" />
         <EditProfile path="/profile/edit" />
-        <Subscribe path="/subscribe" />
         <Profile path="/profile/:id" tab="posts" />
         <Profile path="/:id/replies" tab="replies" />
         <Profile path="/:id/likes" tab="likes" />

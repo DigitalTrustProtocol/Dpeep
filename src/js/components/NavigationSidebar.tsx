@@ -4,6 +4,7 @@ import {
   HomeIcon,
   InformationCircleIcon,
   PaperAirplaneIcon,
+  SunIcon
 } from '@heroicons/react/24/outline';
 import {
   Cog8ToothIcon as Cog8ToothIconFull,
@@ -11,6 +12,7 @@ import {
   InformationCircleIcon as InformationCircleIconFull,
   MagnifyingGlassIcon,
   PaperAirplaneIcon as PaperAirplaneIconFull,
+  SunIcon as SunIconFull,
   PlusIcon,
 } from '@heroicons/react/24/solid';
 import { Link } from 'preact-router';
@@ -35,12 +37,19 @@ const MENU_ITEMS = [
     icon: MagnifyingGlassIcon,
     activeIcon: Icons.magnifyingGlassBold,
   },
-  {
-    url: '/chat',
-    text: 'messages',
-    icon: PaperAirplaneIcon,
-    activeIcon: PaperAirplaneIconFull,
+  // {
+  //   url: '/chat',
+  //   text: 'messages',
+  //   icon: PaperAirplaneIcon,
+  //   activeIcon: PaperAirplaneIconFull,
+  // },
+    {
+    url: '/graph',
+    text: 'Web of Trust',
+    icon: SunIcon,
+    activeIcon: SunIconFull,
   },
+
   {
     url: '/settings',
     text: 'settings',
