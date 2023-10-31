@@ -20,6 +20,7 @@ import QrCode from '../QrCode';
 import Name from '../user/Name';
 
 import Modal from './Modal';
+import { formatSats } from '@/utils/Lightning';
 
 // Code kindly contributed by @Kieran and @verbiricha from Snort
 
@@ -278,7 +279,7 @@ export default function SendSats(props: ZapProps) {
             onClick={() => selectAmount(a)}
           >
             {emojis[a] && <>{emojis[a]}&nbsp;</>}
-            {Helpers.formatAmount(a, 0)}
+            {formatSats(a)}
           </button>
         ))}
       </div>

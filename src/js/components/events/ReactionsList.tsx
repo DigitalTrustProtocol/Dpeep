@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { nip19, Event } from 'nostr-tools';
 import { Link } from 'preact-router';
 
@@ -9,8 +9,11 @@ import Name from '../user/Name';
 import TrustScore from '../../dwotr/model/TrustScore';
 import { RenderScoreDistrustLink, RenderScoreTrustLink } from '@/dwotr/components/RenderGraph';
 import Key from '@/nostr/Key';
-import { STR, UID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
 import { formatAmount } from '@/utils/Lightning';
+import { useLikes } from './buttons/Like';
+import { useReposts } from './buttons/Repost';
+import { useZaps } from '@/dwotr/hooks/useZaps';
 
 type ReactionData = {
   pubkey: string;
@@ -18,12 +21,9 @@ type ReactionData = {
 };
 
 type ReactionsListProps = {
-  event: Event;
+  eventId: UID;
+  eventAuthor: string;
   wot?: any;
-  likes: Set<UID>;
-  zapAmountByUser: Map<string, number>;
-  formattedZapAmount: string;
-  reposts: Set<string>;
 };
 
 const Reaction = ({ data }: { data: ReactionData }) => {
@@ -39,27 +39,36 @@ const Reaction = ({ data }: { data: ReactionData }) => {
   );
 };
 
-const ReactionsList = ({
-  event,
-  wot,
-  likes,
-  zapAmountByUser,
-  formattedZapAmount,
-  reposts,
-}: ReactionsListProps) => {
+const ReactionsList = ({ eventId, eventAuthor, wot }: ReactionsListProps) => {
   const [modalReactions, setModalReactions] = useState([] as ReactionData[]);
   const [modalTitle, setModalTitle] = useState('');
+  const [likesByUser, setLikesByUser] = useState([] as ReactionData[]);
+  const [repostsByUser, setRepostsByUser] = useState([] as ReactionData[]);
+  const { zapAmountByUser, formattedZapAmount } = useZaps(eventId, false);
+
+  const { likes } = useLikes(eventId, eventAuthor, false);
+  const { reposts } = useReposts(eventId, ID(eventAuthor), false);
 
   const score = wot?.vertice?.score as TrustScore;
   const hasTrust = score?.hasTrustScore();
   const hasDistrust = score?.hasDistrustScore();
 
+  useEffect(() => {
+    const likesdata = Array.from(likes).map((id) => ({ pubkey: STR(id) })) as ReactionData[];
+    setLikesByUser(likesdata);
+  }, [likes]);
+
+  useEffect(() => {
+    const repostsdata = Array.from(reposts).map((container) => ({
+      pubkey: STR(container.authorId),
+    })) as ReactionData[];
+    setRepostsByUser(repostsdata);
+  }, [reposts]);
+
   // Dont show reactions if there are none
   const hasReactions =
     likes.size > 0 || reposts.size > 0 || zapAmountByUser.size > 0 || hasTrust || hasDistrust;
   if (!hasReactions) return null;
-
-  const likesdata = Array.from(likes).map((id) => ({ pubkey: STR(id) })) as ReactionData[];
 
   return (
     <>
@@ -81,7 +90,7 @@ const ReactionsList = ({
           <div className="flex-shrink-0">
             <a
               onClick={() => {
-                setModalReactions(likesdata);
+                setModalReactions(likesByUser);
                 setModalTitle('Liked by');
               }}
               className="cursor-pointer hover:underline"
@@ -94,8 +103,7 @@ const ReactionsList = ({
           <div className="flex-shrink-0">
             <a
               onClick={() => {
-                const data = Array.from(reposts).map((pubkey) => ({ pubkey })) as ReactionData[];
-                setModalReactions(data);
+                setModalReactions(repostsByUser);
                 setModalTitle('Reposted by');
               }}
               className="cursor-pointer hover:underline"
@@ -129,7 +137,7 @@ const ReactionsList = ({
           <div className="flex-shrink-0" title="Degree 0/1/2">
             {RenderScoreTrustLink(
               score,
-              Key.toNostrBech32Address(event.id, 'note') as string,
+              Key.toNostrBech32Address(STR(eventId), 'note') as string,
               true,
             )}
           </div>
@@ -138,7 +146,7 @@ const ReactionsList = ({
           <div className="flex-shrink-0" title="Degree 0/1/2">
             {RenderScoreDistrustLink(
               score,
-              Key.toNostrBech32Address(event.id, 'note') as string,
+              Key.toNostrBech32Address(STR(eventId), 'note') as string,
               true,
             )}
           </div>
@@ -149,4 +157,4 @@ const ReactionsList = ({
   );
 };
 
-export default ReactionsList;
+export default memo(ReactionsList);

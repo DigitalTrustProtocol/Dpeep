@@ -1,6 +1,6 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event, Filter } from 'nostr-tools';
-import wotPubSub, { ReactionKind } from './network/WOTPubSub';
+import wotPubSub, { FeedOption, ReactionKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import storage from './Storage';
 import followManager from './FollowManager';
@@ -10,11 +10,13 @@ import eventManager from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import { ReactionEvent } from './network/types';
 import { BulkStorage } from './network/BulkStorage';
+import EventCallbacks from './model/EventCallbacks';
+import relaySubscription from './network/RelaySubscription';
 
 
 
 export const isLike = (content: string) =>
-  ['', '+', '🤙', '👍', '❤️', '😎', '🏅'].includes(content);
+  ['+', '🤙', '👍', '❤️', '😎', '🏅'].includes(content);
 
 export const isDownvote = (content: string) =>
   ['-', 'downvote'].includes(content);
@@ -74,6 +76,10 @@ class ReactionManager {
   // Map Key is : AuthorId, SortedMap is eventId, created_at
   authors: Map<UID, ReactionMap> = new Map();
 
+  onEvent = new EventCallbacks(); // Callbacks to call new notes
+
+
+
   metrics = {
     TotalMemory: 0,
     Loaded: 0,
@@ -116,6 +122,8 @@ class ReactionManager {
     } as ReactionRecord;
 
     this.save(record); // Save the event to the local database
+
+    this.onEvent.dispatch(reaction.subjectEventId, reaction);
   }
 
   async handle(event: ReactionEvent) {
@@ -136,6 +144,8 @@ class ReactionManager {
     this.addValue(reaction);
 
     event.meta = reaction; // Meta property is never saved to Database  
+
+    this.onEvent.dispatch(reaction.subjectEventId, reaction);
 
     // Only save the event if the profile is followed by our WoT
     if (followManager.isAllowed(authorId)) {
@@ -270,21 +280,17 @@ class ReactionManager {
 
 
 
-  subscribeRelays(eventId: string, cb: any, since: number = 0, limit: number = 1000) {
-    let filters = [
-      {
-        '#e': [eventId],
+  subscribeRelays(eventId: UID, since: number = 0, limit: number = 1000) {
+    let options = {
+      filter: {
+        '#e': [STR(eventId)],
         kinds: [ReactionKind],
       },
-    ] as Array<Filter>;
+    } as FeedOption;
 
-    const cbInstance = (event: Event) => {
-      reactionManager.#relayCallback(event);
-      if (cb) cb(reactionManager.getLikes(ID(eventId)), reactionManager.getDownVotes(ID(eventId)));
-    };
-
-    return wotPubSub.subscribeFilter(filters, cbInstance);
+    return relaySubscription.map(options);
   }
+
 
 
   getEvent(reaction: Reaction) : Event | undefined {

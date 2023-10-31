@@ -9,16 +9,22 @@ import Icons from '@/utils/Icons';
 
 import ZapModal from '../../modal/Zap';
 import { useZaps } from '@/dwotr/hooks/useZaps';
-import { ID } from '@/utils/UniqueIds';
+import { STR, UID } from '@/utils/UniqueIds';
 
-const Zap = ({ event }) => {
+type ZapProps = {
+  eventId: UID;
+  authorId: UID;
+  loadGlobal: boolean;
+};
+
+const Zap = ({ eventId, authorId, loadGlobal=false }: ZapProps) => {
   const [state, setState] = useState({ showZapModal: false });
 
-  const { formattedZapAmount, zappedByMe } = useZaps(event.id, false);
+  const { formattedZapAmount, zappedByMe } = useZaps(eventId, loadGlobal);
 
   const [defaultZapAmount] = useLocalState('defaultZapAmount', 0);
   const [longPress, setLongPress] = useState(false); // state to determine if it's a long press
-  const { profile } = useProfile(ID(event.pubkey));
+  const { profile } = useProfile(authorId);
   const lightning = profile?.lud16 || profile?.lud06;
 
   let pressTimer: any = null;
@@ -60,15 +66,15 @@ const Zap = ({ event }) => {
         <Show when={!defaultZapAmount}>
           <BoltIcon width={18} />
         </Show>
-        {/* {formattedZapAmount} */}
+        {formattedZapAmount && formattedZapAmount}
       </a>
       {state.showZapModal && (
         <ZapModal
           quickZap={!!defaultZapAmount && !longPress}
           show={true}
           lnurl={lightning}
-          note={event.id}
-          recipient={event.pubkey}
+          note={STR(eventId)}
+          recipient={STR(authorId)}
           onClose={() => setState((prevState) => ({ ...prevState, showZapModal: false }))}
         />
       )}

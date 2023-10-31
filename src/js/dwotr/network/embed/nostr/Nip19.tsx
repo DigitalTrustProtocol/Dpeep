@@ -16,7 +16,10 @@ const NostrNip19: Embed = {
         r.setAuthor(data);
       } else if (type === 'nevent') {
         r.setEvent(data);
-      }
+
+      if(data.author && data.author.length == 64) // Add author if it's a pubkey
+        r.setAuthor(data);
+      } 
     } catch (e) {
       console.log(e);
     }

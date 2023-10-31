@@ -33,8 +33,12 @@ export default {
     if (typeof amount !== 'number') {
       return '';
     }
+    if (amount == 0) {
+      return '';
+    }
+
     if (amount < 1000) {
-      return amount.toFixed(decimals);
+      return amount.toString();
     }
     if (amount < 1000000) {
       return (amount / 1000).toFixed(decimals) + 'K';

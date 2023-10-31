@@ -1,6 +1,5 @@
 import { memo } from 'preact/compat';
-import { useEffect, useState, useCallback } from 'preact/hooks';
-import { Event } from 'nostr-tools';
+import { useState } from 'preact/hooks';
 import localState from '@/state/LocalState.ts';
 
 import ReactionsList from '../ReactionsList';
@@ -11,14 +10,8 @@ import Repost from './Repost';
 import Zap from './Zap';
 import TrustReactionButtons from '@/dwotr/components/TrustReactionButtons';
 import Globe from '@/dwotr/components/buttons/Globe';
-import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
-import { throttle } from 'lodash';
-import { ID, UID } from '@/utils/UniqueIds';
-import reactionManager from '@/dwotr/ReactionManager';
-import Events from '@/nostr/Events';
-import { useZaps } from '@/dwotr/hooks/useZaps';
-import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
 import { useKey } from '@/dwotr/hooks/useKey';
+import { ID } from '@/utils/UniqueIds';
 
 let settings: any = {};
 localState.get('settings').on((s) => (settings = s));
@@ -32,21 +25,16 @@ type Props = {
 const ReactionButtons = ({ event, standalone, wot }: Props) => {
   const { uid: eventId, myId } = useKey(event.id);
   const [loadGlobal, setLoadGlobal] = useState<boolean>(false);
-  const { zapAmountByUser, formattedZapAmount } = useZaps(event.id, loadGlobal);
-  //const reposts = useReposts(event.id, loadGlobal);
 
   return (
     <>
-      {/* { standalone &&
+      { standalone &&
         <ReactionsList
-          event={event}
+          eventId={eventId}
+          eventAuthor={event.pubkey}
           wot={wot}
-          likes={likes}
-          zapAmountByUser={zapAmountByUser}
-          formattedZapAmount={formattedZapAmount}
-          reposts={reposts}
         />
-      } */}
+      }
       <div className="flex">
         <ReplyButton eventId={eventId} standalone={standalone} />
         {settings.showReposts !== false && (
@@ -60,7 +48,7 @@ const ReactionButtons = ({ event, standalone, wot }: Props) => {
             loadGlobal={loadGlobal}
           />
         )}
-        {settings.showZaps !== false && <Zap event={event} />}
+        {settings.showZaps !== false && <Zap eventId={eventId} authorId={ID(event.pubkey)} loadGlobal={loadGlobal} />}
         <TrustReactionButtons eventId={event.id} wot={wot} standalone={standalone} />
         {standalone && (
           <Globe
@@ -77,29 +65,29 @@ const ReactionButtons = ({ event, standalone, wot }: Props) => {
 
 export default memo(ReactionButtons);
 
-const useReposts = (messageId: string, loadGlobal: boolean) => {
-  const [reposts, setReposts] = useState(new Set<string>());
-  const isMounted = useIsMounted();
+// export const useReposts = (messageId: string, loadGlobal: boolean) => {
+//   const [reposts, setReposts] = useState(new Set<string>());
+//   const isMounted = useIsMounted();
 
-  useEffect(() => {
-    const handleReposts = (repostedBy) => {
-      if (!isMounted()) return;
-      setReposts(new Set(repostedBy));
-    };
+//   useEffect(() => {
+//     const handleReposts = (repostedBy) => {
+//       if (!isMounted()) return;
+//       setReposts(new Set(repostedBy));
+//     };
 
-    // Set initial reposts
-    setReposts(Events.repostsByMessageId.get(messageId) || new Set<string>());
+//     // Set initial reposts
+//     setReposts(Events.repostsByMessageId.get(messageId) || new Set<string>());
 
-    if (!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
+//     if (!loadGlobal) return; // Do not subscribe on relay server as only WoT likes are showen on the event.
 
-    // Subscribe
-    let unsub = Events.getReposts(messageId, handleReposts);
+//     // Subscribe
+//     let unsub = Events.getReposts(messageId, handleReposts);
 
-    // Return cleanup function
-    return () => {
-      unsub?.();
-    };
-  }, [messageId, loadGlobal]);
+//     // Return cleanup function
+//     return () => {
+//       unsub?.();
+//     };
+//   }, [messageId, loadGlobal]);
 
-  return reposts;
-};
+//   return reposts;
+// };
