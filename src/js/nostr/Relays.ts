@@ -1,15 +1,15 @@
-import { sha256 } from '@noble/hashes/sha256';
-import throttle from 'lodash/throttle';
+//import { sha256 } from '@noble/hashes/sha256';
+//import throttle from 'lodash/throttle';
 import { Event, Sub } from 'nostr-tools';
 
 import relayPool from '@/nostr/relayPool.ts';
 
 import localState from '../state/LocalState.ts';
-import Helpers from '../utils/Helpers';
+//import Helpers from '../utils/Helpers';
 
 //import PubSub from './PubSub';
 import followManager from '@/dwotr/FollowManager.ts';
-import { ID } from '@/utils/UniqueIds.ts';
+//import { ID } from '@/utils/UniqueIds.ts';
 
 type SavedRelays = {
   [key: string]: {
@@ -61,12 +61,12 @@ export type PopularRelay = {
 const Relays = {
   relays: new Map<string, RelayMetadata>(),
   searchRelays: new Map<string, RelayMetadata>(),
-  writeRelaysByUser: new Map<string, Set<string>>(),
-  filtersBySubscriptionName: new Map<string, string>(),
-  subscribedEventTags: new Set<string>(),
-  subscribedProfiles: new Set<string>(),
-  subscriptionsByName: new Map<string, Set<Sub>>(),
-  newAuthors: new Set<string>(),
+  //writeRelaysByUser: new Map<string, Set<string>>(), // Not used
+  //filtersBySubscriptionName: new Map<string, string>(), // Not used
+  //subscribedEventTags: new Set<string>(), // Not used
+  //subscribedProfiles: new Set<string>(), // Not used
+  //subscriptionsByName: new Map<string, Set<Sub>>(), // Not used
+  //newAuthors: new Set<string>(), // Not used
   DEFAULT_RELAYS,
   init() {
     this.relays = new Map(DEFAULT_RELAYS.map((url) => [url, { enabled: true, url }]));
@@ -78,10 +78,13 @@ const Relays = {
       .filter((v) => v.enabled)
       .map((v) => v.url);
   },
-  getSubscriptionIdForName(name: string) {
-    return Helpers.arrayToHex(sha256(name)).slice(0, 8);
-  },
+  // Not used
+  // getSubscriptionIdForName(name: string) {
+  //   return Helpers.arrayToHex(sha256(name)).slice(0, 8);
+  // },
   // get Map of relayUrl: {read:boolean, write:boolean}
+
+  // Relocate code 
   getUrlsFromFollowEvent(event: Event): Map<string, PublicRelaySettings> {
     const urls = new Map<string, PublicRelaySettings>();
     if (event.content) {
@@ -122,14 +125,15 @@ const Relays = {
     }
     return count;
   },
-  getUserRelays(user: string): Array<[string, PublicRelaySettings]> {
-    if (typeof user !== 'string') {
-      console.log('getUserRelays: invalid user', user);
-      return [];
-    }
+  // Not used
+  // getUserRelays(user: string): Array<[string, PublicRelaySettings]> {
+  //   if (typeof user !== 'string') {
+  //     console.log('getUserRelays: invalid user', user);
+  //     return [];
+  //   }
 
-    return Array.from(followManager.items.get(ID(user))?.relays.entries() || []);
-  },
+  //   return Array.from(followManager.items.get(ID(user))?.relays.entries() || []);
+  // },
   manage: function () {
     localState.get('relays').put({});
     localState.get('relays').on((r: SavedRelays) => {
@@ -209,58 +213,15 @@ const Relays = {
     }
     localState.get('relays').put(relaysObj);
   },
-  updateLastSeen: throttle(
-    (url) => {
-      const now = Math.floor(Date.now() / 1000);
-      localState.get('relays').get(url).get('lastSeen').put(now);
-    },
-    5 * 1000,
-    { leading: true },
-  ),
-  // groupFilter(filter: Filter): { name: string; groupedFilter: Filter } {
-  //   // if filter has authors, add to subscribedAuthors and group by authors
-  //   if (filter.authors && filter.kinds?.length === 1 && filter.kinds[0] === 0) {
-  //     filter.authors.forEach((a) => {
-  //       this.subscribedProfiles.add(a);
-  //     });
-  //     return {
-  //       name: 'profiles',
-  //       groupedFilter: {
-  //         authors: Array.from(this.subscribedProfiles.values()),
-  //         kinds: [0],
-  //       },
-  //     };
-  //   }
-  //   if (filter.authors) {
-  //     filter.authors = Array.from(this.subscribedProfiles.values());
-  //     return {
-  //       name: 'authors',
-  //       groupedFilter: {
-  //         authors: Array.from(this.subscribedProfiles.values()),
-  //       },
-  //     };
-  //   }
-  //   if (filter.ids) {
-  //     return {
-  //       name: 'ids',
-  //       groupedFilter: { ids: Array.from(PubSub.subscribedEventIds.values()) },
-  //     };
-  //   }
-  //   if (filter['#e']) {
-  //     filter['#e'].forEach((e) => {
-  //       this.subscribedEventTags.add(e);
-  //     });
-  //     return {
-  //       name: 'eventsByTag',
-  //       groupedFilter: { '#e': Array.from(this.subscribedEventTags.values()) },
-  //     };
-  //   }
-  //   // do not bundle. TODO console.log, limit or sth
-  //   return {
-  //     name: JSON.stringify(filter),
-  //     groupedFilter: filter,
-  //   };
-  // },
+  // Not used
+  // updateLastSeen: throttle(
+  //   (url) => {
+  //     const now = Math.floor(Date.now() / 1000);
+  //     localState.get('relays').get(url).get('lastSeen').put(now);
+  //   },
+  //   5 * 1000,
+  //   { leading: true },
+  // )
 };
 
 export default Relays;

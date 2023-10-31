@@ -1,8 +1,6 @@
 // mentions like #[3], can refer to event or user
 
 import Embed, { EmbedData } from '../index';
-import { ID } from '@/utils/UniqueIds';
-
 
 const InlineMention: Embed = {
   regex: /#\[([0-9]+)]/g,
@@ -14,9 +12,9 @@ const InlineMention: Embed = {
     if (tag) {
       const [type, id] = tag;
       if (type === 'p') {
-        r.authors.add(ID(id));
+        r.setAuthor({ author: id });
       } else if (type === 'e') {
-        r.events.add(ID(id));
+        r.setEvent({ id });
       } 
     }
     return r;

@@ -34,7 +34,7 @@ export class NoteManager {
 
   deletedEvents: Set<UID> = new Set();
 
-  onEvent = new EventCallbacks(); // Callbacks to call when the follower change
+  onEvent = new EventCallbacks(); // Callbacks to call new notes
 
   table = new BulkStorage(storage.notes);
 
@@ -48,7 +48,13 @@ export class NoteManager {
     RelayEvents: 0,
   };
 
-  constructor() {}
+  constructor() {
+  }
+
+  registerHandlers() {
+    noteKinds.forEach((kind) => { eventManager.eventHandlers.set(kind, this.handle.bind(this)) });
+    noteKinds.forEach((kind) => { eventManager.containerParsers.set(kind, this.parse.bind(this)) });
+  }
 
   hasNode(id: UID) {
     return this.notes.has(id);
@@ -57,6 +63,7 @@ export class NoteManager {
   getNode(id: UID) {
     return this.notes.get(id);
   }
+
 
   handle(event: Event, relayUrl?: string): boolean {
     let container = this.parse(event, relayUrl);
@@ -91,13 +98,16 @@ export class NoteManager {
     this.metrics.Loaded = notes.length;
 
     //let deltaDelete: Array<string> = [];
+    
 
     for (let note of notes) {
-      eventManager.addSeen(ID(note.id));
-      let container = this.parse(note)!;
+      let noteId = ID(note.id);
+      eventManager.addSeen(noteId);
+      //let container = this.parse(note)!; // No container parsing, faster loading
 
-      if (this.#canAdd(container)) {
-        this.#addEvent(container);
+      if (this.#canAdd(note)) {
+        this.notes.set(noteId, note);
+        eventManager.eventIndex.set(noteId, note);
       } else {
         //deltaDelete.push(container.id);
       }
@@ -132,14 +142,18 @@ export class NoteManager {
     container.subtype = NoteSubtype.Note; // Note subtype = 1
     //container.content = event.content;  Is the string copied or is it a reference? String is immutable, so it should be copied, but internaly it could be a reference
 
-    let involved = new Set<UID>();
+    let involved = new Map<UID, string>(); // Involved: UserId, relayUrl
     let reply = container as ReplyContainer;
     let repost = container as RepostContainer;
 
     for (let tag of event.tags) {
-      if (tag[0] == 'p') involved.add(ID(tag[1]));
+      let relayUrl = tag[2];
+
+      if (tag[0] == 'p') involved.set(ID(tag[1]),relayUrl);
 
       if (tag[0] == 'e') {
+        container.relay = relayUrl;
+
         if (tag[3] == 'root') {
           reply.rootId = ID(tag[1]);
           reply.subtype = NoteSubtype.Reply; // Reply subtype = 2
@@ -185,10 +199,11 @@ export class NoteManager {
 
   // ---- Private methods ----
 
-  #canAdd(container: NoteContainer): boolean {
-    if (eventDeletionManager.deleted.has(container.id)) return false;
+  #canAdd(event: Event): boolean {
+    let eventId = ID(event.id);
+    if (eventDeletionManager.deleted.has(eventId)) return false;
 
-    if (container?.event) if (blockManager.isBlocked(ID(container.event?.pubkey))) return false;
+    if (event) if (blockManager.isBlocked(ID(event.pubkey))) return false;
 
     return true;
   }

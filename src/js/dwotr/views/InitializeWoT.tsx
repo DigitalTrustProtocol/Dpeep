@@ -14,8 +14,9 @@ import { Event } from 'nostr-tools';
 import { getNostrTime } from '../Utils';
 import zapManager from '../ZapManager';
 import eventDeletionManager from '../EventDeletionManager';
-import relayManager from '../RelayManager';
+import relayManager from '../ServerManager';
 import replyManager from '../ReplyManager';
+import repostManager from '../RepostManager';
 
 type InitializeWoTProps = {
   path?: string;
@@ -99,11 +100,15 @@ const InitializeWoT = (props: InitializeWoTProps) => {
 
   useEffect(() => {
     let load = async () => {
-      await loadDB();
-      await loadNetwork();
+      await loadDB(); // Load from local database (Slow)
+      await loadNetwork(); // Load from relay servers (Slow)
 
-      subscribe();
+      subscribe(); // Subscribe to relay servers (Fast)
     };
+
+    // Register handlers first (Fast)
+    noteManager.registerHandlers();
+    repostManager.registerHandlers();
 
     load();
 

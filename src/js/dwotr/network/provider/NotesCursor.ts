@@ -21,7 +21,7 @@ export class NotesCursor extends BaseCursor<NoteContainer> {
 
 
   eventHandler(event: Event) {
-    let container = eventManager.containers.get(ID(event.id)) as NoteContainer;
+    let container = eventManager.getContainerByEvent(event) as NoteContainer;
 
     if (container.event!.created_at < this.until) return; // E.g.: since <= note.created_at <= until
 
@@ -49,7 +49,7 @@ export class NotesCursor extends BaseCursor<NoteContainer> {
         this.done = true;
         break;
       }
-      let container = eventManager.containers.get(ID(note.id)) as NoteContainer;
+      let container = eventManager.getContainerByEvent(note) as NoteContainer;
       if(!container) continue;
 
       if(!this.include(container)) continue;

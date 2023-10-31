@@ -1,11 +1,5 @@
 import { Event, Filter } from 'nostr-tools';
-import {
-  OnEvent,
-  ReplaceableKinds,
-  StreamKinds,
-  FeedOption,
-  OnEose,
-} from './WOTPubSub';
+import { OnEvent, ReplaceableKinds, StreamKinds, FeedOption, OnEose } from './WOTPubSub';
 import getRelayPool from '@/nostr/relayPool';
 
 import { ID, STR, UID } from '@/utils/UniqueIds';
@@ -14,16 +8,13 @@ import Relays from '@/nostr/Relays';
 import { getNostrTime } from '../Utils';
 import blockManager from '../BlockManager';
 import { DebouncedFunc, debounce } from 'lodash';
-import relayManager from '../RelayManager';
+import relayManager from '../ServerManager';
 import { EPOCH } from '../Utils/Nostr';
-
-
 
 class RelaySubscription {
   until = getNostrTime();
 
   subscribedAuthors = new Set<UID>();
-
 
   logging = false;
 
@@ -31,7 +22,6 @@ class RelaySubscription {
   subs = new Map<number, () => void>();
 
   #subCounter = 0;
-
 
   metrics = {
     Count: 0,
@@ -45,11 +35,16 @@ class RelaySubscription {
     TrustEvents: 0,
   };
 
-
   // Continuously subscribe to authors and most kinds of events.
   // This is used to keep the relay connection alive and constantly getting new events.
   // Used the for WoT context. Following and trusted authors are subscribed to.
-  mapAuthors(authorIds: Set<UID> | Array<UID>, since = this.until+1, kinds = [...StreamKinds, ...ReplaceableKinds], onEvent?: OnEvent, onEose?: OnEose) : Array<number> {
+  mapAuthors(
+    authorIds: Set<UID> | Array<UID>,
+    since = this.until + 1,
+    kinds = [...StreamKinds, ...ReplaceableKinds],
+    onEvent?: OnEvent,
+    onEose?: OnEose,
+  ): Array<number> {
     let authors: Array<string> = [];
 
     for (let id of authorIds) {
@@ -65,18 +60,16 @@ class RelaySubscription {
     let subs: Array<number> = [];
 
     for (let batch of batchs) {
-
-      let filter = 
-        {
-          authors: batch,
-          kinds,
-          since,
-        } as Filter;
+      let filter = {
+        authors: batch,
+        kinds,
+        since,
+      } as Filter;
 
       let options = {
         filter,
         onEvent,
-        onEose
+        onEose,
       } as FeedOption;
 
       subs.push(this.map(options));
@@ -85,8 +78,12 @@ class RelaySubscription {
     return subs;
   }
 
-
-  async onceAuthors(authorIds: Set<UID> | Array<UID>, since = EPOCH, until = getNostrTime(), kinds = [...StreamKinds, ...ReplaceableKinds]) : Promise<boolean[]> {
+  async onceAuthors(
+    authorIds: Set<UID> | Array<UID>,
+    since = EPOCH,
+    until = getNostrTime(),
+    kinds = [...StreamKinds, ...ReplaceableKinds],
+  ): Promise<boolean[]> {
     let authors: Array<string> = [];
     let timeOut = 30000;
 
@@ -101,16 +98,15 @@ class RelaySubscription {
     let subs: Array<Promise<boolean>> = [];
 
     for (let batch of batchs) {
-      let filter = 
-        {
-          authors: batch,
-          kinds,
-          since,
-          until,
-        } as Filter;
+      let filter = {
+        authors: batch,
+        kinds,
+        since,
+        until,
+      } as Filter;
 
       let options = {
-        filter
+        filter,
       } as FeedOption;
 
       subs.push(this.once(options, timeOut));
@@ -120,7 +116,6 @@ class RelaySubscription {
 
     return results;
   }
-
 
   // A Once subscription is used to get a batch of events by an author.
   // Return a true value when done and false if timed out.
@@ -132,19 +127,16 @@ class RelaySubscription {
     since?: number | undefined,
     until?: number | undefined,
   ): Promise<boolean> {
-    let filter = 
-      {
-        authors,
-        kinds,
-        since,
-        until,
-        limit,
-      } as Filter;
-    
+    let filter = {
+      authors,
+      kinds,
+      since,
+      until,
+      limit,
+    } as Filter;
 
     return this.getEventsByFilter(filter, onEvent);
   }
-
 
   // A Once subscription is used to get a batch of events by ids.
   // Return a true value when done and false if timed out.
@@ -156,15 +148,14 @@ class RelaySubscription {
     since?: number | undefined,
     until?: number | undefined,
   ): Promise<Array<Event>> {
-    let filter = 
-      {
-        ids,
-        kinds,
-        since,
-        until,
-        limit,
-      } as Filter;
-    
+    let filter = {
+      ids,
+      kinds,
+      since,
+      until,
+      limit,
+    } as Filter;
+
     let events: Array<Event> = [];
 
     const cb = (event: Event, afterEose: boolean, url: string | undefined) => {
@@ -177,18 +168,15 @@ class RelaySubscription {
     return events;
   }
 
-  async getEventsByFilter(
-    filter: Filter,
-    cb?: OnEvent,
-  ): Promise<boolean> {
+  async getEventsByFilter(filter: Filter, cb?: OnEvent, relays?: string[]): Promise<boolean> {
     let options = {
       filter,
       onEvent: cb,
+      relays,
     } as FeedOption;
 
     return this.once(options);
   }
-
 
   // A Once subscription is used to get events by options.
   // Return a true value when done and false if timed out.
@@ -196,58 +184,78 @@ class RelaySubscription {
     let stopWatch = Date.now();
 
     let subCounter = ++this.#subCounter;
-    let relays = relayManager.enabledRelays();
+    let relays = Array.from(new Set([...options.relays || [], ...relayManager.enabledRelays()]));
     let slowRelays = new Set<string>(relays);
 
-
-    if(this.logging)
-      console.log("RelaySubscription:Once:Called", " - Sub:", subCounter);
-
+    if (this.logging) console.log('RelaySubscription:Once:Called', ' - Sub:', subCounter);
 
     let promise = new Promise<boolean>((resolve, _) => {
-
       let close = () => {
         relayCallback?.cancel();
         options.onClose?.(subCounter);
         unsub?.();
         resolve(false);
-      }
+      };
 
-      let relayCallback: DebouncedFunc<any> = debounce(()=> {
-        if(this.logging)
-          console.log('RelaySubscription:Once:Debounced(3sec timout)', ' - Relays: ', relays.length, " - Slow Relays:", slowRelays.size, slowRelays, Date.now() - stopWatch, 'ms');
-  
-          for(const relayUrl of slowRelays) {
+      let relayCallback: DebouncedFunc<any> = debounce(
+        () => {
+          if (this.logging)
+            console.log(
+              'RelaySubscription:Once:Debounced(3sec timout)',
+              ' - Relays: ',
+              relays.length,
+              ' - Slow Relays:',
+              slowRelays.size,
+              slowRelays,
+              Date.now() - stopWatch,
+              'ms',
+            );
+
+          for (const relayUrl of slowRelays) {
             //slowRelays.delete(relayUrl);
             relayManager.removeActiveRelay(relayUrl);
           }
-          
+
           close(); // Close the promise
-      }, 3000, {leading: false, trailing: true});
-  
+        },
+        3000,
+        { leading: false, trailing: true },
+      );
+
       let tries = 0;
 
       const onEvent = this.#createOnEvent(options?.onEvent, relayCallback);
 
       const onEose = (relayUrl: string, minCreatedAt: number) => {
-       
-        if (slowRelays.has(relayUrl)) 
-          slowRelays.delete(relayUrl);
+        if (slowRelays.has(relayUrl)) slowRelays.delete(relayUrl);
 
-        if (relays.includes(relayUrl)) 
-          tries++;
+        if (relays.includes(relayUrl)) tries++;
 
-       if(this.logging)
-          console.log('RelaySubscription:Once:onEose', relayUrl, `${tries}/${relays.length}`, " - Sub:", subCounter);
-        
+        if (this.logging)
+          console.log(
+            'RelaySubscription:Once:onEose',
+            relayUrl,
+            `${tries}/${relays.length}`,
+            ' - Sub:',
+            subCounter,
+          );
+
         let allEosed = tries >= relays.length;
         options.onEose?.(allEosed, relayUrl, minCreatedAt);
 
         if (allEosed) {
-          if(this.logging) 
-            console.log('RelaySubscription:Once:Done', relays.length, 'relays', Date.now() - stopWatch, 'ms', " - Sub:", subCounter);
+          if (this.logging)
+            console.log(
+              'RelaySubscription:Once:Done',
+              relays.length,
+              'relays',
+              Date.now() - stopWatch,
+              'ms',
+              ' - Sub:',
+              subCounter,
+            );
 
-            close();
+          close();
         }
       };
 
@@ -263,21 +271,19 @@ class RelaySubscription {
       });
     });
 
-    
-
     return promise;
   }
 
   // A Continues subscription is used to get events by options.
-    // Return a unsubribe number value, used to unsubscribe.
-  map(options: FeedOption) : number {
+  // Return a unsubribe number value, used to unsubscribe.
+  map(options: FeedOption): number {
     let relayIndex = new Map<string, number>();
 
     let relays = relayManager.enabledRelays();
 
-    let state ={
-      closed: false
-    } 
+    let state = {
+      closed: false,
+    };
 
     const onEvent = this.#createOnEvent(options?.onEvent);
 
@@ -311,15 +317,14 @@ class RelaySubscription {
 
   // A Continues subscription is used to get replaceable events by options.
   // Return a unsubribe number value, used to unsubscribe.
-  on(options: FeedOption) : number {
+  on(options: FeedOption): number {
     let relayIndex = new Map<string, number>();
 
     let relays = relayManager.enabledRelays();
 
-
-    let state ={
-      closed: false
-    } 
+    let state = {
+      closed: false,
+    };
 
     const onEvent = this.#createOnEvent(options?.onEvent);
 
@@ -328,8 +333,8 @@ class RelaySubscription {
       let allEosed = [...relayIndex.values()].every((v) => v === 0);
 
       options.onEose?.(allEosed, relayUrl, minCreatedAt);
-      
-      if(allEosed) {
+
+      if (allEosed) {
         state.closed = true;
         options.onClose?.(0);
         unsub?.();
@@ -355,12 +360,11 @@ class RelaySubscription {
   }
 
   offAll() {
-    for(let unsub of this.subs.values()) {
+    for (let unsub of this.subs.values()) {
       unsub();
     }
     this.subs.clear();
   }
-
 
   #batchArray(arr: Array<any>, batchSize: number = 1000) {
     const batchedArr: Array<any> = [];
@@ -372,37 +376,38 @@ class RelaySubscription {
     return batchedArr;
   }
 
-
   #createOnEvent(userOnEvent?: OnEvent, internalFastCall?: OnEvent) {
-
     let subCounter = this.#subCounter;
 
     const onEvent = (event: Event, afterEose: boolean, url: string | undefined) => {
-
       // if(this.logging)
       //   console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
 
-      if(!event) return;
+      if (!event) return;
       internalFastCall?.(event, afterEose, url);
 
       let authorId = ID(event.pubkey);
       if (blockManager.isBlocked(authorId)) return;
 
       let id = ID(event.id);
-      if(eventManager.seen(id)) { // Skip verify and eventHandle on seen events
-        if(this.logging)
-          console.log('RelaySubscription:onEvent:seen - ID:', event.id, " - Sub:", subCounter);
-        //if(!state?.closed)
+
+      if (eventManager.seen(id)) {
+        // Skip verify and eventHandle on seen events
+        if (this.logging)
+          console.log('RelaySubscription:onEvent:seen - ID:', event.id, ' - Sub:', subCounter);
+
         userOnEvent?.(event, afterEose, url);
-      }; 
+
+        return; // Return as the event have already been processed at some point
+      }
 
       // By waiting with verifying the event until its a new event, saves a lot of time.
-      if(!eventManager.verify(event)) return; // Skip events that are not valid.
+      if (!eventManager.verify(event)) return; // Skip events that are not valid.
 
       eventManager.eventCallback(event, afterEose, url).then((_) => {
-          userOnEvent?.(event, afterEose, url);
+        userOnEvent?.(event, afterEose, url);
       });
-    }
+    };
     return onEvent;
   }
 
@@ -413,7 +418,6 @@ class RelaySubscription {
 
     return this.metrics;
   }
-
 }
 
 const relaySubscription = new RelaySubscription();

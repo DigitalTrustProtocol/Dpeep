@@ -2,7 +2,7 @@ import { RelayPool } from 'nostr-relaypool';
 
 import Events from '@/nostr/Events.ts';
 import Relays from '@/nostr/Relays.ts';
-import localState from '@/state/LocalState.ts';
+//import localState from '@/state/LocalState.ts';
 //import { UniqueIds } from '@/utils/UniqueIds.ts';
 
 let relayPoolInstance: RelayPool | null = null;
@@ -14,17 +14,17 @@ const getRelayPool = () => {
     return relayPoolInstance;
   }
 
-  let dev = {
-    logSubscriptions: false,
-    indexedDbLoad: true,
-  };
+  // let dev = {
+  //   logSubscriptions: false,
+  //   indexedDbLoad: true,
+  // };
 
   let lastResubscribed = Date.now();
 
-  localState.get('dev').on((d) => {
-    dev = d;
-    relayPoolInstance!.logSubscriptions = dev.logSubscriptions;
-  });
+  // localState.get('dev').on((d) => {
+  //   dev = d;
+  //   relayPoolInstance!.logSubscriptions = dev.logSubscriptions;
+  // });
 
   const reconnect = () => {
     if (Date.now() - lastResubscribed > 60 * 1000) {
@@ -45,7 +45,7 @@ const getRelayPool = () => {
 
   relayPoolInstance = new RelayPool(Relays.enabledRelays(), {
     useEventCache: false,
-    autoReconnect: true,
+    autoReconnect: false,
     skipVerification: true, // Done manually as seen event are ignored. Way faster approach.
 
     // externalGetEventById: (id) => {

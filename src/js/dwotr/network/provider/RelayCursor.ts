@@ -61,7 +61,7 @@ export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
         
         this.until = Math.min(until, event.created_at) - 1;
 
-        let container = eventManager.containers.get(ID(event.id)) as T;
+        let container = eventManager.getContainerByEvent(event) as T;
         if(!container) return;
 
         this.buffer.push(container);

@@ -28,7 +28,7 @@ const FeedTanStack = ({ filterOptions }: FeedProps) => {
 
   const { events, hasMore, hasRefresh, loadMore, refresh } = useFeed(filterOption);
 
-  const containers = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
+  const containers = events.map((event) => eventManager.getContainer(ID(event.id))) || [];
 
   useLayoutEffect(() => {
     parentOffsetRef.current = parentRef.current?.offsetTop ?? 0;

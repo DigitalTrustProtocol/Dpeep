@@ -16,7 +16,7 @@ export class LikesCursor extends RelayCursor<ReactionContainer> {
 
     let containers: ReactionContainer[] = [];
     for(let reaction of reactions?.values() ?? []) {
-      let container = eventManager.containers.get(reaction.subjectEventId) as ReactionContainer;
+      let container = eventManager.getContainer(reaction.subjectEventId) as ReactionContainer;
       if(!container) continue;
 
       containers.push(container);

@@ -17,7 +17,7 @@ class FollowingCursor extends NotesCursor {
   }
 
   eventHandler(event: Event) {
-    let container = eventManager.containers.get(ID(event.id)) as NoteContainer;
+    let container = eventManager.getContainerByEvent(event) as NoteContainer;
 
     //if (container.event!.created_at < this.until) return false; // E.g.: since <= note.created_at <= until
 

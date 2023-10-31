@@ -63,7 +63,7 @@ export const useRepost = (container: RepostContainer) => {
     if (!container) return;
     if (!container?.repostOf) return;
 
-    const repostOfContainer = eventManager.containers.get(container.repostOf) as RepostContainer;
+    const repostOfContainer = eventManager.getContainer(container.repostOf) as RepostContainer;
     if (!repostOfContainer) return;
     setRepostOf(repostOfContainer);
 

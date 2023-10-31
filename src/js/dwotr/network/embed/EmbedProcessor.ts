@@ -1,5 +1,5 @@
 import { EmbedData } from '.';
-import { UID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
 import { MetadataKind, ReactionKind, RepostKind, TextKind } from '../WOTPubSub';
 import profileManager from '../../ProfileManager';
 import eventManager from '../../EventManager';
@@ -42,47 +42,33 @@ export class EmbedProcessor extends EmbedData {
     }
   }
 
-
-  addEvent(id: UID): boolean {
-    if (eventManager.seen(id)) return false; // Already seen
-
-    this.events.add(id);
-    // this.kinds.add(kind);
-    // if (kind == RepostKind) this.kinds.add(TextKind); // Add text kind if repost, as it can be a text kind
-
-    return true;
-  }
-
   #doProfile(container: EventContainer) {
-    this.#addProfile(container.authorId!);
+    if (this.#hasProfile(container.authorId!)) return;
+
+    this.setAuthor(EmbedData.create(undefined, STR(container.authorId), container.relay));
   }
 
   #doText(container: NoteContainer) {
-    // Get the container from memory, as it have been loaded already
-    if (container?.subtype == 2) {
-      this.#doReply(container); // Can be a reply
-      return;
-    }
 
-    if (container?.subtype == 3) {
-      // Check if the event is a repost even that the kind is 1
-      this.#doRepost(container); // Can be a repost
-      return;
-    }
-
+    // A note can be a note, reply, and a inline repost at the same time
+    // Therefore check for all three types
     this.#doNoteEmbeds(container);
+    this.#doReply(container); 
+    this.#doRepost(container); 
   }
 
   #doNoteEmbeds(container: NoteContainer) {
     let embedEvent = ExstractEmbeds(container?.event!.content || '', container.event!);
 
-    for (let author of embedEvent.authors) {
-      if(eventManager.seen(author)) continue; // Already seen
-      this.authors.add(author);
+    for (let item of embedEvent.authors.values()) {
+      if(!item.author) continue;
+      if(eventManager.seen(ID(item.author))) continue; // Already seen
+      this.setAuthor(item);
     }
-    for (let event of embedEvent.events) {
-      if(eventManager.seen(event)) continue; // Already seen
-      this.events.add(event);
+    for (let item of embedEvent.events.values()) {
+      if(!item?.id) continue;
+      if(eventManager.seen(ID(item.id))) continue; // Already seen
+      this.setEvent(item);
     }
   }
 
@@ -100,17 +86,17 @@ export class EmbedProcessor extends EmbedData {
 
   #doReply(container: ReplyContainer) {
     if (container?.rootId) {
-      this.addEvent(container?.rootId!);
+      this.setEvent(EmbedData.create(STR(container.rootId), undefined, container.relay));
     }
 
     if (container?.repliedTo) {
-      this.addEvent(container?.repliedTo!);
+      this.setEvent(EmbedData.create(STR(container.repliedTo), undefined, container.relay));
     }
   }
 
   #doRepost(container: RepostContainer) {
     if (container.repostOf) {
-      this.addEvent(container.repostOf);
+      this.setEvent(EmbedData.create(STR(container.repostOf), undefined, container.relay));
     }
   }
 
@@ -120,11 +106,6 @@ export class EmbedProcessor extends EmbedData {
     return !profile.isDefault;
   }
 
-  #addProfile(uid: UID) {
-    if (this.#hasProfile(uid)) return;
-
-    this.authors.add(uid);
-  }
 
 
 }

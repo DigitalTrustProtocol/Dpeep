@@ -80,7 +80,7 @@ class NotesCursor implements ICursor {
         break;
       }
 
-      let container = eventManager.containers.get(ID(note.id)) as NoteContainer;
+      let container = eventManager.getContainerByEvent(note) as NoteContainer;
 
       if(!this.accept(container)) continue; // Skip events that don't match the filterFn, undefined means match
 

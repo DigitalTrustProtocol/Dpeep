@@ -1,7 +1,6 @@
 import { nip19 } from 'nostr-tools';
 
 import Embed, { EmbedData } from '../index';
-import { ID } from '@/utils/UniqueIds';
 
 const nip19Regex = /\bnostr:(n(?:event|profile)1\w+)\b/g;
 
@@ -14,10 +13,9 @@ const NostrNip19: Embed = {
       const { type, data } = nip19.decode(match);
       
       if (type === 'nprofile') {
-        r.authors.add(ID(data.pubkey));
+        r.setAuthor(data);
       } else if (type === 'nevent') {
-        r.events.add(ID(data.id));
-        // same as note
+        r.setEvent(data);
       }
     } catch (e) {
       console.log(e);

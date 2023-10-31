@@ -3,6 +3,7 @@ import { EdgeRecord } from '../model/Graph';
 import ProfileRecord from '../model/ProfileRecord';
 import { Event } from 'nostr-tools';
 import { ReactionRecord } from '../ReactionManager';
+import { RelayRecord } from '../ServerManager';
 
 
 export const DB_NAME = 'DWoTR';
@@ -21,11 +22,12 @@ export class DWoTRDexie extends Dexie {
   blocks!: Table<Event>;
   replies!: Table<Event>;
   reposts!: Table<Event>;
+  relays!: Table<RelayRecord>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(12).stores({
+    this.version(13).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
@@ -36,6 +38,7 @@ export class DWoTRDexie extends Dexie {
       blocks: 'id, pubkey, created_at',
       replies: 'id, pubkey, created_at',
       reposts: 'id, pubkey, created_at',
+      relays: 'url',
     });
   }
 }

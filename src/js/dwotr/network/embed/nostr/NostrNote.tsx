@@ -1,4 +1,3 @@
-import { ID } from '@/utils/UniqueIds';
 import Embed, { EmbedData as EmbedData } from '../index';
 import Key from '@/nostr/Key';
 
@@ -10,7 +9,8 @@ const NostrNote: Embed = {
   component: ({ match }) => {
     let r = new EmbedData();
     const hex = Key.toNostrHexAddress(match.replace('@', ''))!;
-    r.events.add(ID(hex));
+
+    r.setEvent({ id: hex });
     return r;
   },
 };

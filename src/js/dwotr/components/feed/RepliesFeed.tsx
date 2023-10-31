@@ -63,7 +63,7 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
 
   if(!events) return null;
 
-  let items = events.map((event) => eventManager.containers.get(ID(event.id))) || [];
+  let items = events.map((event) => eventManager.getContainer(ID(event.id))) || [];
 
   return (
     <>

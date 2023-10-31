@@ -29,7 +29,7 @@ export class LikesCursor extends NotesCursor {
     let reactions = reactionManager.authors.get(this.options.user!);
 
     for(let reaction of reactions?.values() ?? []) {
-      let container = eventManager.containers.get(reaction.subjectEventId);
+      let container = eventManager.getContainer(reaction.subjectEventId);
       if(!container) continue;
 
       this.preBuffer.push(container?.event!);
@@ -37,7 +37,7 @@ export class LikesCursor extends NotesCursor {
   }
 
   eventHandler(event: Event) {
-    let container = eventManager.containers.get(ID(event.id)) as NoteContainer;
+    let container = eventManager.getContainerByEvent(event) as NoteContainer;
 
     if (!this.accept(container)) return; // Skip events that don't match the filterFn, undefined means match
 

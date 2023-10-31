@@ -14,7 +14,7 @@ export type EventContainer = {
   id: UID; // the id of the event in number format
   kind: number; // the kind of the event
   event?: Event; // the event itself
-  relayId?: number; // the relay that sent this event
+  relay?: string; // the relay that sent this event
   authorId?: UID; // the author of the event
 }
 
@@ -26,13 +26,16 @@ export type NoteContainer = EventContainer & {
 
 export type ReplyContainer = NoteContainer & {
   rootId?: UID;
+  rootRelay?: string;
   repliedTo?: UID;
+  repliedToRelay?: string;
   involved?: Set<UID>;
   thread?: boolean; // whether this event is the root of a thread
 }
 
 export type RepostContainer = NoteContainer & {
   repostOf?: UID;
+  repostRelay?: string;
 }
 
 

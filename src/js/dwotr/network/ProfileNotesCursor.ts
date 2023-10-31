@@ -16,7 +16,7 @@ class ProfileNotesCursor extends NotesCursor {
   }
 
   eventHandler(event: Event) {
-    let container = eventManager.containers.get(ID(event.id)) as NoteContainer;
+    let container = eventManager.getContainerByEvent(event) as NoteContainer;
 
     if (!this.accept(container)) return; // Skip events that don't match the filterFn, undefined means match
 

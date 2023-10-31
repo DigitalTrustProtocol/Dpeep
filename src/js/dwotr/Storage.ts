@@ -44,6 +44,10 @@ class Storage {
   get reposts() {
     return this.db.reposts;
   }
+
+  get relays() {
+    return this.db.relays;
+  }
   
   get db(): DWoTRDexie {
     if (!this.#db) {

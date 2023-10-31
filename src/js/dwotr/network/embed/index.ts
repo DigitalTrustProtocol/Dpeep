@@ -1,24 +1,62 @@
 import { Event } from 'nostr-tools';
 import { EmbedProps } from '@/components/embed';
-import { UID } from '@/utils/UniqueIds';
 import InlineMention from './nostr/InlineMention';
 import NostrNip19 from './nostr/Nip19';
 import NostrNpub from './nostr/NostrNpub';
 //import NostrNote from './nostr/NostrNote';
 
+export type EmbedItem = {
+  id?: string;
+  author?: string;
+  relays?: string[] | undefined;
+}
+
 export class EmbedData {
-  authors: Set<UID> = new Set<UID>();
-  events: Set<UID> = new Set<UID>();
-  relays: Map<UID, string> = new Map<UID, string>(); // UID (event|profile) -> Relay url string
+
+
+
+  authors: Map<string, EmbedItem> = new Map<string, EmbedItem>();
+  events: Map<string, EmbedItem> = new Map<string, EmbedItem>();
+
+  setEvent(item: EmbedItem) {
+    this.events.set(item?.id || '', item);
+  }
+
+  setAuthor(item: EmbedItem) {
+    this.authors.set(item?.author || '', item);
+  }
 
 
   add(embedEvent: EmbedData) {
-    for (let author of embedEvent.authors) {
-      this.authors.add(author);
+    for(let author of embedEvent.authors.values()) {
+      this.setAuthor(author);
     }
-    for (let event of embedEvent.events) {
-      this.events.add(event);
+    for(let event of embedEvent.events.values()) {
+      this.setEvent(event);
     }
+  }
+
+  getEventRelays() : string[] {
+    let relays: string[] = [];
+    for(let item of this.events.values()) {
+      if(!item.relays) continue;
+      relays.push(...item.relays);
+    }
+    return relays;
+  }
+
+  getAuthorRelays() : string[] {
+    let relays: string[] = [];
+    for(let item of this.authors.values()) {
+      if(!item.relays) continue;
+      relays.push(...item.relays);
+    }
+    return relays;
+  }
+
+  static create(id?: string, author?: string, relays?: string | string[] | undefined) : EmbedItem {
+    if(typeof relays === 'string') relays = [relays];
+    return { id, author, relays: relays as string[] | undefined};
   }
 }
 

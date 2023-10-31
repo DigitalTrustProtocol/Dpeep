@@ -9,7 +9,7 @@ import eventDeletionManager from './EventDeletionManager';
 import { BulkStorage } from './network/BulkStorage';
 import { RepostKind } from './network/WOTPubSub';
 import noteManager from './NoteManager';
-import { RepostContainer } from './model/ContainerTypes';
+import { EventContainer, RepostContainer } from './model/ContainerTypes';
 
 
 // Decorate the event with the repost_of meta data
@@ -41,12 +41,20 @@ class RepostManager {
 
   table = new BulkStorage(storage.reposts);
 
+  constructor() {
+  }
+
+  registerHandlers() {
+    eventManager.eventHandlers.set(RepostKind, this.handle.bind(this));
+    eventManager.containerParsers.set(RepostKind, this.parse.bind(this));
+  }
+
   isRepostEvent(event: Event) : boolean {
     return event.kind == RepostKind;
   }
 
 
-  handle(event: Event) {
+  handle(event: Event, url?: string) {
     
     this.metrics.RelayEvents++;
 
@@ -102,7 +110,7 @@ class RepostManager {
   }
 
 
-  parse(event: Event, url?: string): RepostContainer | undefined {
+  parse(event: Event, url?: string): EventContainer | undefined {
     if(!this.isRepostEvent(event)) return undefined;
 
     let repostOfId = getRepostedEventId(event);

@@ -94,6 +94,7 @@ export type FeedOption = {
   eventId?: UID;
   size?: number;
   filter: Filter;
+  relays?: string[];
   includeReposts?: boolean;
   includeReplies?: boolean;
   filterFn?: (event: Event) => boolean;

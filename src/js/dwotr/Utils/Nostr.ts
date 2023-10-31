@@ -1,7 +1,7 @@
 // Source: https://github.com/coracle-social/coracle/blob/master/src/util/nostr.ts
 
 import {  fromPairs, last, identity, prop, flatten, uniq } from 'ramda';
-import { ensurePlural, mapVals, tryFunc, avg, first } from 'hurdak';
+import { ensurePlural, mapVals, tryFunc, first } from 'hurdak';
 import { Event } from 'nostr-tools';
 
 export const noteKinds = [1, 30023, 1063, 9802, 1808];

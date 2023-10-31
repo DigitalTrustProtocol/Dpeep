@@ -30,7 +30,7 @@ export default function Repost(props: Props) {
     if (!props.event) return;
     let repostEvent = props.event;
 
-    let repostContainer = eventManager.containers.get(ID(repostEvent.id)) as RepostContainer;
+    let repostContainer = eventManager.getContainerByEvent(repostEvent) as RepostContainer;
 
     if (!repostContainer?.repostOf) return;
     const e = noteManager.notes.get(repostContainer.repostOf!); // At this point noteManager should have the reposted event

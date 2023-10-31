@@ -52,13 +52,13 @@ export class ReplyManager {
     let afterBuffer: Array<ReplyContainer> = [];
 
     for (const replyId of replyManager.replies.get(parentId) || []) {
-      let container = eventManager.containers.get(replyId) as ReplyContainer;
+      let container = eventManager.getContainer<ReplyContainer>(replyId);
       let event = container?.event;
       if (event) {
-        if (event.pubkey == Key.getPubKey()) preBuffer.unshift(container); // Put my replies at the top
+        if (event.pubkey == Key.getPubKey()) preBuffer.unshift(container!); // Put my replies at the top
         else if (followManager.isAllowed(ID(event.pubkey)))
-          preBuffer.push(container); // Put known users replies at the top'ish
-        else afterBuffer.push(container);
+          preBuffer.push(container!); // Put known users replies at the top'ish
+        else afterBuffer.push(container!);
       }
     }
     return preBuffer.concat(afterBuffer);
@@ -90,11 +90,10 @@ export class ReplyManager {
     let deltaDelete: Array<string> = [];
 
     for (let note of events) {
-
+      let eventId = ID(note.id);
       let container = noteManager.parse(note)!;
-      eventManager.addSeen(container.id);
-      eventManager.eventIndex.set(container.id, note);
-      eventManager.containers.set(container.id, container);
+      eventManager.addSeen(eventId);
+      eventManager.eventIndex.set(eventId, note);
 
       if (this.#canAdd(container)) {
         this.#addEvent(container);
@@ -166,26 +165,26 @@ export class ReplyManager {
     return this.metrics;
   }
 
-  parse(event: Event, relayUrl?: string) : ReplyContainer {
-    let container = noteManager.parse(event, relayUrl) as ReplyContainer;
+  // parse(event: Event, relayUrl?: string) : ReplyContainer {
+  //   let container = noteManager.parse(event, relayUrl) as ReplyContainer;
 
-    container.involved = new Set<UID>();
-    for(let tag of event.tags) {
-      if(tag[0] == 'p') container.involved.add(ID(tag[1]));
+  //   container.involved = new Set<UID>();
+  //   for(let tag of event.tags) {
+  //     if(tag[0] == 'p') container.involved.add(ID(tag[1]));
       
-      if(tag[0] == 'e') {
-        if(tag[3] == 'root')  container.rootId = ID(tag[1]);
-        if(tag[3] == 'reply') container.repliedTo = ID(tag[1]);
-        if(tag[3] === '') container.repliedTo = ID(tag[1]);
+  //     if(tag[0] == 'e') {
+  //       if(tag[3] == 'root')  container.rootId = ID(tag[1]);
+  //       if(tag[3] == 'reply') container.repliedTo = ID(tag[1]);
+  //       if(tag[3] === '') container.repliedTo = ID(tag[1]);
 
-        container.subtype = 2; // Reply
-      }
-    }
+  //       container.subtype = 2; // Reply
+  //     }
+  //   }
 
-    if(container.rootId && !container.repliedTo) container.repliedTo = container.rootId;
+  //   if(container.rootId && !container.repliedTo) container.repliedTo = container.rootId;
 
-    return container;
-  }
+  //   return container;
+  // }
 
   // ---- Static methods ----
 

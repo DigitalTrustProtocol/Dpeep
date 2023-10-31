@@ -11,7 +11,6 @@ import {
   MuteKind,
   ReactionKind,
   RepostKind,
-  TextKind,
   Trust1Kind,
   ZapKind,
 } from './network/WOTPubSub';
@@ -27,8 +26,7 @@ import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
 import repostManager from './RepostManager';
 import { EventContainer } from './model/ContainerTypes';
-import relayManager from './RelayManager';
-import { noteKinds } from './Utils/Nostr';
+
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
 
@@ -36,11 +34,49 @@ class EventManager {
 
   containers: Map<UID, EventContainer> = new Map(); // Index of all containers, eventid, eventcontainer
 
+  containerParsers: Map<number, (event: Event, url?: string) => EventContainer | undefined> = new Map();
+  eventHandlers: Map<number, (event: Event, url?: string) => void> = new Map();
+
   metrics = {
     TotalMemory: 0,
     Loaded: 0,
     HandleEvents: 0,
   };
+
+
+  getContainer<T extends EventContainer>(id: UID) : T | undefined {
+    let container = eventManager.containers.get(id) as T;
+    if (container) return container;
+
+    let event = eventManager.eventIndex.get(id);
+    if (!event) return;
+
+    container = this.createContainer<T>(event) as T;
+    eventManager.containers.set(id, container);
+
+    return container as T;
+  }
+
+  getContainerByEvent<T extends EventContainer>(event:Event) : T | undefined {
+    let container = eventManager.containers.get(ID(event.id)) as T;
+    if (container) return container;
+
+    container = this.createContainer<T>(event) as T;
+    if(!container) return;
+    eventManager.containers.set(container.id, container);
+
+    return container as T;
+  }
+
+  createContainer<T extends EventContainer>(event: Event) : T | undefined {
+    let relayUrl = event["dwotr"]?.relay;
+
+    let parser = this.containerParsers.get(event.kind);
+    if (!parser) return undefined;
+
+    let container = parser(event, relayUrl) as T;
+    return container;
+  }
 
   parse(event: Event, relayUrl?: string): EventContainer {
     let eventId = ID(event.id);
@@ -48,7 +84,7 @@ class EventManager {
       id: eventId,
       kind: event.kind,
       event: event,
-      relayId: relayUrl ? relayManager.getRelayId(relayUrl) : undefined,
+      relay: relayUrl,
       authorId: ID(event.pubkey),
     };
 
@@ -157,21 +193,21 @@ class EventManager {
     return verifySignature(event);
   }
 
-  doRelayEvent(event: Event): boolean {
-    if (!event?.id) return false;
-    let eventId = ID(event.id); // add Event ID to UniqueIds
+  // doRelayEvent(event: Event): boolean {
+  //   if (!event?.id) return false;
+  //   let eventId = ID(event.id); // add Event ID to UniqueIds
 
-    if (this.seenRelayEvents.has(eventId)) {
-      return false; // already seen this event, skip it
-    }
+  //   if (this.seenRelayEvents.has(eventId)) {
+  //     return false; // already seen this event, skip it
+  //   }
 
-    // Relay-pool do not validate events, so we need to do it here.
-    // Validate an event takes about 14ms, so this is a big performance boost avoid validating events that we have already seen
-    if (!validateEvent(event) || !verifySignature(event)) return false;
+  //   // Relay-pool do not validate events, so we need to do it here.
+  //   // Validate an event takes about 14ms, so this is a big performance boost avoid validating events that we have already seen
+  //   if (!validateEvent(event) || !verifySignature(event)) return false;
 
-    this.seenRelayEvents.add(eventId);
-    return true;
-  }
+  //   this.seenRelayEvents.add(eventId);
+  //   return true;
+  // }
 
   async eventCallback(event: Event, afterEose?: boolean, url?: string | undefined) {
     if (!event) return false;
@@ -182,17 +218,19 @@ class EventManager {
 
     eventManager.metrics.HandleEvents++;
 
-    if (noteManager.supportedKinds.has(event.kind)) return noteManager.handle(event, url); // Handle the event as a note
+    // Add the relay to the event, and possible other data is nessary
+    event["dwotr"] = {
+      relay: url,
+    };
 
+    // Handle the event as a note
+    if (noteManager.supportedKinds.has(event.kind)) return noteManager.handle(event, url); 
+
+    // Else check here if the event is a supported kind
     switch (event.kind) {
       case MetadataKind:
         profileManager.handle(event, url);
         break;
-
-      // case TextKind:
-
-      //   noteManager.handle(event, url); // Handle the event as a note
-      //   break;
 
       case RepostKind:
         repostManager.handle(event);
