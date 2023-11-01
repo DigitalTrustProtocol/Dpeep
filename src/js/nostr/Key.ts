@@ -254,16 +254,15 @@ export default {
     }
     return null;
   },
-  toNostrHexAddress(str: string): string | null {
-    if (!str) {
-      console.error('toNostrHexAddress: no input');
+  toNostrHexAddress(key: string): string | null {
+    if (!key) {
       return null;
     }
-    if (str.match(/^[0-9a-fA-F]{64}$/)) {
-      return str;
+    if (key.match(/^[0-9a-fA-F]{64}$/)) {
+      return key;
     }
     try {
-      const { words } = bech32.decode(str);
+      const { words } = bech32.decode(key);
       const data = new Uint8Array(bech32.fromWords(words));
       const addr = Helpers.arrayToHex(data);
       return addr;
@@ -272,4 +271,20 @@ export default {
     }
     return null;
   },
+  // Validates a hex address of 64 characters representing a public key
+  validate(key: string): boolean {
+      if (typeof key !== 'string' || key.length !== 64) {
+        return false;
+      }
+      const validChars = '0123456789abcdefABCDEF';
+      for (let i = 0; i < key.length; i++) {
+        if (!validChars.includes(key[i])) {
+          return false;
+        }
+      }
+      return true;
+    },
+    sanitize(key: string): string {
+      return key?.trim();
+    }
 };

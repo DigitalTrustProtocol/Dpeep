@@ -10,6 +10,8 @@ import {
   RepostContainer,
 } from '../../model/ContainerTypes';
 import { ExstractEmbeds } from '.';
+import Key from '@/nostr/Key';
+import { Url } from '../Url';
 
 export class EmbedProcessor extends EmbedData {
   constructor() {
@@ -39,6 +41,9 @@ export class EmbedProcessor extends EmbedData {
           //this.#doReactions(container as ReactionEvent);
           break;
       }
+
+      // In general include the tags of every event
+      this.#doTags(container); 
     }
   }
 
@@ -57,18 +62,43 @@ export class EmbedProcessor extends EmbedData {
     this.#doRepost(container); 
   }
 
+  #doTags(container: NoteContainer) {
+    let event = container.event!;
+
+    let defaultRelay = container.relay;
+
+    for (let tag of event.tags) {
+      if(tag[0] == 'p') {
+        let author = Key.sanitize(tag[1]);
+        if(!Key.validate(author)) continue; // Invalid key
+        if(this.#hasProfile(ID(author))) continue; // Already seen
+        let relay = Url.isValid(tag[2]) ? tag[2] : defaultRelay;
+        this.setAuthor(EmbedData.create(undefined, author, relay));
+      }
+
+      if(tag[0] == 'e') {
+        let id = Key.sanitize(tag[1]);
+        if(!Key.validate(id)) continue; // Invalid key
+        if(eventManager.seen(ID(id))) continue; // Already seen
+        let relay = Url.isValid(tag[2]) ? tag[2] : defaultRelay;
+        this.setEvent(EmbedData.create(id, undefined, relay));
+      }
+    }
+  }
+
   #doNoteEmbeds(container: NoteContainer) {
     let embedEvent = ExstractEmbeds(container?.event!.content || '', container.event!);
+    let defaultRelay = container.relay;
 
     for (let item of embedEvent.authors.values()) {
       if(!item.author) continue;
-      if(eventManager.seen(ID(item.author))) continue; // Already seen
-      this.setAuthor(item);
+      if(this.#hasProfile(ID(item.author))) continue; // Already seen
+      this.setAuthor(item, defaultRelay);
     }
     for (let item of embedEvent.events.values()) {
       if(!item?.id) continue;
       if(eventManager.seen(ID(item.id))) continue; // Already seen
-      this.setEvent(item);
+      this.setEvent(item, defaultRelay);
     }
   }
 

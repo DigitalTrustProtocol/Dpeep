@@ -1,3 +1,4 @@
+import Key from '@/nostr/Key';
 import Embed, { EmbedData } from '../index';
 
 const pubKeyRegex =
@@ -7,8 +8,10 @@ const NostrNpub: Embed = {
   regex: pubKeyRegex,
   component: ({ match }) => {
     let r = new EmbedData();
-    const pub = match.replace('@', '');
-    r.setEvent({ id: pub });
+    const hex = Key.toNostrHexAddress(match.replace('@', '').trim());
+    if (!hex) return r; // Invalid address, ignore
+
+    r.setAuthor({ author: hex });
     return r;
   },
 };

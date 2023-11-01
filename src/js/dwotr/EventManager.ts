@@ -26,6 +26,7 @@ import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
 import repostManager from './RepostManager';
 import { EventContainer } from './model/ContainerTypes';
+import serverManager from './ServerManager';
 
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
@@ -34,7 +35,8 @@ class EventManager {
 
   containers: Map<UID, EventContainer> = new Map(); // Index of all containers, eventid, eventcontainer
 
-  containerParsers: Map<number, (event: Event, url?: string) => EventContainer | undefined> = new Map();
+  containerParsers: Map<number, (event: Event, url?: string) => EventContainer | undefined> =
+    new Map();
   eventHandlers: Map<number, (event: Event, url?: string) => void> = new Map();
 
   metrics = {
@@ -43,8 +45,7 @@ class EventManager {
     HandleEvents: 0,
   };
 
-
-  getContainer<T extends EventContainer>(id: UID) : T | undefined {
+  getContainer<T extends EventContainer>(id: UID): T | undefined {
     let container = eventManager.containers.get(id) as T;
     if (container) return container;
 
@@ -57,19 +58,19 @@ class EventManager {
     return container as T;
   }
 
-  getContainerByEvent<T extends EventContainer>(event:Event) : T | undefined {
+  getContainerByEvent<T extends EventContainer>(event: Event): T | undefined {
     let container = eventManager.containers.get(ID(event.id)) as T;
     if (container) return container;
 
     container = this.createContainer<T>(event) as T;
-    if(!container) return;
+    if (!container) return;
     eventManager.containers.set(container.id, container);
 
     return container as T;
   }
 
-  createContainer<T extends EventContainer>(event: Event) : T | undefined {
-    let relayUrl = event["dwotr"]?.relay;
+  createContainer<T extends EventContainer>(event: Event): T | undefined {
+    let relayUrl = event['dwotr']?.relay;
 
     let parser = this.containerParsers.get(event.kind);
     if (!parser) return undefined;
@@ -181,7 +182,7 @@ class EventManager {
   }
 
   seen(eventId: UID) {
-    if(eventId == 0) return true; // 0 is a special case, as representing null event, therefore it is always seen
+    if (eventId == 0) return true; // 0 is a special case, as representing null event, therefore it is always seen
     return this.seenRelayEvents.has(eventId);
   }
 
@@ -218,13 +219,17 @@ class EventManager {
 
     eventManager.metrics.HandleEvents++;
 
-    // Add the relay to the event, and possible other data is nessary
-    event["dwotr"] = {
-      relay: url,
-    };
+    if (url) {
+      // Add the relay to the event, so we know where it came from.
+      event['dwotr'] = {
+        relay: url,
+      };
+
+      serverManager.incrementEventCount(url); // Increment the event count for the relay
+    }
 
     // Handle the event as a note
-    if (noteManager.supportedKinds.has(event.kind)) return noteManager.handle(event, url); 
+    if (noteManager.supportedKinds.has(event.kind)) return noteManager.handle(event, url);
 
     // Else check here if the event is a supported kind
     switch (event.kind) {

@@ -12,18 +12,15 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
   const [status, setStatus] = useState<ProviderStatus>('idle');
   const batchLoaded = useRef<Array<boolean>>([]);
 
-
-
   const dataProvider = useRef<DataProvider>(); // Make sure to get the same provider for the same feedId
   const intervalRef = useRef<any>(undefined);
   const loading = useRef<boolean>(false);
-
-  const mounted = useRef<boolean>(true);
+  const mounted = useRef<boolean>(false);
 
   // Loading events from memory
   useEffect(() => {
-    mounted.current = true;
     if (!opt) return; // The options may not be ready yet
+    mounted.current = true;
 
     let listener = {
       onStatusChanged: (status: ProviderStatus) => {
@@ -39,7 +36,7 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
     setContainers(list);
 
     if(list.length < dataProvider.current!.batchSize) 
-       loadNext(); 
+       loadMore(); 
 
     // Check regularly for new events
     intervalRef.current = setInterval(() => {
@@ -54,10 +51,14 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
   }, [opt]);
 
 
-  const loadNext = useCallback((e?: any, cb?: (list: NoteContainer[]) => void) => {
+  const loadMore = useCallback((e?: any, cb?: (list: NoteContainer[]) => void) => {
     if (!dataProvider.current || !mounted.current) return;
-    if (loading.current == true) return;
+    if (loading.current == true) {
+      console.log('loadMore: already loading :)');
+      return;
+    } 
     loading.current = true; // Prevent multiple loads from happening at once
+    console.log('loadMore: loading...');
 
     dataProvider.current?.nextPage().then((items) => {
       if (!dataProvider.current || !mounted.current) return 0;
@@ -65,26 +66,27 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
       setHasMore(!dataProvider.current.isDone());
       loading.current = false;
       cb?.(items);
+      console.log('loadMore: done');
     });
 
   }, []);
 
   // Load events in front of the event list
-  const reset = useCallback((): void => {
-    if (!dataProvider.current || !mounted.current) return;
-    //if (!dataProvider.current?.hasNew()) return;
+  // const reset = useCallback((): void => {
+  //   if (!dataProvider.current || !mounted.current) return;
+  //   //if (!dataProvider.current?.hasNew()) return;
 
-    dataProvider.current.reset();
-    dataProvider.current.preLoad();
-    setHasMore(!dataProvider.current?.isDone());
-    setHasNew(!!dataProvider.current?.hasNew());
+  //   dataProvider.current.reset();
+  //   dataProvider.current.preLoad();
+  //   setHasMore(!dataProvider.current?.isDone());
+  //   setHasNew(!!dataProvider.current?.hasNew());
 
-    loadNext();
+  //   loadNext();
 
-    setContainers(dataProvider.current!.getBuffer());
-  }, []);
+  //   setContainers(dataProvider.current!.getBuffer());
+  // }, []);
 
-  return { containers, status, hasMore, hasNew, batchLoaded: batchLoaded.current, loadNext, reset };
+  return { containers, status, hasMore, hasNew, batchLoaded: batchLoaded.current, loadMore };
 };
 
 export default useFeedProvider;

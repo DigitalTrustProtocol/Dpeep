@@ -8,7 +8,7 @@ import Relays from '@/nostr/Relays';
 import { getNostrTime } from '../Utils';
 import blockManager from '../BlockManager';
 import { DebouncedFunc, debounce } from 'lodash';
-import relayManager from '../ServerManager';
+import serverManager from '../ServerManager';
 import { EPOCH } from '../Utils/Nostr';
 
 class RelaySubscription {
@@ -184,7 +184,7 @@ class RelaySubscription {
     let stopWatch = Date.now();
 
     let subCounter = ++this.#subCounter;
-    let relays = Array.from(new Set([...options.relays || [], ...relayManager.enabledRelays()]));
+    let relays = serverManager.getActiveRelays(options.relays || []);
     let slowRelays = new Set<string>(relays);
 
     if (this.logging) console.log('RelaySubscription:Once:Called', ' - Sub:', subCounter);
@@ -213,7 +213,7 @@ class RelaySubscription {
 
           for (const relayUrl of slowRelays) {
             //slowRelays.delete(relayUrl);
-            relayManager.removeActiveRelay(relayUrl);
+            serverManager.removeActiveRelay(relayUrl);
           }
 
           close(); // Close the promise
@@ -279,7 +279,7 @@ class RelaySubscription {
   map(options: FeedOption): number {
     let relayIndex = new Map<string, number>();
 
-    let relays = relayManager.enabledRelays();
+    let relays = serverManager.getActiveRelays(options.relays || []);
 
     let state = {
       closed: false,
@@ -320,7 +320,7 @@ class RelaySubscription {
   on(options: FeedOption): number {
     let relayIndex = new Map<string, number>();
 
-    let relays = relayManager.enabledRelays();
+    let relays = serverManager.getActiveRelays(options.relays || []);
 
     let state = {
       closed: false,

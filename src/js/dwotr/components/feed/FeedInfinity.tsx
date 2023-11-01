@@ -4,9 +4,8 @@ import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import EventComponent from '../events/EventComponent';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import { useScrollYPosition } from '@/dwotr/hooks/useScrollPosition';
 
-const BATCH_COUNT = 10; // The number of items to load at once
+const BATCH_COUNT = 20; // The number of items to load at once
 
 export type FeedProps = {
   feedOption?: FeedOption;
@@ -15,7 +14,7 @@ export type FeedProps = {
 };
 
 const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
-  const { containers, status, hasMore, hasNew, loadNext, reset } = useFeedProvider(
+  const { containers, status, hasMore, hasNew, loadMore } = useFeedProvider(
     feedOption,
     BATCH_COUNT,
   );
@@ -24,8 +23,8 @@ const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
     itemCount: containers.length,
     loadMore: () => {
       if (hasMore && status == 'idle') {
-        console.log('FeedInfinity:loadMore');
-        loadNext();
+        console.log('FeedInfinity:loadMore: Status is', status, 'and hasMore:', hasMore, '- loading more...');
+        loadMore();
       }
     },
   });
@@ -36,18 +35,16 @@ const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
     setScope('local'+Date.now()); // Force a new scope to trigger a reload
   }, [items]);
 
-
   return (
     <>
       <div style={{ height: `${topHeight}px` }} />
       {items.map((item) => {
-
         let id = containers[item.index]?.id;
         if (id == undefined) return null;
 
         return (
           <div key={id} data-index={item.index} ref={measureRef} style={{ minHeight: item.height }}>
-            <EventComponent id={id} />
+            <EventComponent id={id} showReplies={feedOption?.showReplies} />
             <hr className="opacity-10 mb-2 mt-2" />
           </div>
         );
@@ -58,12 +55,12 @@ const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
           <div className="loading">🔄</div>
         </div>
       )}
-      {!hasMore && items.length > 0 && 
+      {!hasMore && items.length > 0 && status == 'idle' &&
         <p style={{ textAlign: 'center' }}>
           <b>No more notes</b>
         </p>
       }
-      {!items.length && !hasMore && 
+      {!items.length && !hasMore && status == 'idle' &&
         <p style={{ textAlign: 'center' }}>
           <b>No notes</b>
         </p>
@@ -154,7 +151,9 @@ const useInfiniteScroll = ({
     setTopHeight(newTopHeight); //Can change on every scroll
     setBottomHeight(newBottomHeight);
 
-    if (getItem(itemCount - loadMoreWithin).inView) {
+    let item = getItem(itemCount - loadMoreWithin);
+    if (item.inView && item.height > 100) { // Load more when the item is in view and has a height
+      console.log('useInfiniteScroll:loadMore:ItemCount:', itemCount);
       loadMore();
     }
 
@@ -176,7 +175,6 @@ const useInfiniteScroll = ({
   useEffect(() => {
     const handleScroll = () => {
       requestAnimationFrame(updateVisibleItems);
-      //throttle(updateVisibleItems, 200);
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -232,6 +230,7 @@ const useInfiniteScroll = ({
 
       item.top = node.offsetTop;
 
+      // Handles images, videos, etc that change the height of the item asynchronously
       observer.current?.observe(node);
 
       return () => {

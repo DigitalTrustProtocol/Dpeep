@@ -17,6 +17,7 @@ import followManager from './FollowManager';
 import wotPubSub, { FeedOption } from './network/WOTPubSub';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
+import eventDeletionManager from './EventDeletionManager';
 
 //type OnProfile = (profile: ProfileMemory, state: any) => void;
 
@@ -442,7 +443,6 @@ class ProfileManager {
 
       let profile = this.sanitizeProfile(raw, event.pubkey, isBlocked);
 
-      //Always save the profile to DWoTRDB
       this.save(profile); // Save to DWoTRDB
 
       return this.addProfileToMemory(profile); // Save to memory
@@ -450,6 +450,7 @@ class ProfileManager {
       // Remove the event from IndexedDB if it has an id wich means it was saved there
       if (event.id) {
         storage.profiles.delete(event.id);
+        eventDeletionManager.deleted.add(ID(event.id)); // Don't try to reload this event!
       }
       console.error(e);
       return undefined;
@@ -497,73 +498,6 @@ class ProfileManager {
 
     return true;
   }
-
-  // Get the latest profile
-
-  // subscribeProfile(
-  //   profileId: UID,
-  //   cb: (profile: ProfileMemory) => void,
-  //   kinds = [0],
-  //   delay = 1000,
-  // ) {
-  //   this.callbacks.addListener(profileId, cb);
-
-  //   const handleEvent = (event: Event) => {
-  //     // At this point the profile should be loaded into memory from the event
-  //     let profile = profileManager.getMemoryProfile(profileId);
-
-  //     this.callbacks.dispatch(profileId, profile);
-  //   };
-
-  //   wotPubSub.getAuthorEvent(profileId, kinds, handleEvent, delay); // delay 1 sec
-  // }
-
-  // subscribe(address: string, cb: (e: any) => void): Unsubscribe {
-  //   return () => {};
-  //   const hexPub = Key.toNostrHexAddress(address) as string;
-  //   const id = ID(hexPub);
-
-  //   let subsciptionIndex = this.subscriptions.add(id, cb);
-  //   let profile = this.getMemoryProfile(id);
-
-  //   if (profile.isDefault) {
-  //     // Check if profile is in IndexedDB
-  //     this.loadProfile(hexPub).then((record) => {
-  //       if (record) {
-  //         // exists in DB
-  //         this.subscribeCallback(record, cb);
-  //       } else {
-  //         // Check if profile is in API
-  //         profileManager.fetchProfile(hexPub).then((data) => {
-  //           // TODO verify sig
-  //           if (!data) return;
-
-  //           let eventProfile = this.addProfileEvent(data);
-
-  //           this.subscribeCallback(eventProfile, cb);
-  //         });
-  //       }
-  //     });
-  //   }
-
-  //   // Instantly send the profile to the callback
-  //   this.subscribeCallback(profile, cb);
-
-  //   // If not already subscribed to updates
-  //   if (!this.subscriptions.hasUnsubscribe(id)) {
-  //     // Then subscribe to updates via nostr relays, but only once per address
-  //     let unsub = PubSub.subscribe(
-  //       { kinds: [0], authors: [hexPub] },
-  //       this.subscriptionCallback,
-  //       false,
-  //     );
-  //     this.subscriptions.addUnsubscribe(id, unsub);
-  //   }
-  //   return () => {
-  //     this.subscriptions.remove(id, subsciptionIndex);
-  //   }
-
-  // }
 
   subscribeCallback(profile: ProfileMemory | undefined, cb: (e: any) => void) {
     if (!profile) return;

@@ -10,6 +10,7 @@ class FollowingCursor extends NotesCursor {
     this.kinds.add(1);
     this.authors = followManager.getFollows(this.options.user);
   }
+
 }
 
 export default FollowingCursor;

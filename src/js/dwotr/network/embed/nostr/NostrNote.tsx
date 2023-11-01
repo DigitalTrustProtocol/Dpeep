@@ -8,11 +8,12 @@ const NostrNote: Embed = {
   regex: eventRegex,
   component: ({ match }) => {
     let r = new EmbedData();
-    const hex = Key.toNostrHexAddress(match.replace('@', ''))!;
-
+    const hex = Key.toNostrHexAddress(match.replace('@', '').trim());
+    if (!hex) return r; // Invalid address, ignore
     r.setEvent({ id: hex });
     return r;
   },
 };
+
 
 export default NostrNote;

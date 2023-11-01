@@ -97,6 +97,7 @@ export type FeedOption = {
   relays?: string[];
   includeReposts?: boolean;
   includeReplies?: boolean;
+  showReplies?: number;
   filterFn?: (event: Event) => boolean;
   postFilter?: (container: EventContainer) => boolean;
   onEvent?: OnEvent;

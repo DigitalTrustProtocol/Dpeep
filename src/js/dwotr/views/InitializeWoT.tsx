@@ -14,7 +14,7 @@ import { Event } from 'nostr-tools';
 import { getNostrTime } from '../Utils';
 import zapManager from '../ZapManager';
 import eventDeletionManager from '../EventDeletionManager';
-import relayManager from '../ServerManager';
+import serverManager from '../ServerManager';
 import replyManager from '../ReplyManager';
 import repostManager from '../RepostManager';
 
@@ -39,6 +39,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const loadDB = async () => {
     setState((state: any) => ({ ...state, dbStatus: 'loading' }));
 
+    await serverManager.load(); // Load relay list
     // Filtering events - blocks out unwanted events
     muteManager.load(); // Only me
     await eventDeletionManager.load(); 
@@ -56,7 +57,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
     await zapManager.load();
 
     // System events
-    await relayManager.load();
+    await serverManager.load();
 
     console.log('loadDB done');
 

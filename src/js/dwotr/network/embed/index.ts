@@ -3,6 +3,7 @@ import { EmbedProps } from '@/components/embed';
 import InlineMention from './nostr/InlineMention';
 import NostrNip19 from './nostr/Nip19';
 import NostrNpub from './nostr/NostrNpub';
+import NostrNote from './nostr/NostrNote';
 //import NostrNote from './nostr/NostrNote';
 
 export type EmbedItem = {
@@ -18,11 +19,13 @@ export class EmbedData {
   authors: Map<string, EmbedItem> = new Map<string, EmbedItem>();
   events: Map<string, EmbedItem> = new Map<string, EmbedItem>();
 
-  setEvent(item: EmbedItem) {
+  setEvent(item: EmbedItem, defaultRelay?: string) {
+    if((!item?.relays || item.relays.length == 0) && defaultRelay) item.relays = [defaultRelay];
     this.events.set(item?.id || '', item);
   }
 
-  setAuthor(item: EmbedItem) {
+  setAuthor(item: EmbedItem, defaultRelay?: string) {
+    if((!item?.relays || item.relays.length == 0) && defaultRelay) item.relays = [defaultRelay];
     this.authors.set(item?.author || '', item);
   }
 
@@ -66,7 +69,7 @@ type Embed = {
   settingsKey?: string;
 };
 
-export const NostrEmbeds: Embed[] = [NostrNpub, NostrNip19, InlineMention];
+export const NostrEmbeds: Embed[] = [NostrNote, NostrNpub, NostrNip19, InlineMention];
 
 export const ExstractEmbeds = (text: string, event: Event): EmbedData => {
   let embedData = new EmbedData();

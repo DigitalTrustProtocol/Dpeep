@@ -39,7 +39,7 @@ const KeyConverter: React.FC<RouteProps> = () => {
           </div>
           {key &&
             hex &&
-            (key === hex.toHex() ? (
+            (key === hex.value ? (
               <>
                 <p className="mt-3">
                   <span className="font-bold">note:</span> {note}
@@ -53,7 +53,7 @@ const KeyConverter: React.FC<RouteProps> = () => {
               </>
             ) : (
               <p className="mt-3">
-                <span className="font-bold">hex:</span> {hex.toHex()}
+                <span className="font-bold">hex:</span> {hex.value}
               </p>
             ))}
           {key && !hex && <p className="mt-3 text-red-500 font-bold">Invalid key</p>}

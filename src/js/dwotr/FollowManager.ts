@@ -200,7 +200,13 @@ class FollowManager {
   }
 
   #mergeRelays(relays: Map<string, PublicRelaySettings>) {
+
+
+
     for (const [url, settings] of relays) {
+
+      //serverManager.addActiveRelay(url);
+
       let metadata = this.relays.get(url);
       if (!metadata) {
         metadata = {

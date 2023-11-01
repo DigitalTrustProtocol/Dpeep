@@ -24,20 +24,40 @@ class ServerManager {
 
     logging = false;
 
-
     relays: Map<string, RelayRecord> = new Map();
 
     table = new BulkStorage(storage.relays);
 
     activeRelays: Array<string> = [];
 
-    constructor() {
 
+    getRelayRecord(relay: string) : RelayRecord {
+        let relayData = this.relays.get(relay);
+        if(!relayData) {
+            relayData = new RelayRecord();
+            this.relays.set(relay, relayData);
+        }
+        return relayData;
     }
 
 
+    incrementRefCount(relay: string) {
+        let relayData = this.getRelayRecord(relay);
+        relayData.refCount++;
+        this.save(relayData);
+    }
+
+    incrementEventCount(relay: string) {
+        let relayData = this.getRelayRecord(relay);
+        relayData.eventCount++;
+        this.save(relayData);
+    }
 
 
+    getActiveRelays(extraRelays: string[]) : Array<string> {
+        let relays = Array.from(new Set([...extraRelays || [], ...this.enabledRelays()])).filter((r) => r && r.length > 0);
+        return relays;
+    }
 
 
 
@@ -69,8 +89,17 @@ class ServerManager {
 
 
     async load() : Promise<void> {
-        return Promise.resolve();
+        let records = await this.table.toArray();
+        for(let record of records) {
+            this.relays.set(record.url, record);
+        }
     }
+
+    save(record: RelayRecord) : void
+    {
+        this.table.save(record.url, record); // Save to the database, async in bulk
+    }
+
 
     // #getRelayData(relay: string) : RelayMetadata {
     //     let relayData = this.relays.get(relay);
@@ -82,13 +111,10 @@ class ServerManager {
     // }
     
 
-
-
-
 }
 
-const relayManager = new ServerManager();
-export default relayManager;
+const serverManager = new ServerManager();
+export default serverManager;
 
 
 // urlCount = 0;

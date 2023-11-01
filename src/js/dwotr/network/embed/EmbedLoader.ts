@@ -1,12 +1,12 @@
 import { Event, Filter } from 'nostr-tools';
-import { ID, STR, UID } from '@/utils/UniqueIds';
+import { STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from '../RelaySubscription';
 import { DisplayKinds, MetadataKind } from '../WOTPubSub';
 import { Events } from '../types';
 import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import eventManager from '@/dwotr/EventManager';
 import { EmbedProcessor } from './EmbedProcessor';
-import { EmbedData, EmbedItem } from '.';
+import { EmbedData } from '.';
 
 
 
@@ -29,8 +29,6 @@ export class EmbedLoader {
   async resolve(events: Array<Event>): Promise<void> {
     if (events.length == 0) return;
 
-    if(this.logging)
-      console.log("EmbedLoader:resolve:Loading context for events:", events.length, events);
     // The number of events should not be more than between 10-50, so we can load all context in one go
     if (events.length > 50) throw new Error('Too many events to load context for');
 
@@ -41,12 +39,35 @@ export class EmbedLoader {
       let embeds = this.#processEmbeds(events);
       if (embeds.authors.size == 0 && embeds.events.size == 0) return;
       if(this.logging)
-        console.log("EmbedLoader:resolve:Embeds", embeds);
+        console.log("EmbedLoader:resolve:Found", "-Events", embeds.events.size, "-Authors:", embeds.authors.size, embeds);
 
       events = await this.#load(embeds);
+
+      let notLoaded = this.#notLoaded(events, embeds);
+
       if(this.logging)
-        console.log("EmbedLoader:resolve:Loaded", events);
+        console.log("EmbedLoader:resolve:Loaded", "-New events:", events.length, events, "-Not loaded:", notLoaded.events.size + notLoaded.authors.size, notLoaded);
     }
+  }
+
+  #notLoaded(events: Events, embedData: EmbedData) : EmbedData {
+    let result = new EmbedData();
+
+    let eventIds = new Set(events.map((e) => e.id!) as string[]);
+
+    for(let [key, value] of embedData.events) {
+      if(!eventIds.has(key)) {
+        result.events.set(key, value);
+      }
+    }
+
+    for(let [key, value] of embedData.authors) {
+      if(!eventIds.has(key)) {
+        result.authors.set(key, value);
+      }
+    }
+
+    return result;
   }
 
 
@@ -59,12 +80,11 @@ export class EmbedLoader {
   }
 
   async #load(embeds: EmbedData): Promise<Events> {
-    let result: Events = [];
-    // Loading missing, can generate more items
-    result.concat(await this.#loadEvents(embeds));
-    result.concat(await this.#loadProfiles(embeds));
 
-    return result;
+    let eventsLoaded = await this.#loadEvents(embeds);
+    let profilesLoaded = await this.#loadProfiles(embeds);
+
+    return [...eventsLoaded, ...profilesLoaded];
   }
 
 

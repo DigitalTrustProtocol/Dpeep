@@ -20,6 +20,8 @@ import { FeedOption } from '@/dwotr/network/WOTPubSub.ts';
 import ProfileNotesCursor from '@/dwotr/network/provider/ProfileNotesCursor.ts';
 import { Feed } from '@/dwotr/components/feed/Feed.tsx';
 import { LikesCursor } from '@/dwotr/network/provider/LikesCursor.ts';
+import relaySubscription from '@/dwotr/network/RelaySubscription.ts';
+import { ProfileRelayCursor } from '@/dwotr/network/provider/ProfileRelayCursor.ts';
 
 function getNpub(id: string) {
   if (!id) return Key.getPubKey(); // Default to my profile
@@ -100,6 +102,11 @@ function Profile(props) {
   }, [npub]);
 
   const options = useMemo(() => {
+
+    let id = ID(hexPub);
+    let isSubscribed = relaySubscription.subscribedAuthors.has(id);
+    let myCursor = isSubscribed ? ProfileNotesCursor : ProfileRelayCursor;
+
     return [
       {
         id: 'posts' + hexPub,
@@ -109,7 +116,7 @@ function Profile(props) {
         includeReplies: false,
         includeReposts: true,
         mergeReposts: true,
-        cursor: ProfileNotesCursor,
+        cursor: myCursor,
       } as FeedOption,
       {
         id: 'replies'+hexPub,
@@ -120,7 +127,7 @@ function Profile(props) {
         includeReplies: true,
         includeReposts: true,
         mergeReposts: true,
-        cursor: ProfileNotesCursor,
+        cursor: myCursor,
       } as FeedOption,
       {
         id: 'reactions'+hexPub,

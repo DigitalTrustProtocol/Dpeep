@@ -98,7 +98,7 @@ const Follows: React.FC<Props> = (props) => {
 
   const followAll = () => {
     if (confirm(`${t('follow_all')} (${items.length})?`)) {
-      followManager.follow(items.map((hexKey) => STR(hexKey) as string), true)
+      followManager.follow(items.map((hexKey) => STR(hexKey) as string));
     }
   };
 

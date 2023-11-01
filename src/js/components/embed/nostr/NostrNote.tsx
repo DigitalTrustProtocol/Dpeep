@@ -8,7 +8,7 @@ const eventRegex =
 const NostrUser: Embed = {
   regex: eventRegex,
   component: ({ match }) => {
-    const hex = Key.toNostrHexAddress(match.replace('@', ''))!;
+    const hex = Key.toNostrHexAddress(match.replace('@', '').trim())!;
     return <InLineQuote id={hex} key={hex} />;
   },
 };

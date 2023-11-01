@@ -6,7 +6,6 @@ import Note from './Note';
 import { RepostKind } from '@/dwotr/network/WOTPubSub';
 import { UID } from '@/utils/UniqueIds';
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
-import eventManager from '@/dwotr/EventManager';
 import { useEventContainer } from '@/dwotr/hooks/useEventContainer';
 
 // export type CompnentContext = {

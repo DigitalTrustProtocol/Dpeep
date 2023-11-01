@@ -1,5 +1,5 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import { Event, Filter } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import wotPubSub, { FeedOption, ReactionKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import storage from './Storage';
@@ -16,10 +16,10 @@ import relaySubscription from './network/RelaySubscription';
 
 
 export const isLike = (content: string) =>
-  ['+', '🤙', '👍', '❤️', '😎', '🏅'].includes(content);
+  ['+', '🤙', '👍', '❤️', '😎', '🏅','up','upvote'].includes(content);
 
 export const isDownvote = (content: string) =>
-  ['-', 'downvote'].includes(content);
+  ['-', 'down','downvote'].includes(content);
 
 export class ReactionRecord {
   id: string = '';
