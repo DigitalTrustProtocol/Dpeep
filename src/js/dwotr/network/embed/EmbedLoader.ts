@@ -36,7 +36,7 @@ export class EmbedLoader {
 
     for (let i = 0; i < 3; i++) {
       if(this.logging)
-        console.log("EmbedLoader:resolve:Processing embeds", "Iteration:", i);
+        console.log("EmbedLoader:resolve", "Iteration:", i);
 
       let embeds = this.#processEmbeds(events);
       if (embeds.authors.size == 0 && embeds.events.size == 0) return;
@@ -51,7 +51,7 @@ export class EmbedLoader {
       // Make a visible list somewhere of the items that could not be loaded
 
       if(this.logging)
-        console.log("EmbedLoader:resolve:Loaded", "-New events:", events.length, events, "-Not loaded:", notLoaded.events.size + notLoaded.authors.size, notLoaded);
+        console.log("EmbedLoader:resolve:Loaded", "-New events:", events.length, events, "-Not loaded count:", notLoaded.events.size + notLoaded.authors.size, " -Not Loaded Embeds", notLoaded);
     }
   }
 
@@ -111,7 +111,7 @@ export class EmbedLoader {
 
     await relaySubscription.getEventsByFilter(filter, cb, relays);
 
-    if (this.logging) console.log('ContextLoader:loadEvents:Loading events:', filter, events);
+    //if (this.logging) console.log('ContextLoader:loadEvents:Loading events:', filter, events);
     return events;
   }
 
@@ -131,8 +131,7 @@ export class EmbedLoader {
 
     await relaySubscription.getEventsByFilter(filter, cb, relays);
 
-    if (this.logging)
-      console.log('ContextLoader:loadProfiles:Loading profiles:', filter, events);
+    //if (this.logging) console.log('ContextLoader:loadProfiles:Loading profiles:', filter, events);
 
     return events;
   }

@@ -116,16 +116,19 @@ export class EmbedProcessor extends EmbedData {
 
   #doReply(container: ReplyContainer) {
     if (container?.rootId) {
+      if(eventManager.seen(container.rootId)) return; // Already seen
       this.setEvent(EmbedData.create(STR(container.rootId), undefined, container.relay));
     }
 
     if (container?.repliedTo) {
+      if(eventManager.seen(container.repliedTo)) return; // Already seen
       this.setEvent(EmbedData.create(STR(container.repliedTo), undefined, container.relay));
     }
   }
 
   #doRepost(container: RepostContainer) {
     if (container.repostOf) {
+      if(eventManager.seen(container.repostOf)) return; // Already seen
       this.setEvent(EmbedData.create(STR(container.repostOf), undefined, container.relay));
     }
   }
