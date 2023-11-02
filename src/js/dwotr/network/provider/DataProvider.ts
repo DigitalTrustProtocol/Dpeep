@@ -91,19 +91,19 @@ export class DataProvider {
       const items = await this.fetchItems();
 
       // Failsafe in async senario
-      if (this.status != 'loading') return []; // If the status has changed, then exit and return empty array
+      if (this.status != 'loading') return []; // If the status has changed while fetchItems was going on, then exit and return empty array
 
-      // If there are no new items, then don't do anything
-      if (items.length == 0) return [];
+      if (items.length > 0) {
+        this.buffer = this.buffer.concat(items); // Add the new items to the buffer, creating a new array
+        this.listeners?.onDataLoaded?.(items);
 
-      this.buffer = this.buffer.concat(items); // Add the new items to the buffer, creating a new array
-      this.listeners?.onDataLoaded?.(items);
-
-      let events = items.map((item) => item.event!);
-      await embedLoader.resolve(events);
+        let events = items.map((item) => item.event!);
+        await embedLoader.resolve(events);
+      }
 
       this.setStatus('idle');
       return items;
+
     } catch (error) {
       this.setError(error);
     }

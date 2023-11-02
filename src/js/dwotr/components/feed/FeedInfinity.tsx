@@ -14,12 +14,12 @@ export type FeedProps = {
 };
 
 const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
-  const { containers, status, hasMore, hasNew, loadMore, reset } = useFeedProvider(
+  const { containers, status, hasMore, hasNew, loadMore, reset:resetFeedProvider } = useFeedProvider(
     feedOption,
     BATCH_COUNT,
   );
 
-  const { items, topHeight, bottomHeight, measureRef } = useInfiniteScroll({
+  const { items, topHeight, bottomHeight, measureRef, resetItems:resetInfiniteScroll } = useInfiniteScroll({
     itemCount: containers.length,
     loadMore: () => {
       if (hasMore && status == 'idle') {
@@ -32,9 +32,10 @@ const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
   const loadNew = useCallback((e) => {
     e.preventDefault();
 
-    //setScope('local'+Date.now()); // Force a new scope to trigger a reload
+    // Reset all so we can load the new events on top
     window.scrollTo(window.scrollX, 0);
-    reset();
+    resetInfiniteScroll();
+    resetFeedProvider();
   }, [items]);
 
   return (
@@ -85,6 +86,7 @@ interface UseInfiniteScrollResult {
   topHeight: number;
   bottomHeight: number;
   measureRef: (node: HTMLElement | null) => void;
+  resetItems: () => void;
 }
 
 class Item {
@@ -174,6 +176,11 @@ const useInfiniteScroll = ({
     [updateVisibleItems],
   );
 
+  const resetItems = useCallback(() => {
+    itemMap.current.clear();
+    setItems([]);
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       requestAnimationFrame(updateVisibleItems);
@@ -227,8 +234,8 @@ const useInfiniteScroll = ({
       const { height } = node.getBoundingClientRect();
 
       let item = getItem(Number(index));
-      //if (item.height < height)
-      item.height = height;
+      if (item.height < height)
+        item.height = height;
 
       item.top = node.offsetTop;
 
@@ -248,5 +255,6 @@ const useInfiniteScroll = ({
     topHeight,
     bottomHeight,
     measureRef,
+    resetItems,
   };
 };
