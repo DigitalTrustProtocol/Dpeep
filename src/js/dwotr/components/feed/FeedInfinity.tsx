@@ -14,7 +14,7 @@ export type FeedProps = {
 };
 
 const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
-  const { containers, status, hasMore, hasNew, loadMore } = useFeedProvider(
+  const { containers, status, hasMore, hasNew, loadMore, reset } = useFeedProvider(
     feedOption,
     BATCH_COUNT,
   );
@@ -32,7 +32,9 @@ const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
   const loadNew = useCallback((e) => {
     e.preventDefault();
 
-    setScope('local'+Date.now()); // Force a new scope to trigger a reload
+    //setScope('local'+Date.now()); // Force a new scope to trigger a reload
+    window.scrollTo(window.scrollX, 0);
+    reset();
   }, [items]);
 
   return (

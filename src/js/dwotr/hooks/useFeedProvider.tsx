@@ -72,21 +72,21 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
   }, []);
 
   // Load events in front of the event list
-  // const reset = useCallback((): void => {
-  //   if (!dataProvider.current || !mounted.current) return;
-  //   //if (!dataProvider.current?.hasNew()) return;
+  const reset = useCallback((): void => {
+    if (!dataProvider.current || !mounted.current) return;
+    //if (!dataProvider.current?.hasNew()) return;
 
-  //   dataProvider.current.reset();
-  //   dataProvider.current.preLoad();
-  //   setHasMore(!dataProvider.current?.isDone());
-  //   setHasNew(!!dataProvider.current?.hasNew());
+    dataProvider.current.reset();
+    dataProvider.current.preLoad();
+    setHasMore(!dataProvider.current?.isDone());
+    setHasNew(false); // wait a bit before showing the new events
 
-  //   loadNext();
+    loadMore();
 
-  //   setContainers(dataProvider.current!.getBuffer());
-  // }, []);
+    setContainers(dataProvider.current!.getBuffer());
+  }, []);
 
-  return { containers, status, hasMore, hasNew, batchLoaded: batchLoaded.current, loadMore };
+  return { containers, status, hasMore, hasNew, batchLoaded: batchLoaded.current, loadMore, reset };
 };
 
 export default useFeedProvider;

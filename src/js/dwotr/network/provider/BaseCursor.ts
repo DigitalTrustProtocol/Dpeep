@@ -35,8 +35,8 @@ export class BaseCursor<T> implements Cursor<T> {
     return [];
   }
 
-  async next(): Promise<T | null> {
-    return null;
+  async next(): Promise<T | undefined> {
+    return undefined;
   }
 
   reset() {

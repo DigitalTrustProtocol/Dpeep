@@ -31,9 +31,9 @@ export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
   }
 
 
-  async next(): Promise<T | null> {
+  async next(): Promise<T | undefined> {
 
-    if(this.done) return null;
+    if(this.done) return;
 
     if(this.buffer.length)
       return this.buffer.shift() as T;

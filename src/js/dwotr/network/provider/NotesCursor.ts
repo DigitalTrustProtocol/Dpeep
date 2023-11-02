@@ -1,14 +1,20 @@
 import { Event } from 'nostr-tools';
-import { NoteContainer } from '@/dwotr/model/ContainerTypes';
+import { NoteContainer, ResolvedContainer } from '@/dwotr/model/ContainerTypes';
 import { FeedOption, RepostKind } from '../WOTPubSub';
 import noteManager from '@/dwotr/NoteManager';
-import { ID, UID } from '@/utils/UniqueIds';
+import { UID } from '@/utils/UniqueIds';
 import eventManager from '@/dwotr/EventManager';
 import { BaseCursor } from './BaseCursor';
+import embedLoader from '../embed/EmbedLoader';
+import { get } from 'lodash';
+import { getNostrTime } from '@/dwotr/Utils';
 
 export class NotesCursor extends BaseCursor<NoteContainer> {
-  
+  newItems: NoteContainer[] = [];
+  preItems: NoteContainer[] = [];
   notePointer: IterableIterator<Event>; // Pointer to the current value in the notes map
+  resolving = false;
+  resolveTimer: any = undefined;
 
   authors = new Set<UID>();
   kinds = new Set<number>();
@@ -16,9 +22,8 @@ export class NotesCursor extends BaseCursor<NoteContainer> {
   constructor(opt: FeedOption) {
     super(opt);
     this.notePointer = noteManager.notes.values(); // Get an iterator to the notes map
-    if(opt.includeReposts) this.kinds.add(RepostKind); // Include reposts
+    if (opt.includeReposts) this.kinds.add(RepostKind); // Include reposts
   }
-
 
   eventHandler(event: Event) {
     let container = eventManager.getContainerByEvent(event) as NoteContainer;
@@ -27,40 +32,76 @@ export class NotesCursor extends BaseCursor<NoteContainer> {
 
     if (!this.include(container, Number.MAX_SAFE_INTEGER)) return; // Skip events that don't match the filterFn, undefined means match
 
-    this.newDataCount++;
+    this.newItems.push(container);
   }
 
+  #resolve = () => {
+    if (this.resolving) return;
+    this.resolving = true;
+
+    let resolveList = (this.newItems as ResolvedContainer[]).filter((item) => !item.resolved).slice(0, 100); // Resolve the first 100 items
+    let events = resolveList.map((item) => item.event!);
+
+    embedLoader.resolve(events).finally(() => {
+    
+      resolveList.forEach((item) => item.resolved = true);
+
+      this.newDataCount += resolveList.length;
+      this.resolving = false;
+    });
+  }
+
+  hasNew(): boolean {
+    return !!this.newDataCount;
+  }
+
+
   mount() {
+    // Listen to new events
     noteManager.onEvent.addGenericListener(this.eventHandler.bind(this));
+    // Resolve new events every second
+    this.resolveTimer = setInterval(this.#resolve, 1000);
   }
 
   unmount() {
     noteManager.onEvent.removeGenericListener(this.eventHandler.bind(this));
+    clearInterval(this.resolveTimer);
   }
 
-  async next(): Promise<NoteContainer | null> {
+  preLoad(): NoteContainer[] {
+    return [];
+  }
 
-    if (this.done) return null;
-    
-    while(true) {
-      let note = this.notePointer.next().value as Event;
-      if (!note) {
-        // If the iterator is done, we're done
-        this.done = true;
-        break;
+  async next(): Promise<NoteContainer | undefined> {
+    let container: NoteContainer | undefined = undefined;
+
+    // Watch out for infinite loops
+    while (!this.done && !container) {
+      container = this.preItems.shift(); // If there are new items, return them first
+
+      if (!container) {
+        let event = this.notePointer.next().value as Event;
+        if (!event) {
+          // If the event is undefined, then we're done
+          this.done = true;
+          break;
+        }
+
+        container = eventManager.getContainerByEvent(event) as NoteContainer;
+        if (!container) continue; // Skip if the container is undefined as the event is not parse able
       }
-      let container = eventManager.getContainerByEvent(note) as NoteContainer;
-      if(!container) continue;
 
-      if(!this.include(container)) continue;
-      return container;
+      if (!this.include(container!)) continue;
     }
-    return null;
+    return container;
   }
 
   reset() {
-    super.reset();
-    this.notePointer = noteManager.notes.values(); // Get an iterator to the notes map
+    super.reset(); // Reset the base class including until and since
+    this.notePointer = noteManager.notes.values(); // Get an new iterator to the notes map
+    this.preItems = (this.newItems as ResolvedContainer[]).filter((item) => item.resolved);
+    this.newItems = [];
+    this.newDataCount = 0;
   }
 
   include(container: NoteContainer, until = this.until): boolean {

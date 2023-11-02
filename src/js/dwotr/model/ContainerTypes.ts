@@ -24,6 +24,11 @@ export type NoteContainer = EventContainer & {
   subtype?: number;
 }
 
+export type ResolvedContainer = EventContainer & {
+  resolved?: boolean;
+}
+
+
 export type ReplyContainer = NoteContainer & {
   rootId?: UID;
   rootRelay?: string;

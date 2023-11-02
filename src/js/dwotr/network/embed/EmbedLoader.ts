@@ -26,11 +26,13 @@ export class EmbedLoader {
   // Reposts
   // Zaps
 
+
+
   async resolve(events: Array<Event>): Promise<void> {
     if (events.length == 0) return;
 
     // The number of events should not be more than between 10-50, so we can load all context in one go
-    if (events.length > 50) throw new Error('Too many events to load context for');
+    //if (events.length > 100) throw new Error('Too many events to load context for');
 
     for (let i = 0; i < 3; i++) {
       if(this.logging)
@@ -44,12 +46,16 @@ export class EmbedLoader {
       events = await this.#load(embeds);
 
       let notLoaded = this.#notLoaded(events, embeds);
+      // Store the not loaded items in the embeds object, so we can try to load them again later?!?
+      // Maybe show a warning to the user that some items could not be loaded
+      // Make a visible list somewhere of the items that could not be loaded
 
       if(this.logging)
         console.log("EmbedLoader:resolve:Loaded", "-New events:", events.length, events, "-Not loaded:", notLoaded.events.size + notLoaded.authors.size, notLoaded);
     }
   }
 
+  // Returns a new EmbedData object with only the items that were not loaded, because they were not found on the relays or timed out
   #notLoaded(events: Events, embedData: EmbedData) : EmbedData {
     let result = new EmbedData();
 

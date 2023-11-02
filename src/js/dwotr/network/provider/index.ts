@@ -3,7 +3,7 @@ export type ProviderStatus = 'idle' | 'loading' | 'waiting' | 'error';
 export interface Cursor<T> {
   isDone(): boolean;
   hasNew(): boolean;
-  next(): Promise<T | null>;
+  next(): Promise<T | undefined>;
   reset(): void;
   mount(): void;
   unmount(): void;
