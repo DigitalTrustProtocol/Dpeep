@@ -162,12 +162,15 @@ export class NoteManager {
           reply.repliedTo = ID(tag[1]);
           reply.subtype = NoteSubtype.Reply; // Reply subtype = 2
         }
-        if (tag[3] === '') {
+        if (!tag[3]) {
+          if(reply.repliedTo) 
+            reply.rootId = reply.repliedTo;
+
           reply.repliedTo = ID(tag[1]);
           reply.subtype = NoteSubtype.Reply; // Reply subtype = 2
         }
 
-        if (tag[3] == 'mention' && isRepost(event)) {
+        if (tag[3] == 'mention' && reply.subtype == NoteSubtype.Note) {
           repost.repostOf = ID(tag[1]);
           repost.subtype = NoteSubtype.Repost; // Repost subtype = 3
         }

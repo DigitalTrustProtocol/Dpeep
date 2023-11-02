@@ -13,7 +13,9 @@ export type FeedProps = {
   children?: any;
 };
 
-const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
+const FeedInfinity = ({ feedOption }: FeedProps) => {
+  const [loadMoreRequest, setLoadMoreRequest] = useState<boolean>(false);
+
   const { containers, status, hasMore, hasNew, loadMore, reset:resetFeedProvider } = useFeedProvider(
     feedOption,
     BATCH_COUNT,
@@ -21,13 +23,18 @@ const FeedInfinity = ({ feedOption, setScope }: FeedProps) => {
 
   const { items, topHeight, bottomHeight, measureRef, resetItems:resetInfiniteScroll } = useInfiniteScroll({
     itemCount: containers.length,
-    loadMore: () => {
-      if (hasMore && status == 'idle') {
-        console.log('FeedInfinity:loadMore: Status is', status, 'and hasMore:', hasMore, '- loading more...');
-        loadMore();
-      }
-    },
+    loadMore: () => setLoadMoreRequest(true),
   });
+
+  useEffect(() => {
+    if(!loadMoreRequest) return; // No request to load more
+    if(!hasMore) return; // No more items to load
+    if(status != 'idle') return; // Already loading, or something else
+
+    setLoadMoreRequest(false); // Reset the request
+    loadMore(); // Load more items
+
+  }, [loadMoreRequest, status, hasMore]);
 
   const loadNew = useCallback((e) => {
     e.preventDefault();
