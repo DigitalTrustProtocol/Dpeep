@@ -49,7 +49,7 @@ const useReplies = (eventId: UID) => {
         setReplies(new Set(replyManager.replies.get(eventId)));
       },
       1000,
-      { leading: true, trailing: false },
+      { leading: true, trailing: true },
     );
 
     onUpdated(); // Set initial Replies count.

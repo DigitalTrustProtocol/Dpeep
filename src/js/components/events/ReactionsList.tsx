@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useEffect, useState } from 'preact/hooks';
-import { nip19, Event } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 import { Link } from 'preact-router';
 
 import Modal from '../modal/Modal';
@@ -24,6 +24,7 @@ type ReactionsListProps = {
   eventId: UID;
   eventAuthor: string;
   wot?: any;
+  loadGlobal?: boolean;
 };
 
 const Reaction = ({ data }: { data: ReactionData }) => {

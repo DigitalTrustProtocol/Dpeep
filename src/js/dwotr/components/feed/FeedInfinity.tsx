@@ -227,8 +227,8 @@ const useInfiniteScroll = ({
       const { height } = node.getBoundingClientRect();
 
       let item = getItem(Number(index));
-      if (item.height < height)
-        item.height = height;
+      //if (item.height < height)
+      item.height = height;
 
       item.top = node.offsetTop;
 

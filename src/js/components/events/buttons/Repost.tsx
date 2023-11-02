@@ -64,7 +64,7 @@ export const useReposts = (eventId: UID, myId: UID, loadGlobal: boolean) => {
         setSelected(repostManager.index.get(myId)?.has(eventId) || false);
       },
       1000,
-      { leading: true, trailing: false },
+      { leading: true, trailing: true },
     );
 
     onUpdated(); // Set initial Replies count.

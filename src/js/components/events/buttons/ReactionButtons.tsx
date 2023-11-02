@@ -33,6 +33,7 @@ const ReactionButtons = ({ event, standalone, wot }: Props) => {
           eventId={eventId}
           eventAuthor={event.pubkey}
           wot={wot}
+          loadGlobal={loadGlobal} // Rerender on loadGlobal change
         />
       }
       <div className="flex">

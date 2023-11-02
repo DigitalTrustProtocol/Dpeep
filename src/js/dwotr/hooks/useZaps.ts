@@ -29,7 +29,7 @@ export const useZaps = (eventId: UID, loadGlobal: boolean) => {
         setZappedByMe(zap.zappedByMe);
         setZapAmountByUser(zap.amountPerUser);
         setFormattedZapAmount(zap.amount > 0 ? formatAmount(zap.amount) : '');
-      }, 1000, { leading: true, trailing: false });
+      }, 1000, { leading: true, trailing: true });
   
       onEvent(); // Set initial zaps
       zapManager.onEvent.addListener(eventId, onEvent);

@@ -66,7 +66,7 @@ export const useLikes = (eventId: UID, eventAuthor: string, loadGlobal: boolean)
       if (!isMounted()) return;
       const likes = reactionManager.getLikes(eventId);
       setLikes(new Set(likes)); // Update likes state with new likes set
-    }, 500, { leading: true, trailing: false });
+    }, 500, { leading: true, trailing: true });
 
     // Set initial likes
     setLikesThrottle();

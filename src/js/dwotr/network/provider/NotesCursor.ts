@@ -6,8 +6,6 @@ import { UID } from '@/utils/UniqueIds';
 import eventManager from '@/dwotr/EventManager';
 import { BaseCursor } from './BaseCursor';
 import embedLoader from '../embed/EmbedLoader';
-import { get } from 'lodash';
-import { getNostrTime } from '@/dwotr/Utils';
 
 export class NotesCursor extends BaseCursor<NoteContainer> {
   newItems: NoteContainer[] = [];
@@ -76,23 +74,24 @@ export class NotesCursor extends BaseCursor<NoteContainer> {
     let container: NoteContainer | undefined = undefined;
 
     // Watch out for infinite loops
-    while (!this.done && !container) {
+    while(!this.done) {
       container = this.preItems.shift(); // If there are new items, return them first
 
       if (!container) {
-        let event = this.notePointer.next().value as Event;
-        if (!event) {
-          // If the event is undefined, then we're done
+
+        let { value, done } = this.notePointer.next(); // If the notePointer is done, then we're done
+        if(done) {
           this.done = true;
           break;
         }
 
-        container = eventManager.getContainerByEvent(event) as NoteContainer;
-        if (!container) continue; // Skip if the container is undefined as the event is not parse able
+        container = eventManager.getContainerByEvent(value) as NoteContainer;
+        if (!container) continue; // Skip if the container is undefined as the event is not parseable
       }
 
-      if (!this.include(container!)) continue;
-    }
+      if (this.include(container)) break; // If the container is included, then break the loop
+    } 
+
     return container;
   }
 
