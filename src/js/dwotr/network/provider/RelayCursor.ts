@@ -45,7 +45,7 @@ export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
   }
 
 
-  async load(timeOut: number = 1000): Promise<number> {
+  async load(timeOut: number = 10000): Promise<number> {
     // If we're already loading, or we have enough buffered, do nothing
     if (this.done) {
       return 0;

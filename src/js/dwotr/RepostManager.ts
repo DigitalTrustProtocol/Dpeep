@@ -58,7 +58,7 @@ class RepostManager {
     
     this.metrics.RelayEvents++;
 
-    let container = this.parse(event) as RepostContainer;
+    let container = this.parse(event, url) as RepostContainer;
 
     this.handleContainer(container);
 

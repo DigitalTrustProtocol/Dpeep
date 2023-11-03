@@ -1,5 +1,5 @@
 import { ID, UID } from '@/utils/UniqueIds';
-import { Event, validateEvent, verifySignature } from 'nostr-tools';
+import { Event, verifySignature } from 'nostr-tools';
 import { EdgeRecord, EntityType } from './model/Graph';
 import graphNetwork from './GraphNetwork';
 import {
@@ -10,6 +10,7 @@ import {
   MetadataKind,
   MuteKind,
   ReactionKind,
+  RecommendRelayKind,
   RepostKind,
   Trust1Kind,
   ZapKind,
@@ -27,6 +28,7 @@ import EventDeletionManager from './EventDeletionManager';
 import repostManager from './RepostManager';
 import { EventContainer } from './model/ContainerTypes';
 import serverManager from './ServerManager';
+import recommendRelayManager from './RecommendRelayManager';
 
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
@@ -91,10 +93,6 @@ class EventManager {
 
     return container;
   }
-
-  // addContainer(container: EventContainer) {
-  //   this.containers.set(container.id, container);
-  // }
 
   createTrustEvent(
     entityPubkey: string,
@@ -235,6 +233,10 @@ class EventManager {
     switch (event.kind) {
       case MetadataKind:
         profileManager.handle(event, url);
+        break;
+
+      case RecommendRelayKind:
+        recommendRelayManager.handle(event, url);
         break;
 
       case RepostKind:

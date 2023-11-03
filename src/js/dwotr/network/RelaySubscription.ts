@@ -201,7 +201,7 @@ class RelaySubscription {
         () => {
           if (this.logging)
             console.log(
-              'RelaySubscription:Once:Debounced(3sec timout)',
+              'RelaySubscription:Once:Debounced(timout)',
               ' - Relays: ',
               relays.length,
               ' - Slow Relays:',
@@ -218,7 +218,7 @@ class RelaySubscription {
 
           close(); // Close the promise
         },
-        3000,
+        timeOut,
         { leading: false, trailing: true },
       );
 

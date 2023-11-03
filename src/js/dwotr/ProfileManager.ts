@@ -18,6 +18,7 @@ import wotPubSub, { FeedOption } from './network/WOTPubSub';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
 import eventDeletionManager from './EventDeletionManager';
+import { BulkStorage } from './network/BulkStorage';
 
 //type OnProfile = (profile: ProfileMemory, state: any) => void;
 
@@ -34,7 +35,9 @@ class ProfileManager {
   
   // Controls the callbacks for when a profile is updated
   onEvent: EventCallbacks = new EventCallbacks();
- 
+
+  table = new BulkStorage(storage.profiles);
+
 
   metrics = {
     TableCount: 0,
@@ -43,30 +46,14 @@ class ProfileManager {
     Saved: 0,
   };
 
-  //--------------------------------------------------------------------------------
-  // Saves profile(s) to IndexedDB
-  //--------------------------------------------------------------------------------
-  saveBulk = throttle(() => {
-    if (this.#saving) {
-      this.saveBulk(); // try again later
-      return;
-    }
 
-    this.#saving = true;
-
-    const queue = [...this.#saveQueue.values()];
-    this.#saveQueue = new Map<number, ProfileRecord>();
-
-    this.metrics.Saved += queue.length;
-
-    storage.profiles.bulkPut(queue).finally(() => {
-      this.#saving = false;
-    });
-  }, 500);
 
   async init() {
     this.loaded = true;
   }
+
+  // ---------------------------------------------------------------------------------------------
+
 
   //--------------------------------------------------------------------------------
   // Mapping profiles from relay server
@@ -307,8 +294,7 @@ class ProfileManager {
 
   save(profile: ProfileMemory) {
     if (profile?.isDefault || profile?.isDefault == undefined) return; // don't save default profiles
-    this.#saveQueue.set(profile.id, profile);
-    this.saveBulk(); // Save to IndexedDB in bulk by throttling
+    this.table.save(profile.id, profile); // Save to IndexedDB in bulk by throttling
   }
 
   async loadAllProfiles() {
@@ -479,12 +465,12 @@ class ProfileManager {
 
   callbacks = new EventCallbacks();
 
-  subscribeMyself() {
+  subscribeMyself(since?: number, until?: number ) {
     const myPub = Key.getPubKey();
     this.mapProfiles([ID(myPub)]);
-    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735] }]); // mentions, reactions, DMs
-    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4] }]); // dms for us
-    wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4] }]); // dms by us
+    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735], since, until }]); // mentions, reactions, DMs
+    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4], since, until }]); // dms for us
+    wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4], since, until }]); // dms by us
     //Events.subscribeGroups();
   }
 

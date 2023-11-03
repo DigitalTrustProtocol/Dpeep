@@ -78,9 +78,9 @@ const InitializeWoT = (props: InitializeWoTProps) => {
       );
     else console.log('No notes loaded from Database');
 
-    await profileManager.subscribeMyselfOnce(since);
-    await followManager.subscribeFollowsOnce(since);
-    await graphNetwork.subscribeOnce(since);
+    // await profileManager.subscribeMyselfOnce(since);
+    // await followManager.subscribeFollowsOnce(since);
+    // await graphNetwork.subscribeOnce(since);
 
     console.log('loadNetwork done');
     //await graphNetwork.load();
