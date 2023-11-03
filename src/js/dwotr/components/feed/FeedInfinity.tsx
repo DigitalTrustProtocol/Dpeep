@@ -110,18 +110,11 @@ interface UseInfiniteScrollResult {
 
 class Item {
   index: number;
-  height: number = 0;
-  width: number = 0;
-  top: number = 0; // 0 means not measured yet
-  bottom: number = 0;
+  height: number = 0; // 0 means not measured yet
+  top: number = 0;
   inView: boolean = false;
   constructor(index: number) {
     this.index = index;
-  }
-
-  setTop(top: number) {
-    this.top = top;
-    this.bottom = top + this.height;
   }
 }
 
@@ -141,7 +134,7 @@ const useInfiniteScroll = ({
   const updateVisibleItems = useCallback(() => {
     const viewportTop = window.scrollY || document.documentElement.scrollTop;
     const viewportBottom = viewportTop + window.screen.height;
-   
+
     let newTopHeight = 0;
     let newBottomHeight = 0;
     let inViewItems: Item[] = [];
@@ -161,31 +154,31 @@ const useInfiniteScroll = ({
       let isInView = item.inView; // Save the previous inView state of the item
       item.inView = false;
 
-      if(item.height == 0) {
-        inViewItems.push(item);  // Add the item to the list so it can be measured
+      if (item.height == 0) {
+        inViewItems.push(item); // Add the item to the list so it can be measured
         inViewItemsChanged = true;
         newItems = true;
-        continue; 
+        continue;
       }
 
       if (itemBottom < viewportTop) {
         newTopHeight += item.height;
         continue;
-      } 
+      }
 
       item.inView = item.top <= viewportBottom;
       inViewItemsChanged = inViewItemsChanged || isInView !== item.inView;
 
-      if (!item.inView) { // && overflowCountdown-- < 0 Optimization: render overflow items for better scroll experience
+      if (!item.inView) {
+        // && overflowCountdown-- < 0 Optimization: render overflow items for better scroll experience
         newBottomHeight += item.height;
         continue;
-      } 
-      
+      }
+
       // Finally add the item to the list
       inViewItems.push(item);
     }
 
-    let lastItem = getItem(itemCount - 1);
 
     if (inViewItemsChanged) {
       setItems(inViewItems);
@@ -198,11 +191,13 @@ const useInfiniteScroll = ({
       return; // No items in view, exit method
     }
 
-    if(lastItem.inView && !newItems)  {
+    let itemIndex = itemCount > loadMoreWithin ? itemCount - loadMoreWithin: itemCount;
+    let lastItem = getItem(itemIndex - 1);
+
+    if (lastItem.inView && !newItems) {
       loadMore();
     }
   }, [itemCount, loadMore, loadMoreWithin]);
-
 
   const getItem = useCallback(
     (index: number, height = 0): Item => {
@@ -226,7 +221,6 @@ const useInfiniteScroll = ({
   useEffect(() => {
     const handleScroll = () => {
       requestAnimationFrame(updateVisibleItems);
-      //throttle(updateVisibleItems, 100, { leading: false, trailing: true })(); // Throttle to 10fps
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -255,9 +249,7 @@ const useInfiniteScroll = ({
         if (item.height < height) {
           item.top = node.offsetTop;
           item.height = height;
-          item.bottom = item.top + item.height;
-        } 
-
+        }
       }
     });
 
@@ -278,14 +270,13 @@ const useInfiniteScroll = ({
       if (item.height < height) {
         item.top = node.offsetTop;
         item.height = height;
-        item.bottom = item.top + item.height;
-      } 
+      }
 
       // Handles images, videos, etc that change the height of the item asynchronously
       observer.current?.observe(node);
 
       return () => {
-        if (node == null) return;
+        if (!node) return;
         observer.current?.unobserve(node);
       };
     },
