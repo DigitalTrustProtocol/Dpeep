@@ -4,9 +4,9 @@ import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import EventComponent from '../events/EventComponent';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import { throttle } from 'lodash';
+import { last, throttle } from 'lodash';
 
-const BATCH_COUNT = 20; // The number of items to load at once
+const BATCH_COUNT = 10; // The number of items to load at once
 
 export type FeedProps = {
   feedOption?: FeedOption;
@@ -113,7 +113,7 @@ class Item {
   index: number;
   height: number = 0;
   width: number = 0;
-  top: number = 0;
+  top: number = 0; // 0 means not measured yet
   bottom: number = 0;
   inView: boolean = false;
   constructor(index: number) {
@@ -141,48 +141,82 @@ const useInfiniteScroll = ({
 
   const updateVisibleItems = useCallback(() => {
     const viewportTop = window.scrollY || document.documentElement.scrollTop;
-    const viewportBottom = viewportTop + window.innerHeight;
+    const viewportBottom = viewportTop + window.screen.height;
 
     // Optimization: Only update if the "virtual" itemViewPort has changed do the to the scroll
     // Check if the screen viewport is within the item viewport, if so don't update
-    if (viewportTop >= itemViewPort.current.top && viewportBottom <= itemViewPort.current.bottom) {
-      // Check for loadMore when the viewport is within the item viewport
-      checkForLoadMore();
-
-      return;
-    }
-
+    // if (viewportTop >= itemViewPort.current.top && viewportBottom <= itemViewPort.current.bottom) {
+    //   // Check for loadMore when the viewport is within the item viewport
+    //   ///checkForLoadMore();
+      
+    //   return;
+    // }
+    //console.log("ViewPoirTop: ", viewportTop, " ViewPortBottom: ", viewportBottom);
+    
     let newTopHeight = 0;
     let newBottomHeight = 0;
     let inViewItems: Item[] = [];
-    let itemTop = 0;
-    let itemBottom = 0;
+
+    let itemTop = 82;
+
+    let newItems = false;
     let inViewItemsChanged = false;
     let overflowCountdown = 5; // Optimization: render overflow items for better scroll experience
+
+    //console.time('updateVisibleItems item loop: ' + itemCount + ' items');
+    console.log('updateVisibleItems item loop: ' + itemCount + ' items');
 
     for (let index = 0; index < itemCount; index++) {
       const item = getItem(index);
 
-      itemBottom += item.top + item.height;
 
-      let isInView = false;
+      //console.log('itemBottom: ' + itemBottom + ' viewportTop: ' + viewportTop, ' inView: ', item.inView);
 
-      if (itemBottom < viewportTop) newTopHeight += item.height;
-      else {
-        isInView = itemTop <= viewportBottom;
+      let isInView = item.inView;
+      item.inView = false;
 
-        if (!isInView && overflowCountdown-- < 0) newBottomHeight += item.height;
-        else inViewItems.push(item);
+      if(item.height == 0) {
+        inViewItems.push(item);  // Add the item to the list so it can be measured
+        inViewItemsChanged = true;
+        newItems = true;
+        continue; 
       }
 
-      if (item.inView !== isInView) inViewItemsChanged = true;
-      item.inView = isInView;
+      let itemBottom = itemTop + item.height;
+      if (itemBottom < viewportTop) {
+        newTopHeight += item.height;
+        itemTop += item.height;
+        continue;
+      } 
 
+      item.inView = itemTop <= viewportBottom;
+      inViewItemsChanged = inViewItemsChanged || isInView !== item.inView;
+
+
+      if (!item.inView) { // && overflowCountdown-- < 0 Optimization: render overflow items for better scroll experience
+        newBottomHeight += item.height;
+        itemTop += item.height;
+        continue;
+      } 
+      
+      // Finally add the item to the list
+      inViewItems.push(item);
       itemTop += item.height;
+
+      //if (item.inView !== isInView) inViewItemsChanged = true;
+      //item.inView = isInView;
+
     }
+    let lastItem = getItem(itemCount - 1);
+
+    //console.timeEnd('updateVisibleItems item loop: ' + itemCount + ' items');
+    //console.log("inViewItemsChanged: ", inViewItemsChanged, ' TopDiv:', newTopHeight, ' BottomDiv:', newBottomHeight, ' -lastItem in View', lastItem.inView, ' lastItem top', itemTop - lastItem.height);
 
     // Only update if changed, expensive to update UI
-    if (inViewItemsChanged) setItems(inViewItems);
+    //if (inViewItemsChanged) {
+      setItems(inViewItems);
+//      console.log('updateVisibleItems full render');
+    //}
 
     // Update the heights of the empty div space above and below the items
     setTopHeight(newTopHeight); //Can change on every scroll
@@ -195,19 +229,23 @@ const useInfiniteScroll = ({
     }
 
     // Update the "virtual" item viewport
-    itemViewPort.current.top = inViewItems[0]?.top || 0;
-    itemViewPort.current.bottom = inViewItems[inViewItems.length - 1]?.bottom || 0;
+    //itemViewPort.current.top = inViewItems[0]?.top || 0;
+    //let lastItem = inViewItems[inViewItems.length - 1];
+    //itemViewPort.current.bottom = lastItem?.top || 0; // Use top of last item as the bottom of the viewport, force a loadMore when the last item is in view
 
-    checkForLoadMore();
-  }, [itemCount, loadMore, loadMoreWithin]);
-
-  const checkForLoadMore = useCallback(() => {
-    let item = getItem(itemCount - (loadMoreWithin + 1));
-    if (item.inView && item.height > 100) {
-      // Load more when the item is in view and has a height
+    if(lastItem.inView && !newItems)  {
+      console.log('loadMore');
       loadMore();
     }
   }, [itemCount, loadMore, loadMoreWithin]);
+
+  // const checkForLoadMore = useCallback(() => {
+  //   let item = getItem(itemCount - (loadMoreWithin + 1));
+  //   if (item.inView && item.height > 100) {
+  //     // Load more when the item is in view and has a height
+    
+  //   }
+  // }, [itemCount, loadMore, loadMoreWithin]);
 
   const getItem = useCallback(
     (index: number, height = 0): Item => {
@@ -230,8 +268,8 @@ const useInfiniteScroll = ({
 
   useEffect(() => {
     const handleScroll = () => {
-      //requestAnimationFrame(updateVisibleItems);
-      throttle(updateVisibleItems, 100, { leading: false, trailing: true })(); // Throttle to 10fps
+      requestAnimationFrame(updateVisibleItems);
+      //throttle(updateVisibleItems, 100, { leading: false, trailing: true })(); // Throttle to 10fps
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -260,6 +298,7 @@ const useInfiniteScroll = ({
         if (item.height < height) item.height = height;
 
         item.top = node.offsetTop;
+        item.bottom = item.top + item.height;
       }
     });
 
@@ -280,6 +319,7 @@ const useInfiniteScroll = ({
       if (item.height < height) item.height = height;
 
       item.top = node.offsetTop;
+      item.bottom = item.top + item.height;
 
       // Handles images, videos, etc that change the height of the item asynchronously
       observer.current?.observe(node);
