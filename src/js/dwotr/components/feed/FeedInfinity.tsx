@@ -4,7 +4,6 @@ import { FeedOption } from '@/dwotr/network/WOTPubSub';
 import EventComponent from '../events/EventComponent';
 import useFeedProvider from '@/dwotr/hooks/useFeedProvider';
 import ShowNewEvents from '@/components/feed/ShowNewEvents';
-import { last, throttle } from 'lodash';
 
 const BATCH_COUNT = 10; // The number of items to load at once
 
@@ -142,38 +141,24 @@ const useInfiniteScroll = ({
   const updateVisibleItems = useCallback(() => {
     const viewportTop = window.scrollY || document.documentElement.scrollTop;
     const viewportBottom = viewportTop + window.screen.height;
-
-    // Optimization: Only update if the "virtual" itemViewPort has changed do the to the scroll
-    // Check if the screen viewport is within the item viewport, if so don't update
-    // if (viewportTop >= itemViewPort.current.top && viewportBottom <= itemViewPort.current.bottom) {
-    //   // Check for loadMore when the viewport is within the item viewport
-    //   ///checkForLoadMore();
-      
-    //   return;
-    // }
-    //console.log("ViewPoirTop: ", viewportTop, " ViewPortBottom: ", viewportBottom);
-    
+   
     let newTopHeight = 0;
     let newBottomHeight = 0;
     let inViewItems: Item[] = [];
 
     let firstItem = getItem(0);
-    let itemTop = 0;
-    let itemBottom = firstItem.top; // Start at the top of the first item on the screen
+    let itemBottom = firstItem.top; // Start at the top of the first item on the screen, from the previous item (virtual)
 
     let newItems = false;
     let inViewItemsChanged = false;
-    let overflowCountdown = 5; // Optimization: render overflow items for better scroll experience
-
-    //console.time('updateVisibleItems item loop: ' + itemCount + ' items');
-    console.log('updateVisibleItems item loop: ' + itemCount + ' items');
 
     for (let index = 0; index < itemCount; index++) {
       const item = getItem(index);
 
-      itemTop = itemBottom; // Set the top of the item to the bottom of the previous item
+      item.top = itemBottom; // Set the top of the item to the bottom of the previous item
+      itemBottom += item.height; // Set the bottom of the current item
 
-      let isInView = item.inView;
+      let isInView = item.inView; // Save the previous inView state of the item
       item.inView = false;
 
       if(item.height == 0) {
@@ -183,19 +168,16 @@ const useInfiniteScroll = ({
         continue; 
       }
 
-      itemBottom += item.height;
-
       if (itemBottom < viewportTop) {
         newTopHeight += item.height;
         continue;
       } 
 
-      item.inView = itemTop <= viewportBottom;
+      item.inView = item.top <= viewportBottom;
       inViewItemsChanged = inViewItemsChanged || isInView !== item.inView;
 
       if (!item.inView) { // && overflowCountdown-- < 0 Optimization: render overflow items for better scroll experience
         newBottomHeight += item.height;
-        //itemTop += item.height;
         continue;
       } 
       
@@ -205,43 +187,22 @@ const useInfiniteScroll = ({
 
     let lastItem = getItem(itemCount - 1);
 
-    //console.timeEnd('updateVisibleItems item loop: ' + itemCount + ' items');
-    //console.log("inViewItemsChanged: ", inViewItemsChanged, ' TopDiv:', newTopHeight, ' BottomDiv:', newBottomHeight, ' -lastItem in View', lastItem.inView, ' lastItem top', itemTop - lastItem.height);
-
-    // Only update if changed, expensive to update UI
-    //if (inViewItemsChanged) {
+    if (inViewItemsChanged) {
       setItems(inViewItems);
-//      console.log('updateVisibleItems full render');
-    //}
-
-    // Update the heights of the empty div space above and below the items
-    setTopHeight(newTopHeight); //Can change on every scroll
-    setBottomHeight(newBottomHeight);
+      // Update the heights of the empty div space above and below the items
+      setTopHeight(newTopHeight); //Can change on every scroll
+      setBottomHeight(newBottomHeight);
+    }
 
     if (inViewItems.length == 0) {
-      itemViewPort.current.top = 0; // No items in view, reset the "virtual" item viewport
-      itemViewPort.current.bottom = 0;
       return; // No items in view, exit method
     }
 
-    // Update the "virtual" item viewport
-    //itemViewPort.current.top = inViewItems[0]?.top || 0;
-    //let lastItem = inViewItems[inViewItems.length - 1];
-    //itemViewPort.current.bottom = lastItem?.top || 0; // Use top of last item as the bottom of the viewport, force a loadMore when the last item is in view
-
     if(lastItem.inView && !newItems)  {
-      console.log('loadMore');
       loadMore();
     }
   }, [itemCount, loadMore, loadMoreWithin]);
 
-  // const checkForLoadMore = useCallback(() => {
-  //   let item = getItem(itemCount - (loadMoreWithin + 1));
-  //   if (item.inView && item.height > 100) {
-  //     // Load more when the item is in view and has a height
-    
-  //   }
-  // }, [itemCount, loadMore, loadMoreWithin]);
 
   const getItem = useCallback(
     (index: number, height = 0): Item => {

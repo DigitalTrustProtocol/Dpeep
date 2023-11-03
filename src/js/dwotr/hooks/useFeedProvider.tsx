@@ -54,11 +54,9 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
   const loadMore = useCallback((e?: any, cb?: (list: NoteContainer[]) => void) => {
     if (!dataProvider.current || !mounted.current) return;
     if (loading.current == true) {
-      console.log('loadMore: already loading :)');
       return;
     } 
     loading.current = true; // Prevent multiple loads from happening at once
-    console.log('loadMore: loading...');
 
     dataProvider.current?.nextPage().then((items) => {
       if (!dataProvider.current || !mounted.current) return 0;
@@ -66,7 +64,6 @@ const useFeedProvider = (opt: FeedOption | undefined, batchSize = 15) => {
       setHasMore(!dataProvider.current.isDone());
       loading.current = false;
       cb?.(items);
-      console.log('loadMore: done');
     });
 
   }, []);
