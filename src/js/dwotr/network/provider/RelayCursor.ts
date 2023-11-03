@@ -5,7 +5,6 @@ import { FeedOption } from '../WOTPubSub';
 import { EPOCH } from '../../Utils/Nostr';
 import relaySubscription from '../RelaySubscription';
 import eventManager from '@/dwotr/EventManager';
-import { ID } from '@/utils/UniqueIds';
 import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import { BaseCursor } from './BaseCursor';
 

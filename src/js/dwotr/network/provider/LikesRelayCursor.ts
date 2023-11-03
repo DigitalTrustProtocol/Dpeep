@@ -1,12 +1,13 @@
 import { FeedOption } from '../WOTPubSub';
 import reactionManager, { Reaction, ReactionMap } from '@/dwotr/ReactionManager';
 import { ReactionContainer } from '@/dwotr/model/ContainerTypes';
-import { BaseCursor } from './BaseCursor';
+import { RelayCursor } from './RelayCursor';
 import eventManager from '@/dwotr/EventManager';
 
-export class LikesCursor extends BaseCursor<ReactionContainer> {
+export class LikesRelayCursor extends RelayCursor<ReactionContainer> {
+
   pointer: IterableIterator<Reaction> | undefined;
-  reactions: ReactionMap;
+  reactions: ReactionMap = undefined;
 
   constructor(opts: FeedOption) {
     super(opts);
@@ -15,21 +16,19 @@ export class LikesCursor extends BaseCursor<ReactionContainer> {
   }
 
   async next(): Promise<ReactionContainer | undefined> {
-    if (this.done) return;
 
+    if(this.done) return;
+
+    // If we have buffered events, return the first one
     while (!this.done) {
       let { done, value } = this.pointer!.next();
-
-      if (done) {
-        this.done = true;
-        return;
-      }
+      if (done) break;
 
       let container = eventManager.containers.get(value.subjectEventId) as ReactionContainer;
       if (container) return container;
     }
 
-    return;
+    return await super.next();
   }
 
   reset(): void {

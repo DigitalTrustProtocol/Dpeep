@@ -55,7 +55,7 @@ type Container = {
   reactions?: SortedMap<UID, Reaction>; // Key is event Id
 }
 
-export type ReactionMap = SortedMap<UID, Reaction>;
+export type ReactionMap = SortedMap<UID, Reaction> | undefined;
 
 
 const sortCreated_at = (a: [UID, Reaction], b: [UID, Reaction]) => {

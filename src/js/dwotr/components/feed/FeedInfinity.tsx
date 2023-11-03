@@ -157,7 +157,9 @@ const useInfiniteScroll = ({
     let newBottomHeight = 0;
     let inViewItems: Item[] = [];
 
-    let itemTop = 82;
+    let firstItem = getItem(0);
+    let itemTop = 0;
+    let itemBottom = firstItem.top; // Start at the top of the first item on the screen
 
     let newItems = false;
     let inViewItemsChanged = false;
@@ -169,8 +171,7 @@ const useInfiniteScroll = ({
     for (let index = 0; index < itemCount; index++) {
       const item = getItem(index);
 
-
-      //console.log('itemBottom: ' + itemBottom + ' viewportTop: ' + viewportTop, ' inView: ', item.inView);
+      itemTop = itemBottom; // Set the top of the item to the bottom of the previous item
 
       let isInView = item.inView;
       item.inView = false;
@@ -182,31 +183,26 @@ const useInfiniteScroll = ({
         continue; 
       }
 
-      let itemBottom = itemTop + item.height;
+      itemBottom += item.height;
+
       if (itemBottom < viewportTop) {
         newTopHeight += item.height;
-        itemTop += item.height;
         continue;
       } 
 
       item.inView = itemTop <= viewportBottom;
       inViewItemsChanged = inViewItemsChanged || isInView !== item.inView;
 
-
       if (!item.inView) { // && overflowCountdown-- < 0 Optimization: render overflow items for better scroll experience
         newBottomHeight += item.height;
-        itemTop += item.height;
+        //itemTop += item.height;
         continue;
       } 
       
       // Finally add the item to the list
       inViewItems.push(item);
-      itemTop += item.height;
-
-      //if (item.inView !== isInView) inViewItemsChanged = true;
-      //item.inView = isInView;
-
     }
+
     let lastItem = getItem(itemCount - 1);
 
     //console.timeEnd('updateVisibleItems item loop: ' + itemCount + ' items');
@@ -295,10 +291,12 @@ const useInfiniteScroll = ({
         const { height } = entry.contentRect;
 
         let item = getItem(Number(index));
-        if (item.height < height) item.height = height;
+        if (item.height < height) {
+          item.top = node.offsetTop;
+          item.height = height;
+          item.bottom = item.top + item.height;
+        } 
 
-        item.top = node.offsetTop;
-        item.bottom = item.top + item.height;
       }
     });
 
@@ -316,10 +314,11 @@ const useInfiniteScroll = ({
       const { height } = node.getBoundingClientRect();
 
       let item = getItem(Number(index));
-      if (item.height < height) item.height = height;
-
-      item.top = node.offsetTop;
-      item.bottom = item.top + item.height;
+      if (item.height < height) {
+        item.top = node.offsetTop;
+        item.height = height;
+        item.bottom = item.top + item.height;
+      } 
 
       // Handles images, videos, etc that change the height of the item asynchronously
       observer.current?.observe(node);
