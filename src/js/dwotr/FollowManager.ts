@@ -10,11 +10,12 @@ import storage from './Storage';
 import graphNetwork from './GraphNetwork';
 import { EventParser, PTagContact } from './Utils/EventParser';
 import blockManager from './BlockManager';
-import Relays, { PublicRelaySettings } from '@/nostr/Relays';
+import Relays from '@/nostr/Relays';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
 import { BulkStorage } from './network/BulkStorage';
-
+import { Url } from './network/Url';
+import serverManager, { PublicRelaySettings } from './ServerManager';
 
 //const FOLLOW_STORE_KEY = 'myFollowList';
 const DegreeInfinit = 99;
@@ -25,11 +26,11 @@ export type RelayMetadata = {
 
   referenceCount: number;
   lastSeen: number;
-  slowCount: number;   
-}
+  slowCount: number;
+};
 
-export class FollowItem {
-  id: UID = 0;
+export class AuthorFollowNetwork {
+  id: UID = 0; // Author id
   follows: Set<UID> = new Set();
   followedBy: Set<UID> = new Set();
   degree: number = DegreeInfinit; // Degree of following
@@ -45,7 +46,7 @@ class FollowManager {
 
   relays = new Map<string, RelayMetadata>();
 
-  items = new Map<UID, FollowItem>();
+  followNetwork = new Map<UID, AuthorFollowNetwork>();
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
@@ -72,7 +73,6 @@ class FollowManager {
     SubscribedToRelays: 0,
   };
 
-
   isFollowedByMe(profileId: UID): boolean {
     return followManager.isFollowedBy(profileId);
   }
@@ -82,15 +82,15 @@ class FollowManager {
   }
 
   isFollowedBy(authorId: UID, byId = ID(Key.getPubKey())): boolean {
-    return followManager.items?.get(authorId)?.followedBy?.has(byId) || false;
+    return followManager.followNetwork?.get(authorId)?.followedBy?.has(byId) || false;
   }
 
   isFollowed(profileId: UID): boolean {
-    return !!followManager.items?.get(profileId)?.followedBy?.size;
+    return !!followManager.followNetwork?.get(profileId)?.followedBy?.size;
   }
 
   isFollowing(authorId: UID, byId = ID(Key.getPubKey())): boolean {
-    return followManager.items?.get(byId)?.follows?.has(authorId) || false;
+    return followManager.followNetwork?.get(byId)?.follows?.has(authorId) || false;
   }
 
   isAllowed(authorId: UID): boolean {
@@ -107,7 +107,7 @@ class FollowManager {
     // Ignore events from profiles that are blocked
     if (blockManager.isBlocked(authorId)) return;
 
-    let item = this.getItem(authorId);
+    let item = this.getFollowNetwork(authorId);
     if (event.created_at <= (item.timestamp || 0)) {
       // Ignore old events
       // Replaypool promised to not send old events, but they do.
@@ -119,7 +119,7 @@ class FollowManager {
     item.degree = this.getDegree(authorId, myId);
 
     let metadata = this.addEvent(event, item);
-    
+
     // This is async
     if (item.degree < this.filterDegree) {
       // Only save events from profiles that are followed or trusted
@@ -162,7 +162,7 @@ class FollowManager {
     return names;
   }
 
-  addEvent(event: Event, item: FollowItem): any | undefined {
+  addEvent(event: Event, item: AuthorFollowNetwork): any | undefined {
     let metadata = this.parseEvent(event);
     if (metadata.pTags.length === 0) return undefined;
 
@@ -179,18 +179,18 @@ class FollowManager {
     let childDegree = item.degree < this.filterDegree ? item.degree + 1 : DegreeInfinit;
 
     for (const id of deltaAdd) {
-      let item = this.getItem(id, childDegree);
+      let item = this.getFollowNetwork(id, childDegree);
       this.addFollower(item, authorId);
       //if (this.#possibleSubscription(item)) this.subsQueue.add(item.id);
     }
 
     for (const id of deltaDelete) {
-      let item = this.getItem(id);
+      let item = this.getFollowNetwork(id);
       this.removeFollower(item, authorId);
       //if (this.#possibleUnsubscription(item)) this.unsubQueue.add(item.id);
     }
 
-    item.relays = Relays.getUrlsFromFollowEvent(event);
+    item.relays = this.#getUrlsFromFollowEvent(event);
 
     this.#mergeRelays(item.relays);
 
@@ -199,29 +199,35 @@ class FollowManager {
     return metadata;
   }
 
-  #mergeRelays(relays: Map<string, PublicRelaySettings>) {
+  #getUrlsFromFollowEvent(event: Event): Map<string, PublicRelaySettings> {
+    const urls = new Map<string, PublicRelaySettings>();
+    if (!event.content) return urls;
 
+    try {
+      const content = JSON.parse(event.content);
+      for (const url in content) {
+        const parsed = Url.sanitize(url);
+        if (!parsed) continue;
 
-
-    for (const [url, settings] of relays) {
-
-      //serverManager.addActiveRelay(url);
-
-      let metadata = this.relays.get(url);
-      if (!metadata) {
-        metadata = {
-          read: false,
-          write: false,
-          referenceCount: 0,
-          lastSeen: 0,
-          slowCount: 0,
-        };
-        this.relays.set(url, metadata);
+        urls.set(parsed, content[url]);
       }
-      metadata.read = metadata.read || settings.read;
-      metadata.write = metadata.write || settings.write;
-      metadata.lastSeen = getNostrTime();
-      metadata.referenceCount++;
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        // console.error('Contact event content is not valid JSON:', e.message);
+        // Handle the error, e.g., by returning null or undefined
+        // or by throwing a custom error
+      }
+    }
+    return urls;
+  }
+
+  #mergeRelays(relays: Map<string, PublicRelaySettings>) {
+    for (const [url, settings] of relays) {
+      let record = serverManager.getRelayRecord(url);
+      record.url = url;
+      record.read = record.read || settings.read;
+      record.write = record.write || settings.write;
+      record.referenceCount++;
     }
   }
 
@@ -236,18 +242,18 @@ class FollowManager {
     return metadata;
   }
 
-  getItem(profileId: UID, degree = DegreeInfinit): FollowItem {
-    let item = this.items.get(profileId);
+  getFollowNetwork(authorId: UID, degree = DegreeInfinit): AuthorFollowNetwork {
+    let item = this.followNetwork.get(authorId);
     if (!item) {
-      item = new FollowItem();
-      item.id = profileId;
+      item = new AuthorFollowNetwork();
+      item.id = authorId;
       item.degree = degree;
-      this.items.set(profileId, item);
+      this.followNetwork.set(authorId, item);
     }
     return item;
   }
 
-  #eventEffects(item: FollowItem, metadata: any | undefined) {
+  #eventEffects(item: AuthorFollowNetwork, metadata: any | undefined) {
     let myId = ID(Key.getPubKey());
 
     if (myId === item.id) {
@@ -264,47 +270,41 @@ class FollowManager {
   }
 
   follow(profiles: Array<UID>, byId = ID(Key.getPubKey())) {
-
     for (const profileId of profiles) {
-      let item = this.getItem(profileId);
+      let item = this.getFollowNetwork(profileId);
       this.addFollower(item, byId);
     }
 
-    this.onEvent.dispatch(byId, this.getItem(byId));
-
+    this.onEvent.dispatch(byId, this.getFollowNetwork(byId));
   }
 
   unfollow(profiles: Array<UID> | Set<UID>, byId = ID(Key.getPubKey())) {
-
     for (const profileId of profiles) {
-      let item = this.getItem(profileId);
+      let item = this.getFollowNetwork(profileId);
       this.removeFollower(item, byId);
     }
   }
-
-
 
   publish() {
     let event = this.createEvent();
 
     this.save(event);
-    
+
     wotPubSub.publish(event);
   }
 
-
-  addFollower(target: FollowItem, followerId: UID): void {
+  addFollower(target: AuthorFollowNetwork, followerId: UID): void {
     target.followedBy.add(followerId);
 
-    let source = this.getItem(followerId);
+    let source = this.getFollowNetwork(followerId);
     source.follows.add(target.id);
   }
 
-  removeFollower(target: FollowItem, followerId: UID): void {
+  removeFollower(target: AuthorFollowNetwork, followerId: UID): void {
     let followedBy = target.followedBy;
     followedBy.delete(followerId);
 
-    let source = this.getItem(followerId);
+    let source = this.getFollowNetwork(followerId);
     source.follows.delete(target.id);
   }
 
@@ -325,7 +325,9 @@ class FollowManager {
 
     let deltaDelete: Array<string> = [];
 
+    let myPubkey = STR(myId);
     for (const event of list) {
+      if (event.pubkey === myPubkey) continue; // Skip my own event, since we already loaded it
       let loaded = this.#loadEvent(myId, event);
 
       if (!loaded) deltaDelete.push(event.pubkey);
@@ -337,13 +339,13 @@ class FollowManager {
 
   #loadEvent(myId: UID, event: Event): boolean {
     let authorId = ID(event.pubkey);
-    let item = this.items.get(authorId); // Get the item if it exists
+    let item = this.followNetwork.get(authorId); // Get the item if it exists
     if (item && item.timestamp >= event.created_at) return true; // Ignore already loaded events
 
     let degree = this.getDegree(authorId, myId);
     if (degree >= this.filterDegree) return false; // Ignore events from profiles that are not trusted or followed
 
-    if (!item) item = this.getItem(authorId, degree); // Create a new item if it does not exist
+    if (!item) item = this.getFollowNetwork(authorId, degree); // Create a new item if it does not exist
 
     this.addEvent(event, item);
 
@@ -375,7 +377,7 @@ class FollowManager {
 
   createEvent(): Event {
     let myId = ID(Key.getPubKey());
-    let item = this.getItem(myId);
+    let item = this.getFollowNetwork(myId);
 
     // Add pet names to p tags
     let pTags = [...item.follows].map((id) => ['p', STR(id), '']);
@@ -421,7 +423,7 @@ class FollowManager {
   #setFollowSuggestionsSetting() {
     if (this.followSuggestionsSetting === false) return; // Keep hiding the suggestions
 
-    let item = this.getItem(ID(Key.getPubKey()));
+    let item = this.getFollowNetwork(ID(Key.getPubKey()));
     if (item.follows.size < 10) return; // Keep showing the suggestions
 
     localState.get('showFollowSuggestions').put(false);
@@ -441,23 +443,19 @@ class FollowManager {
     await this.subscribeOnce(authors, since, until);
   }
 
-
   async subscribeOnce(authors: Array<UID> | Set<UID>, since = EPOCH, until = getNostrTime()) {
     await relaySubscription.onceAuthors(authors, since, until);
   }
 
-
-
-
   relayContactsRequests = new Set<UID>();
 
-  onceContacts(id: UID) : void {
+  onceContacts(id: UID): void {
     if (this.relayContactsRequests.has(id)) return; // Already requested
     this.relayContactsRequests.add(id);
 
     let opt = {
       filter: { kinds: [ContactsKind], authors: [STR(id) as string] } as Filter,
-      onClose: () => this.relayContactsRequests.delete(id)
+      onClose: () => this.relayContactsRequests.delete(id),
     } as FeedOption;
 
     relaySubscription.once(opt);
@@ -472,20 +470,20 @@ class FollowManager {
     let opt = {
       filter: { kinds: [ContactsKind], '#p': [STR(id) as string] } as Filter,
       onClose: () => this.relayFollowedByRequests.delete(id),
-      onEvent
+      onEvent,
     } as FeedOption;
 
     return relaySubscription.map(opt);
   }
 
   getFollows(id: UID = ID(Key.getPubKey())): Set<UID> {
-    let item = this.getItem(id);
+    let item = this.getFollowNetwork(id);
 
     return item.follows;
   }
 
   getFollowedBy(id: UID = ID(Key.getPubKey())): Set<UID> {
-    return this.getItem(id).followedBy;
+    return this.getFollowNetwork(id).followedBy;
   }
 
   async tableCount() {
@@ -497,7 +495,7 @@ class FollowManager {
       this.metrics.TableCount = count;
     });
 
-    this.metrics.Authors = this.items.size;
+    this.metrics.Authors = this.followNetwork.size;
     this.metrics.UICallbacks = this.onEvent.sizeAll();
 
     return this.metrics;

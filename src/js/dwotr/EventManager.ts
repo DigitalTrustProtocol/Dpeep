@@ -29,6 +29,8 @@ import repostManager from './RepostManager';
 import { EventContainer } from './model/ContainerTypes';
 import serverManager from './ServerManager';
 import recommendRelayManager from './RecommendRelayManager';
+import { BulkStorage } from './network/BulkStorage';
+import storage from './Storage';
 
 class EventManager {
   seenRelayEvents: Set<UID> = new Set();
@@ -40,6 +42,8 @@ class EventManager {
   containerParsers: Map<number, (event: Event, url?: string) => EventContainer | undefined> =
     new Map();
   eventHandlers: Map<number, (event: Event, url?: string) => void> = new Map();
+
+  table = new BulkStorage(storage.events);
 
   metrics = {
     TotalMemory: 0,
@@ -210,6 +214,7 @@ class EventManager {
 
   async eventCallback(event: Event, afterEose?: boolean, url?: string | undefined) {
     if (!event) return false;
+    
     eventManager.addSeen(ID(event.id));
 
     // Check if the event has been ordered deleted
@@ -223,7 +228,6 @@ class EventManager {
         relay: url,
       };
 
-      serverManager.incrementEventCount(url); // Increment the event count for the relay
     }
 
     // Handle the event as a note

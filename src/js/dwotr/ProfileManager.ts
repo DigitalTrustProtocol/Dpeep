@@ -412,7 +412,7 @@ class ProfileManager {
       key: profile.key,
       name: profile.name,
       display_name: profile.display_name,
-      followers: followManager.getItem(ID(profile.key)).followedBy,
+      followers: followManager.getFollowNetwork(ID(profile.key)).followedBy,
       //followers: SocialNetwork.followersByUser.get(ID(profile.key)) ?? new Set(),
     });
     return profile;

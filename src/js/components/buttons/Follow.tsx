@@ -23,7 +23,7 @@ const Follow = ({ id, className }: Props) => {
   useEffect(() => {
 
     let onEvent = () => 
-      setIsFollowed(followManager.getItem(myId)?.follows?.has(uid) || false);
+      setIsFollowed(followManager.getFollowNetwork(myId)?.follows?.has(uid) || false);
 
     onEvent();
     followManager.onEvent.addListener(myId, onEvent);

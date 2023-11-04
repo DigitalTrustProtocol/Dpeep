@@ -3,7 +3,16 @@ import { EPOCH } from "./Utils/Nostr";
 import Relays from "@/nostr/Relays";
 import { BulkStorage } from "./network/BulkStorage";
 import storage from "./Storage";
+import { UID } from "@/utils/UniqueIds";
+import followManager from "./FollowManager";
+import recommendRelayManager from "./RecommendRelayManager";
 
+
+export type PublicRelaySettings = {
+    read: boolean;
+    write: boolean;
+  };
+  
 export class RelayRecord {
     url: string = '';
     read: boolean = true;
@@ -11,7 +20,8 @@ export class RelayRecord {
     auth: boolean = false; // If the relay requires authentication
     enabled: boolean = true; // If the relay is enabled
     eventCount: number = 0; // Number of events received from this relay, higher is better
-    refCount: number = 0; // Number of references to this relay by users and events, higher is better
+    referenceCount: number = 0; // Number of references to this relay by users and events, higher is better
+    recommendCount: number = 0; // Number of recommendations for this relay, higher is better
     timeoutCount: number = 0; // Number of timeouts from this relay, lower is better
     lastSync: number = 0; // Last time this relay was synced with the client
     lastActive: number = 0;  // Used to determine if a relay is active or not
@@ -25,6 +35,8 @@ class ServerManager {
     logging = false;
 
     relays: Map<string, RelayRecord> = new Map();
+
+    //userRelays: Map<UID, Set<string>> = new Map(); // Relays used by the user or recommended or within the contact content, used to determine which relays to use when querying for events
 
     table = new BulkStorage(storage.relays);
 
@@ -43,14 +55,37 @@ class ServerManager {
 
     incrementRefCount(relay: string) {
         let relayData = this.getRelayRecord(relay);
-        relayData.refCount++;
+        relayData.referenceCount++;
         this.save(relayData);
     }
 
-    incrementEventCount(relay: string) {
+    incrementEventCount(relay: string | undefined) {
+        if(!relay) return;
         let relayData = this.getRelayRecord(relay);
         relayData.eventCount++;
         this.save(relayData);
+    }
+
+    // Get the relays used by the user or recommended or within the contact content, used to determine which relays to use when querying for events
+    getReadRelaysBy(authorId: UID) : Array<string> {
+        let result = new Set<string>();
+        let network = followManager.getFollowNetwork(authorId);
+        for(let [relay, value]  of network.relays) {
+            if(value.read)
+                result.add(relay);
+        }
+        let recommendRelays = recommendRelayManager.authorRelays.get(authorId);
+        if(recommendRelays) {
+            for(let relay of recommendRelays) {
+                result.add(relay);
+            }
+        }
+        return [...result];
+    }
+
+    getBestReadRelays(numberOfRelays: number = 10) : Array<string> {
+        let relays = Array.from(this.relays.values()).filter((r) => r.read).sort((a, b) => b.eventCount - a.eventCount);
+        return relays.map((r) => r.url).slice(0,numberOfRelays);
     }
 
 
@@ -99,6 +134,7 @@ class ServerManager {
     {
         this.table.save(record.url, record); // Save to the database, async in bulk
     }
+
 
 
     // #getRelayData(relay: string) : RelayMetadata {

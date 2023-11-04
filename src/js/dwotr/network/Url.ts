@@ -7,4 +7,17 @@ export class Url {
       return false;
     }
   }
+
+  public static isWss(urlString: string) {
+    return Url.isValid(urlString?.trim(), ['wss:']);
+  }
+
+  public static sanitize(urlString: string) : string |undefined {
+    try {
+      const url = new URL(urlString?.trim());
+      return url.toString().replace(/\/$/, '');
+    } catch (e) {
+      return;
+    }
+  }
 }

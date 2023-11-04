@@ -1,82 +1,78 @@
 import { Event } from 'nostr-tools';
-import { ID } from '@/utils/UniqueIds';
+import { ID, UID } from '@/utils/UniqueIds';
 import blockManager from './BlockManager';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
 import { RecommendRelayKind } from './network/WOTPubSub';
-import noteManager from './NoteManager';
-import { RecommendRelayContainer } from './model/ContainerTypes';
+import { BulkStorage } from './network/BulkStorage';
+import storage from './Storage';
 import { Url } from './network/Url';
-import profileManager from './ProfileManager';
-import { ProfileMemory } from './model/ProfileRecord';
-
-type ProfileRelays = {
-  relays: {
-    recommendRelays: string[];
-    contactRelays: string[];
-  };
-};
 
 class RecommendRelayManager {
   logging = false;
 
+  authorRelays: Map<UID, Set<string>> = new Map();
+
   onEvent = new EventCallbacks(); // Callbacks to call on new events
 
+  table = new BulkStorage(storage.recommendRelays);
+
   private metrics = {
-    RelayEvents: 0,
+    Table: 0,
+    Events: 0,
+    Authors: 0,
   };
 
   registerHandlers() {
     eventManager.eventHandlers.set(RecommendRelayKind, this.handle.bind(this));
-    eventManager.containerParsers.set(RecommendRelayKind, this.parse.bind(this));
   }
 
   handle(event: Event, url?: string) {
-    this.metrics.RelayEvents++;
+    this.metrics.Events++;
+    if (!this.#canAdd(event)) return;
 
-    let container = this.parse(event, url);
+    this.#addEvent(event);
 
-    this.handleContainer(container);
+    this.table.save(ID(event.id), event);
+
+    this.onEvent.dispatch(ID(event!.id), event);
   }
 
-  handleContainer(container: RecommendRelayContainer | undefined) {
-    if (!this.#canAdd(container)) return;
+  #canAdd(event: Event): boolean {
+    if (eventDeletionManager.deleted.has(ID(event.id))) return false;
+    if (blockManager.isBlocked(ID(event!.pubkey))) return false; // May already been blocked, so redudant code
 
-    this.#addEvent(container!);
-
-    this.onEvent.dispatch(container!.id, container);
-  }
-
-  parse(event: Event, url?: string): RecommendRelayContainer | undefined {
-    let container = eventManager.parse(event, url) as RecommendRelayContainer;
-    let recommendUrl = Url.isValid(event.content) ? event.content : ''; //
-    container.recommendRelays = new Set(recommendUrl);
-
-    return container;
-  }
-
-  #canAdd(container: RecommendRelayContainer | undefined): boolean {
-    if (!container) return false;
-    if (eventDeletionManager.deleted.has(container.id)) return false;
-    if (blockManager.isBlocked(ID(container?.event!.pubkey))) return false; // May already been blocked, so redudant code
+    if (!Url.isWss(event.content)) return false;
 
     return true;
   }
-  #addEvent(container: RecommendRelayContainer): void {
-    noteManager.notes.set(container.id, container.event!); // Add to the noteManager, so its in the feed
-    eventManager.containers.set(container.id, container);
-    eventManager.eventIndex.set(container.id, container.event!);
 
-    let profile = profileManager.getMemoryProfile(container.authorId!) as any as ProfileRelays;
-    if (!profile.relays) profile.relays = { recommendRelays: [], contactRelays: [] };
-    if (!profile.relays.recommendRelays) profile.relays.recommendRelays = [];
+  #addEvent(event: Event): void {
+    eventManager.eventIndex.set(ID(event.id), event);
 
-    profile.relays.recommendRelays = Array.from(container.recommendRelays!);
-    profileManager.save(profile as any as ProfileMemory);
+    let url = Url.sanitize(event.content);
+    if (url) this.addRelayUrl(ID(event.pubkey), url);
   }
 
-  getMetrics() {
+  addRelayUrl(authorId: UID, url: string) {
+    let recommendRelays = this.authorRelays.get(authorId) || new Set<string>();
+    recommendRelays.add(url);
+    this.authorRelays.set(authorId, recommendRelays);
+  }
+
+  async load() {
+    let records = await this.table.toArray();
+
+    records.forEach((record) => {
+      let event = record as Event;
+      this.#addEvent(event);
+    });
+  }
+
+  async getMetrics() {
+    this.table.count().then((count) => this.metrics.Table = count);
+    this.metrics.Authors = this.authorRelays.size;
     return this.metrics;
   }
 }

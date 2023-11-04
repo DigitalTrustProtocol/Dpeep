@@ -380,10 +380,11 @@ class RelaySubscription {
     let subCounter = this.#subCounter;
 
     const onEvent = (event: Event, afterEose: boolean, url: string | undefined) => {
-      // if(this.logging)
-      //   console.log('RelaySubscription:onEvent', url, " - Eose:", afterEose, " - ID:", event.id, " - Sub:", subCounter);
-
+      
       if (!event) return;
+      // Increment the event count for the relay, so we know how many events we have received from the relay, not matter how many times we have received the same event.
+      serverManager.incrementEventCount(url); 
+
       internalFastCall?.(event, afterEose, url);
 
       let authorId = ID(event.pubkey);

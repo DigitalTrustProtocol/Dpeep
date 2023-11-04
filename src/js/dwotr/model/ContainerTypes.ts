@@ -43,11 +43,6 @@ export type RepostContainer = NoteContainer & {
   repostRelay?: string;
 }
 
-export type RecommendRelayContainer = EventContainer & {
-  recommendRelays?: Set<string>;
-}
-
-
 export type ReactionContainer = EventContainer & {
   subjectEventId: UID;
   subjectAuthorId?: UID;

@@ -44,10 +44,6 @@ const SEARCH_RELAYS = [
   'wss://nostr.novacisko.cz',
 ];
 
-export type PublicRelaySettings = {
-  read: boolean;
-  write: boolean;
-};
 export type RelayMetadata = { enabled: boolean; url: string };
 
 export type PopularRelay = {
@@ -85,25 +81,25 @@ const Relays = {
   // get Map of relayUrl: {read:boolean, write:boolean}
 
   // Relocate code 
-  getUrlsFromFollowEvent(event: Event): Map<string, PublicRelaySettings> {
-    const urls = new Map<string, PublicRelaySettings>();
-    if (event.content) {
-      try {
-        const content = JSON.parse(event.content);
-        for (const url in content) {
-          try {
-            const parsed = new URL(url).toString().replace(/\/$/, '');
-            urls.set(parsed, content[url]);
-          } catch (e) {
-            //console.log('invalid relay url', url, event);
-          }
-        }
-      } catch (e) {
-        //console.log('failed to parse relay urls', event);
-      }
-    }
-    return urls;
-  },
+  // getUrlsFromFollowEvent(event: Event): Map<string, PublicRelaySettings> {
+  //   const urls = new Map<string, PublicRelaySettings>();
+  //   if (event.content) {
+  //     try {
+  //       const content = JSON.parse(event.content);
+  //       for (const url in content) {
+  //         try {
+  //           const parsed = new URL(url).toString().replace(/\/$/, '');
+  //           urls.set(parsed, content[url]);
+  //         } catch (e) {
+  //           //console.log('invalid relay url', url, event);
+  //         }
+  //       }
+  //     } catch (e) {
+  //       //console.log('failed to parse relay urls', event);
+  //     }
+  //   }
+  //   return urls;
+  // },
   getPopularRelays: function (): Array<PopularRelay> {
     let result = new Array<PopularRelay>();
 

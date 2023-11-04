@@ -14,7 +14,7 @@ import { translate as t } from '../../translations/Translation.mjs';
 import { STR, UID } from '../../utils/UniqueIds.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import { useIsMounted } from '@/dwotr/hooks/useIsMounted.tsx';
-import followManager, { FollowItem } from '@/dwotr/FollowManager.ts';
+import followManager, { AuthorFollowNetwork } from '@/dwotr/FollowManager.ts';
 
 const FollowedUser = ({ id }: { id: UID }) => {
   const hexKey = STR(id) as string;
@@ -27,7 +27,7 @@ const FollowedUser = ({ id }: { id: UID }) => {
           <Name pub={npub} />
           <br />
           <span className="text-neutral-500 text-sm">
-            {followManager.getItem(id).followedBy?.size || 0}
+            {followManager.getFollowNetwork(id).followedBy?.size || 0}
             <i> </i>
             followers
           </span>
@@ -106,7 +106,7 @@ const Follows: React.FC<Props> = (props) => {
 
     const callback = throttle(() => {
       if (!isMounted()) return;
-      let item = followManager.getItem(uid)
+      let item = followManager.getFollowNetwork(uid)
 
       if(props.followers) {
         setItems([...item?.followedBy]);

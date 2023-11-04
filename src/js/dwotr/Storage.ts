@@ -48,6 +48,15 @@ class Storage {
   get relays() {
     return this.db.relays;
   }
+
+  get recommendRelays() {
+    return this.db.recommendRelays;
+  }
+
+  get events() {
+    return this.db.events;
+  }
+  
   
   get db(): DWoTRDexie {
     if (!this.#db) {

@@ -5,7 +5,6 @@ import { Event } from 'nostr-tools';
 import { ReactionRecord } from '../ReactionManager';
 import { RelayRecord } from '../ServerManager';
 
-
 export const DB_NAME = 'DWoTR';
 
 export class DWoTRDexie extends Dexie {
@@ -23,11 +22,13 @@ export class DWoTRDexie extends Dexie {
   replies!: Table<Event>;
   reposts!: Table<Event>;
   relays!: Table<RelayRecord>;
+  recommendRelays!: Table<Event>;
+  events!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(13).stores({
+    this.version(14).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
@@ -39,6 +40,8 @@ export class DWoTRDexie extends Dexie {
       replies: 'id, pubkey, created_at',
       reposts: 'id, pubkey, created_at',
       relays: 'url',
+      recommendRelays: 'author', // RecommendRelayRecord is author is user pubkey, relay url.
+      events: 'id, pubkey, kind, created_at, [kind+created_at]', // Generic event table, used for storing events that are not loaded into in memory, like follows, blocks, etc.
     });
   }
 }

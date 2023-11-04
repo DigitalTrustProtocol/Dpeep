@@ -11,7 +11,7 @@ import Show from '../helpers/Show';
 
 import Name from './Name';
 import ProfileScoreLinks from '../../dwotr/components/ProfileScoreLinks';
-import followManager, { FollowItem } from '@/dwotr/FollowManager';
+import followManager, { AuthorFollowNetwork } from '@/dwotr/FollowManager';
 import { useIsMounted } from '@/dwotr/hooks/useIsMounted';
 import Globe from '@/dwotr/components/buttons/Globe';
 import { useKey } from '@/dwotr/hooks/useKey';
@@ -99,7 +99,7 @@ const useProfileFollows = (profileId: UID, myId: UID, loadGlobal: boolean) => {
       () => {
         if (!isMounted()) return;
 
-        const item = followManager.getItem(profileId);
+        const item = followManager.getFollowNetwork(profileId);
         if (followedByCount === item?.followedBy.size) return;
 
         setFollowedByCount(item?.followedBy.size || 0);
@@ -119,13 +119,13 @@ const useProfileFollows = (profileId: UID, myId: UID, loadGlobal: boolean) => {
       { leading: true },
     );
 
-    const contactsCallback = (item: FollowItem) => {
+    const contactsCallback = (item: AuthorFollowNetwork) => {
       if (!isMounted()) return;
 
       setContactsCount(item?.follows.size || 0);
     };
 
-    let item = followManager.getItem(profileId);
+    let item = followManager.getFollowNetwork(profileId);
     contactsCallback(item);
     followedByCallback();
 
