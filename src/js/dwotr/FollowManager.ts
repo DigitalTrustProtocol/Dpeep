@@ -44,9 +44,8 @@ class FollowManager {
   filterEnabled = true;
   followSuggestionsSetting = undefined;
 
-  relays = new Map<string, RelayMetadata>();
-
-  followNetwork = new Map<UID, AuthorFollowNetwork>();
+  network = new Map<UID, AuthorFollowNetwork>();
+  relayAuthors = new Map<string, Set<UID>>();
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
@@ -82,15 +81,15 @@ class FollowManager {
   }
 
   isFollowedBy(authorId: UID, byId = ID(Key.getPubKey())): boolean {
-    return followManager.followNetwork?.get(authorId)?.followedBy?.has(byId) || false;
+    return followManager.network?.get(authorId)?.followedBy?.has(byId) || false;
   }
 
   isFollowed(profileId: UID): boolean {
-    return !!followManager.followNetwork?.get(profileId)?.followedBy?.size;
+    return !!followManager.network?.get(profileId)?.followedBy?.size;
   }
 
   isFollowing(authorId: UID, byId = ID(Key.getPubKey())): boolean {
-    return followManager.followNetwork?.get(byId)?.follows?.has(authorId) || false;
+    return followManager.network?.get(byId)?.follows?.has(authorId) || false;
   }
 
   isAllowed(authorId: UID): boolean {
@@ -192,7 +191,7 @@ class FollowManager {
 
     item.relays = this.#getUrlsFromFollowEvent(event);
 
-    this.#mergeRelays(item.relays);
+    this.#mergeRelays(authorId, item.relays);
 
     item.timestamp = event.created_at;
 
@@ -221,14 +220,24 @@ class FollowManager {
     return urls;
   }
 
-  #mergeRelays(relays: Map<string, PublicRelaySettings>) {
+  #mergeRelays(authorId: UID, relays: Map<string, PublicRelaySettings>) {
     for (const [url, settings] of relays) {
+      this.#addRelay(url, authorId); // Add the author to the relay 
+
       let record = serverManager.getRelayRecord(url);
       record.url = url;
       record.read = record.read || settings.read;
       record.write = record.write || settings.write;
-      record.referenceCount++;
     }
+  }
+
+  #addRelay(url: string, authorId: UID) {
+    let relay = this.relayAuthors.get(url);
+    if(!relay) {
+      relay = new Set<UID>();
+      this.relayAuthors.set(url, relay);
+    }
+    relay.add(authorId);
   }
 
   parseEvent(event: Event) {
@@ -243,12 +252,12 @@ class FollowManager {
   }
 
   getFollowNetwork(authorId: UID, degree = DegreeInfinit): AuthorFollowNetwork {
-    let item = this.followNetwork.get(authorId);
+    let item = this.network.get(authorId);
     if (!item) {
       item = new AuthorFollowNetwork();
       item.id = authorId;
       item.degree = degree;
-      this.followNetwork.set(authorId, item);
+      this.network.set(authorId, item);
     }
     return item;
   }
@@ -339,7 +348,7 @@ class FollowManager {
 
   #loadEvent(myId: UID, event: Event): boolean {
     let authorId = ID(event.pubkey);
-    let item = this.followNetwork.get(authorId); // Get the item if it exists
+    let item = this.network.get(authorId); // Get the item if it exists
     if (item && item.timestamp >= event.created_at) return true; // Ignore already loaded events
 
     let degree = this.getDegree(authorId, myId);
@@ -495,7 +504,7 @@ class FollowManager {
       this.metrics.TableCount = count;
     });
 
-    this.metrics.Authors = this.followNetwork.size;
+    this.metrics.Authors = this.network.size;
     this.metrics.UICallbacks = this.onEvent.sizeAll();
 
     return this.metrics;

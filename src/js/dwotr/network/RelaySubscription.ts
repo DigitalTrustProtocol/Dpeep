@@ -382,8 +382,6 @@ class RelaySubscription {
     const onEvent = (event: Event, afterEose: boolean, url: string | undefined) => {
       
       if (!event) return;
-      // Increment the event count for the relay, so we know how many events we have received from the relay, not matter how many times we have received the same event.
-      serverManager.incrementEventCount(url); 
 
       internalFastCall?.(event, afterEose, url);
 

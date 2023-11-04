@@ -1,3 +1,4 @@
+import { Relay } from "nostr-relaypool";
 import { min } from "lodash";
 import { EPOCH } from "./Utils/Nostr";
 import Relays from "@/nostr/Relays";
@@ -6,6 +7,8 @@ import storage from "./Storage";
 import { UID } from "@/utils/UniqueIds";
 import followManager from "./FollowManager";
 import recommendRelayManager from "./RecommendRelayManager";
+import eventManager from "./EventManager";
+import getRelayPool from "@/nostr/relayPool";
 
 
 export type PublicRelaySettings = {
@@ -19,14 +22,22 @@ export class RelayRecord {
     write: boolean = true;
     auth: boolean = false; // If the relay requires authentication
     enabled: boolean = true; // If the relay is enabled
-    eventCount: number = 0; // Number of events received from this relay, higher is better
-    referenceCount: number = 0; // Number of references to this relay by users and events, higher is better
-    recommendCount: number = 0; // Number of recommendations for this relay, higher is better
+    // eventCount: number = 0; // Number of events received from this relay, higher is better
+    // referenceBy: Set<number> = new Set(); // Number of references to this relay by users and events, higher is better
+    // recommendBy: Set<number> = new Set(); // Number of recommendations for this relay, higher is better
+
     timeoutCount: number = 0; // Number of timeouts from this relay, lower is better
     lastSync: number = 0; // Last time this relay was synced with the client
     lastActive: number = 0;  // Used to determine if a relay is active or not
 }
 
+type RelayContainer = {
+    record: RelayRecord;
+    referenceBy: Set<UID>; // Number of references to this relay by users and events, higher is better
+    recommendBy: Set<UID>; // Number of recommendations for this relay, higher is better
+    eventCount: number; // Number of events received from this relay, higher is better
+    instance?: Relay; // Instance of the relay
+}
 
 // Handles the relays in the context of Dpeep
 // RelayManager name is too close to ReplyManager so it was renamed to ServerManager
@@ -34,36 +45,36 @@ class ServerManager {
 
     logging = false;
 
-    relays: Map<string, RelayRecord> = new Map();
+    containers = new Map<string, RelayContainer>();
 
-    //userRelays: Map<UID, Set<string>> = new Map(); // Relays used by the user or recommended or within the contact content, used to determine which relays to use when querying for events
+    records: Map<string, RelayRecord> = new Map();
 
     table = new BulkStorage(storage.relays);
 
     activeRelays: Array<string> = [];
 
-
     getRelayRecord(relay: string) : RelayRecord {
-        let relayData = this.relays.get(relay);
+        let relayData = this.records.get(relay);
         if(!relayData) {
             relayData = new RelayRecord();
-            this.relays.set(relay, relayData);
+            this.records.set(relay, relayData);
         }
         return relayData;
     }
 
-
-    incrementRefCount(relay: string) {
-        let relayData = this.getRelayRecord(relay);
-        relayData.referenceCount++;
-        this.save(relayData);
-    }
-
-    incrementEventCount(relay: string | undefined) {
-        if(!relay) return;
-        let relayData = this.getRelayRecord(relay);
-        relayData.eventCount++;
-        this.save(relayData);
+    getRelayContainer(url: string) : RelayContainer {
+        let container = this.containers.get(url);
+        if(!container) {
+            container = {
+                record: this.getRelayRecord(url),
+                referenceBy: followManager.relayAuthors.get(url) || new Set(),
+                recommendBy: recommendRelayManager.relayAuthors.get(url) || new Set(),
+                eventCount: eventManager.relayEventCount.get(url) || 0,
+                instance: getRelayPool().relayByUrl.get(url), // Instance of the relay, may be undefined
+            } as RelayContainer;
+            this.containers.set(url, container);
+        }
+        return container;
     }
 
     // Get the relays used by the user or recommended or within the contact content, used to determine which relays to use when querying for events
@@ -83,10 +94,15 @@ class ServerManager {
         return [...result];
     }
 
-    getBestReadRelays(numberOfRelays: number = 10) : Array<string> {
-        let relays = Array.from(this.relays.values()).filter((r) => r.read).sort((a, b) => b.eventCount - a.eventCount);
-        return relays.map((r) => r.url).slice(0,numberOfRelays);
+    allRelays() : Array<string> {
+        let urls = new Set([...this.records.keys(), ...recommendRelayManager.relayAuthors.keys(), ...followManager.relayAuthors.keys()]);
+        return [...urls];
     }
+
+    // getBestReadRelays(numberOfRelays: number = 10) : Array<string> {
+    //     let relays = Array.from(this.records.values()).filter((r) => r.read).sort((a, b) => b.eventCount - a.eventCount);
+    //     return relays.map((r) => r.url).slice(0,numberOfRelays);
+    // }
 
 
     getActiveRelays(extraRelays: string[]) : Array<string> {
@@ -101,8 +117,8 @@ class ServerManager {
         if(this.activeRelays.length === 0) {
             this.activeRelays = Relays.enabledRelays();
             for(const url of this.activeRelays) {
-                if(!this.relays.has(url))
-                    this.relays.set(url, new RelayRecord());
+                if(!this.records.has(url))
+                    this.records.set(url, new RelayRecord());
             }
         }
 
@@ -126,7 +142,7 @@ class ServerManager {
     async load() : Promise<void> {
         let records = await this.table.toArray();
         for(let record of records) {
-            this.relays.set(record.url, record);
+            this.records.set(record.url, record);
         }
     }
 

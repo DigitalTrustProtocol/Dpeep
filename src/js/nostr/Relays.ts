@@ -9,6 +9,7 @@ import localState from '../state/LocalState.ts';
 
 //import PubSub from './PubSub';
 import followManager from '@/dwotr/FollowManager.ts';
+import serverManager from '@/dwotr/ServerManager.ts';
 //import { ID } from '@/utils/UniqueIds.ts';
 
 type SavedRelays = {
@@ -48,7 +49,7 @@ export type RelayMetadata = { enabled: boolean; url: string };
 
 export type PopularRelay = {
   url: string;
-  users: number;
+  authorCount: number;
 };
 
 /**
@@ -103,12 +104,16 @@ const Relays = {
   getPopularRelays: function (): Array<PopularRelay> {
     let result = new Array<PopularRelay>();
 
-    for(const key of followManager.relays.keys()) {
-      const count = followManager.relays.get(key)?.referenceCount || 0;
-      result.push({url: key, users: count});
+    let allRelays = serverManager.allRelays();
+    for (const url of allRelays) {
+      let container = serverManager.getRelayContainer(url);
+      let authorCount = container.recommendBy.size + container.referenceBy.size;
+      result.push({ url, authorCount });
     }
 
-    result.sort((a, b) => b.users - a.users);
+    result.sort((a, b) => {
+      return b.authorCount - a.authorCount;
+    });
 
     return result;
   },
@@ -192,12 +197,16 @@ const Relays = {
     this.relays.set(url, { enabled: true, url });
     relayPool().addOrGetRelay(url);
   },
+  saveToContacts() {
+
+  },
+
   restoreDefaults() {
     this.relays.clear();
     for (const url of DEFAULT_RELAYS) {
       this.add(url);
     }
-    followManager.publish(); // publish new follow event by current user
+    //followManager.publish(); // publish new follow event by current user
     //this.saveToContacts();
     // do not save these to contact list
     for (const url of SEARCH_RELAYS) {

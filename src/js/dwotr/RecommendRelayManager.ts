@@ -13,6 +13,7 @@ class RecommendRelayManager {
   logging = false;
 
   authorRelays: Map<UID, Set<string>> = new Map();
+  relayAuthors: Map<string, Set<UID>> = new Map();
 
   onEvent = new EventCallbacks(); // Callbacks to call on new events
 
@@ -51,14 +52,21 @@ class RecommendRelayManager {
   #addEvent(event: Event): void {
     eventManager.eventIndex.set(ID(event.id), event);
 
+    let authorId = ID(event.pubkey);
     let url = Url.sanitize(event.content);
-    if (url) this.addRelayUrl(ID(event.pubkey), url);
+    if (url) {
+        this.addRelayUrl(authorId, url);
+    } 
   }
 
   addRelayUrl(authorId: UID, url: string) {
-    let recommendRelays = this.authorRelays.get(authorId) || new Set<string>();
-    recommendRelays.add(url);
-    this.authorRelays.set(authorId, recommendRelays);
+    let relays = this.authorRelays.get(authorId) || new Set<string>();
+    relays.add(url);
+    this.authorRelays.set(authorId, relays);
+
+    let authors = this.relayAuthors.get(url) || new Set<UID>();
+    authors.add(authorId);
+    this.relayAuthors.set(url, authors);
   }
 
   async load() {

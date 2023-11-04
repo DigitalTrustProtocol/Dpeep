@@ -16,7 +16,6 @@ import {
   ReplyContainer,
   RepostContainer,
 } from './model/ContainerTypes';
-import { isRepost } from '@/nostr/utils';
 import replyManager from './ReplyManager';
 import repostManager from './RepostManager';
 import { noteKinds } from './Utils/Nostr';

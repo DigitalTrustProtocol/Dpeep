@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'preact/compat';
 
-import relayPool from '@/nostr/relayPool.ts';
-
 import Relays, { PopularRelay } from '../../nostr/Relays';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
+import getRelayPool from '@/nostr/relayPool.ts';
 
 const Network = () => {
   const [relays, setRelays] = useState(Array.from(Relays.relays.values()));
@@ -46,7 +45,7 @@ const Network = () => {
 
   const getStatus = (relay) => {
     try {
-      return relayPool().relayByUrl.get(relay.url).status;
+      return getRelayPool().relayByUrl.get(relay.url).status;
     } catch (e) {
       return 3;
     }
@@ -125,7 +124,7 @@ const Network = () => {
         </div>
         {popularRelays.map((relay) => (
           <div className="flex peer gap-2" key={relay.url}>
-            <div className="flex-initial">{relay.users}</div>
+            <div className="flex-initial">{relay.authorCount}</div>
             <div className="flex-grow truncate max-w-[60vw]">{relay.url}</div>
             <div className="flex-initial">
               <button

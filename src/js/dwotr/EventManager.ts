@@ -27,12 +27,14 @@ import zapManager from './ZapManager';
 import EventDeletionManager from './EventDeletionManager';
 import repostManager from './RepostManager';
 import { EventContainer } from './model/ContainerTypes';
-import serverManager from './ServerManager';
 import recommendRelayManager from './RecommendRelayManager';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 
 class EventManager {
+
+  relayEventCount: Map<string, number> = new Map();
+
   seenRelayEvents: Set<UID> = new Set();
 
   eventIndex: Map<UID, Event> = new Map();
@@ -50,6 +52,12 @@ class EventManager {
     Loaded: 0,
     HandleEvents: 0,
   };
+
+  increaseRelayEventCount(relay: string) {
+    let count = this.relayEventCount.get(relay) || 0;
+    count++;
+    this.relayEventCount.set(relay, count);
+  }
 
   getContainer<T extends EventContainer>(id: UID): T | undefined {
     let container = eventManager.containers.get(id) as T;
@@ -216,6 +224,9 @@ class EventManager {
     if (!event) return false;
     
     eventManager.addSeen(ID(event.id));
+    // Increment the event count for the relay, so we know how many events we have received from the relay
+    eventManager.increaseRelayEventCount(url || '');
+
 
     // Check if the event has been ordered deleted
     if (EventDeletionManager.deleted.has(ID(event.id))) return false;
