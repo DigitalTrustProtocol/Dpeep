@@ -1,6 +1,5 @@
 //import { sha256 } from '@noble/hashes/sha256';
 //import throttle from 'lodash/throttle';
-import { Event, Sub } from 'nostr-tools';
 
 import relayPool from '@/nostr/relayPool.ts';
 
@@ -8,8 +7,6 @@ import localState from '../state/LocalState.ts';
 //import Helpers from '../utils/Helpers';
 
 //import PubSub from './PubSub';
-import followManager from '@/dwotr/FollowManager.ts';
-import serverManager from '@/dwotr/ServerManager.ts';
 //import { ID } from '@/utils/UniqueIds.ts';
 
 type SavedRelays = {
@@ -29,7 +26,7 @@ const DEFAULT_RELAYS = [
   'wss://offchain.pub',
   'wss://nos.lol',
   'wss://relay.snort.social',
-  //'wss://relay.current.fyi', Slow!
+  'wss://relay.current.fyi',  //Slow!
   'wss://soloco.nl',
 ];
 
@@ -50,6 +47,7 @@ export type RelayMetadata = { enabled: boolean; url: string };
 export type PopularRelay = {
   url: string;
   authorCount: number;
+  eventCount?: number;
 };
 
 /**
@@ -101,22 +99,6 @@ const Relays = {
   //   }
   //   return urls;
   // },
-  getPopularRelays: function (): Array<PopularRelay> {
-    let result = new Array<PopularRelay>();
-
-    let allRelays = serverManager.allRelays();
-    for (const url of allRelays) {
-      let container = serverManager.getRelayContainer(url);
-      let authorCount = container.recommendBy.size + container.referenceBy.size;
-      result.push({ url, authorCount });
-    }
-
-    result.sort((a, b) => {
-      return b.authorCount - a.authorCount;
-    });
-
-    return result;
-  },
   getConnectedRelayCount: function () {
     let count = 0;
     for (const url of this.relays.keys()) {

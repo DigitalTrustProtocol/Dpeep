@@ -23,12 +23,13 @@ export class DWoTRDexie extends Dexie {
   reposts!: Table<Event>;
   relays!: Table<RelayRecord>;
   recommendRelays!: Table<Event>;
+  relayList!: Table<Event>;
   events!: Table<Event>;
 
   constructor() {
     super(DB_NAME);
 
-    this.version(14).stores({
+    this.version(16).stores({
       edges: 'key, outKey, inKey', // Primary key is a hash of the outKey and inKey, type and context
       profiles: 'key, nip05',
       reactions: 'id, eventId, profileId, created_at',
@@ -40,7 +41,8 @@ export class DWoTRDexie extends Dexie {
       replies: 'id, pubkey, created_at',
       reposts: 'id, pubkey, created_at',
       relays: 'url',
-      recommendRelays: 'author', // RecommendRelayRecord is author is user pubkey, relay url.
+      recommendRelays: 'id, pubkey, created_at', // RecommendRelayRecord is author is user pubkey, relay url.
+      relayList: 'id, pubkey, created_at',
       events: 'id, pubkey, kind, created_at, [kind+created_at]', // Generic event table, used for storing events that are not loaded into in memory, like follows, blocks, etc.
     });
   }

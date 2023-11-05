@@ -3,7 +3,7 @@ import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { TextKind, highlightKind } from './network/WOTPubSub';
 import blockManager from './BlockManager';
-import eventManager from './EventManager';
+import eventManager, { eventDWoTR as EventDWoTR } from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';
 import relaySubscription from './network/RelaySubscription';
@@ -93,20 +93,20 @@ export class NoteManager {
   // This could be for like the last viewed 100 to 1000 events, as the time sort should be good enough for the rest.
 
   async load() {
-    let notes = await storage.notes.toArray();
+    let notes = await storage.notes.toArray() as EventDWoTR[];
     this.metrics.Loaded = notes.length;
 
     //let deltaDelete: Array<string> = [];
-    
-
     for (let note of notes) {
       let noteId = ID(note.id);
       eventManager.addSeen(noteId);
-      //let container = this.parse(note)!; // No container parsing, faster loading
 
       if (this.#canAdd(note)) {
         this.notes.set(noteId, note);
         eventManager.eventIndex.set(noteId, note);
+
+        if(note?.dwotr?.relay) eventManager.increaseRelayEventCount(note["dwotr"].relay);
+
       } else {
         //deltaDelete.push(container.id);
       }

@@ -56,6 +56,10 @@ class Storage {
   get events() {
     return this.db.events;
   }
+
+  get relayList() {
+    return this.db.relayList;
+  } 
   
   
   get db(): DWoTRDexie {

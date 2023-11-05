@@ -4,30 +4,31 @@ import blockManager from './BlockManager';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
-import { RecommendRelayKind } from './network/WOTPubSub';
+import { RelayListKind } from './network/WOTPubSub';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 import { Url } from './network/Url';
 import serverManager, { PublicRelaySettings } from './ServerManager';
 
-class RecommendRelayManager {
-  logging = false;
 
-  authorRelays: Map<UID, Set<string>> = new Map();
-  relayAuthors: Map<string, Set<UID>> = new Map();
+
+
+
+// NIP-65
+class RelayListManager {
+  logging = false;
 
   onEvent = new EventCallbacks(); // Callbacks to call on new events
 
-  table = new BulkStorage(storage.recommendRelays);
+  table = new BulkStorage(storage.relayList);
 
   private metrics = {
     Table: 0,
     Events: 0,
-    Authors: 0,
   };
 
   registerHandlers() {
-    eventManager.eventHandlers.set(RecommendRelayKind, this.handle.bind(this));
+    eventManager.eventHandlers.set(RelayListKind, this.handle.bind(this));
   }
 
   handle(event: Event, url?: string) {
@@ -45,8 +46,6 @@ class RecommendRelayManager {
     if (eventDeletionManager.deleted.has(ID(event.id))) return false;
     if (blockManager.isBlocked(ID(event!.pubkey))) return false; // May already been blocked, so redudant code
 
-    if (!Url.isWss(event.content)) return false;
-
     return true;
   }
 
@@ -54,22 +53,19 @@ class RecommendRelayManager {
     eventManager.eventIndex.set(ID(event.id), event);
 
     let authorId = ID(event.pubkey);
-    let url = Url.sanitize(event.content);
-    if (url) {
-        this.addRelayUrl(authorId, url, event.created_at);
-    } 
+
+    for(let tag of event.tags) {
+      if(tag[0] != 'r') continue;
+      let relayUrl = Url.sanitize(tag[1]);
+      if(!relayUrl) continue; // Invalid url
+      this.addRelay(authorId, relayUrl, tag[2], event.created_at);
+    }
   }
 
-  addRelayUrl(authorId: UID, url: string, created_at: number) {
-    let relays = this.authorRelays.get(authorId) || new Set<string>();
-    relays.add(url);
-    this.authorRelays.set(authorId, relays);
-
-    let authors = this.relayAuthors.get(url) || new Set<UID>();
-    authors.add(authorId);
-    this.relayAuthors.set(url, authors);
-
-    let settings = {read: true, write: true, created_at} as PublicRelaySettings;
+  addRelay(authorId: UID, url: string, action: string, created_at: number) {
+    let read = !action || action == "read";
+    let write = !action || action == "write";
+    let settings = {read, write, created_at} as PublicRelaySettings;
     serverManager.addRelay(authorId, url, settings);
   }
 
@@ -83,11 +79,11 @@ class RecommendRelayManager {
   }
 
   getMetrics() {
-    this.table.count().then((count) => this.metrics.Table = count);
-    this.metrics.Authors = this.authorRelays.size;
+    //this.table.count().then((count) => this.metrics.Table = count);
+    //this.metrics.Authors = this.authorRelays.size;
     return this.metrics;
   }
 }
 
-const recommendRelayManager = new RecommendRelayManager();
-export default recommendRelayManager;
+const relayListManager = new RelayListManager();
+export default relayListManager;

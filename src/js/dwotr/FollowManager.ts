@@ -20,14 +20,6 @@ import serverManager, { PublicRelaySettings } from './ServerManager';
 //const FOLLOW_STORE_KEY = 'myFollowList';
 const DegreeInfinit = 99;
 
-export type RelayMetadata = {
-  read: boolean;
-  write: boolean;
-
-  referenceCount: number;
-  lastSeen: number;
-  slowCount: number;
-};
 
 export class AuthorFollowNetwork {
   id: UID = 0; // Author id
@@ -45,7 +37,7 @@ class FollowManager {
   followSuggestionsSetting = undefined;
 
   network = new Map<UID, AuthorFollowNetwork>();
-  relayAuthors = new Map<string, Set<UID>>();
+  //relayAuthors = new Map<string, Set<UID>>();
 
   onEvent = new EventCallbacks(); // Callbacks to call when the follower change
 
@@ -191,7 +183,7 @@ class FollowManager {
 
     item.relays = this.#getUrlsFromFollowEvent(event);
 
-    this.#mergeRelays(authorId, item.relays);
+    this.#addRelays(authorId, item.relays);
 
     item.timestamp = event.created_at;
 
@@ -220,25 +212,20 @@ class FollowManager {
     return urls;
   }
 
-  #mergeRelays(authorId: UID, relays: Map<string, PublicRelaySettings>) {
+  #addRelays(authorId: UID, relays: Map<string, PublicRelaySettings>) {
     for (const [url, settings] of relays) {
-      this.#addRelay(url, authorId); // Add the author to the relay 
-
-      let record = serverManager.getRelayRecord(url);
-      record.url = url;
-      record.read = record.read || settings.read;
-      record.write = record.write || settings.write;
+      serverManager.addRelay(authorId, url, settings);
     }
   }
 
-  #addRelay(url: string, authorId: UID) {
-    let relay = this.relayAuthors.get(url);
-    if(!relay) {
-      relay = new Set<UID>();
-      this.relayAuthors.set(url, relay);
-    }
-    relay.add(authorId);
-  }
+  // #addRelay(url: string, authorId: UID) {
+  //   let relay = this.relayAuthors.get(url);
+  //   if(!relay) {
+  //     relay = new Set<UID>();
+  //     this.relayAuthors.set(url, relay);
+  //   }
+  //   relay.add(authorId);
+  // }
 
   parseEvent(event: Event) {
     let { p } = EventParser.parseTagsArrays(event);

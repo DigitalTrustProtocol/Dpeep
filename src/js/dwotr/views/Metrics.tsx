@@ -9,6 +9,8 @@ import reactionManager from '../ReactionManager';
 import graphNetwork from '../GraphNetwork';
 import noteManager from '../NoteManager';
 import relaySubscription from '../network/RelaySubscription';
+import relayListManager from '../RelayListManager';
+import serverManager from '../ServerManager';
 
 type TestDataProps = {
   path?: string;
@@ -23,6 +25,8 @@ class Metrics {
   Reactions: any = {}; 
   Notes: any = {};
   Subscriptions: any = {};
+  RelayLists: any = {};
+  RecommendRelays: any = {};
 }
 
 const useMetrics = (): { data: Metrics; time: number } => {
@@ -44,10 +48,13 @@ const useMetrics = (): { data: Metrics; time: number } => {
       d.Profiles = profileManager.getMetrics();
       d.Events = eventManager.getMetrics();
       d.Follow = followManager.getMetrics();
-      d.Relays = wotPubSub.getMetrics();
+      //d.Relays = wotPubSub.getMetrics();
       d.Reactions = reactionManager.getMetrics();
       d.Notes = noteManager.getMetrics();
       d.Subscriptions = relaySubscription.getMetrics();
+      d.Relays = serverManager.getMetrics();
+      d.RelayLists = relayListManager.getMetrics();
+      d.RecommendRelays = relayListManager.getMetrics();
 
       return d;
     };

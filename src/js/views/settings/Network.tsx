@@ -4,6 +4,7 @@ import Relays, { PopularRelay } from '../../nostr/Relays';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
 import getRelayPool from '@/nostr/relayPool.ts';
+import serverManager from '@/dwotr/ServerManager.ts';
 
 const Network = () => {
   const [relays, setRelays] = useState(Array.from(Relays.relays.values()));
@@ -18,7 +19,26 @@ const Network = () => {
   });
 
   useEffect(() => {
-    setPopularRelays(Relays.getPopularRelays());
+
+    const getPopularRelays = (): Array<PopularRelay> => {
+      let result = new Array<PopularRelay>();
+  
+      let allRelays = serverManager.allRelays();
+      for (const url of allRelays) {
+        let container = serverManager.getRelayContainer(url);
+        let authorCount = container.recommendBy.size + container.referenceBy.size;
+        let eventCount = container.eventCount;
+        result.push({ url, authorCount, eventCount });
+      }
+  
+      result.sort((a, b) => {
+        return b.authorCount - a.authorCount;
+      });
+  
+      return result;
+    }
+
+    setPopularRelays(getPopularRelays());
   }, []);
 
   const handleRemoveRelay = (relay) => {
@@ -119,13 +139,16 @@ const Network = () => {
       <h3>{t('popular_relays')}</h3>
       <div className="flex flex-col gap-2">
         <div className="flex peer gap-2">
-          <div className="flex-initial">{t('users')}</div>
           <div className="flex-grow">URL</div>
+          <div className="flex-initial">{t('users')}</div>
+          <div className="flex-initial">{t('events')}</div>
+          <div className="flex-0"></div>
         </div>
         {popularRelays.map((relay) => (
           <div className="flex peer gap-2" key={relay.url}>
-            <div className="flex-initial">{relay.authorCount}</div>
             <div className="flex-grow truncate max-w-[60vw]">{relay.url}</div>
+            <div className="flex-initial">{relay.authorCount}</div>
+            <div className="flex-initial">{relay.eventCount}</div>
             <div className="flex-initial">
               <button
                 className="btn btn-sm btn-neutral"

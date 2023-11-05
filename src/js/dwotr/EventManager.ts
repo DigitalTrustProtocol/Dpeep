@@ -11,6 +11,7 @@ import {
   MuteKind,
   ReactionKind,
   RecommendRelayKind,
+  RelayListKind,
   RepostKind,
   Trust1Kind,
   ZapKind,
@@ -30,9 +31,15 @@ import { EventContainer } from './model/ContainerTypes';
 import recommendRelayManager from './RecommendRelayManager';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
+import relayListManager from './RelayListManager';
 
+// Define the event with the DWoTR metadata object
+export type eventDWoTR = Event & {
+  dwotr: {
+    relay: string;
+  };
+};
 class EventManager {
-
   relayEventCount: Map<string, number> = new Map();
 
   seenRelayEvents: Set<UID> = new Set();
@@ -222,11 +229,10 @@ class EventManager {
 
   async eventCallback(event: Event, afterEose?: boolean, url?: string | undefined) {
     if (!event) return false;
-    
+
     eventManager.addSeen(ID(event.id));
     // Increment the event count for the relay, so we know how many events we have received from the relay
     eventManager.increaseRelayEventCount(url || '');
-
 
     // Check if the event has been ordered deleted
     if (EventDeletionManager.deleted.has(ID(event.id))) return false;
@@ -238,7 +244,6 @@ class EventManager {
       event['dwotr'] = {
         relay: url,
       };
-
     }
 
     // Handle the event as a note
@@ -252,6 +257,10 @@ class EventManager {
 
       case RecommendRelayKind:
         recommendRelayManager.handle(event, url);
+        break;
+
+      case RelayListKind:
+        relayListManager.handle(event, url);
         break;
 
       case RepostKind:
@@ -283,6 +292,7 @@ class EventManager {
       case ZapKind:
         zapManager.handle(event);
         break;
+
       default:
         //Events.handle(event, false, true);
         break;

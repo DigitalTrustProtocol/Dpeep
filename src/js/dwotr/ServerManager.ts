@@ -1,34 +1,32 @@
-import { Relay } from "nostr-relaypool";
 import { min } from "lodash";
 import { EPOCH } from "./Utils/Nostr";
 import Relays from "@/nostr/Relays";
 import { BulkStorage } from "./network/BulkStorage";
 import storage from "./Storage";
 import { UID } from "@/utils/UniqueIds";
-import followManager from "./FollowManager";
 import recommendRelayManager from "./RecommendRelayManager";
 import eventManager from "./EventManager";
-import getRelayPool from "@/nostr/relayPool";
 
 
+// NIP-65 - Each author has a read/write on a relay
 export type PublicRelaySettings = {
     read: boolean;
     write: boolean;
+    created_at?: number; // When the author added the relay
   };
   
 export class RelayRecord {
     url: string = '';
-    read: boolean = true;
-    write: boolean = true;
+    read: boolean = true; // For now not used
+    write: boolean = true; // For now not used
     auth: boolean = false; // If the relay requires authentication
     enabled: boolean = true; // If the relay is enabled
-    // eventCount: number = 0; // Number of events received from this relay, higher is better
-    // referenceBy: Set<number> = new Set(); // Number of references to this relay by users and events, higher is better
-    // recommendBy: Set<number> = new Set(); // Number of recommendations for this relay, higher is better
 
     timeoutCount: number = 0; // Number of timeouts from this relay, lower is better
     lastSync: number = 0; // Last time this relay was synced with the client
     lastActive: number = 0;  // Used to determine if a relay is active or not
+    supportNIPS: string[] = []; // List of supported NIPS
+    search: boolean = false; // If the relay is a search relay
 }
 
 type RelayContainer = {
@@ -36,7 +34,8 @@ type RelayContainer = {
     referenceBy: Set<UID>; // Number of references to this relay by users and events, higher is better
     recommendBy: Set<UID>; // Number of recommendations for this relay, higher is better
     eventCount: number; // Number of events received from this relay, higher is better
-    instance?: Relay; // Instance of the relay
+
+    //instance?: () => Relay; // Instance of the relay
 }
 
 // Handles the relays in the context of Dpeep
@@ -45,13 +44,26 @@ class ServerManager {
 
     logging = false;
 
+    authorRelays: Map<UID, Map<string, PublicRelaySettings>> = new Map();
+    relayAuthors: Map<string, Set<UID>> = new Map();
+
     containers = new Map<string, RelayContainer>();
 
+    // Database records
     records: Map<string, RelayRecord> = new Map();
 
     table = new BulkStorage(storage.relays);
 
     activeRelays: Array<string> = [];
+
+    private metrics = {
+        Table: 0,
+        Events: 0,
+        Authors: 0,
+      };
+    
+    
+    // Relay add and get ----------------------
 
     getRelayRecord(relay: string) : RelayRecord {
         let relayData = this.records.get(relay);
@@ -67,10 +79,10 @@ class ServerManager {
         if(!container) {
             container = {
                 record: this.getRelayRecord(url),
-                referenceBy: followManager.relayAuthors.get(url) || new Set(),
+                referenceBy: serverManager.relayAuthors.get(url) || new Set(),
                 recommendBy: recommendRelayManager.relayAuthors.get(url) || new Set(),
                 eventCount: eventManager.relayEventCount.get(url) || 0,
-                instance: getRelayPool().relayByUrl.get(url), // Instance of the relay, may be undefined
+                //instance: () => getRelayPool().relayByUrl.get(url), // Instance of the relay, may be undefined
             } as RelayContainer;
             this.containers.set(url, container);
         }
@@ -78,24 +90,76 @@ class ServerManager {
     }
 
     // Get the relays used by the user or recommended or within the contact content, used to determine which relays to use when querying for events
-    getReadRelaysBy(authorId: UID) : Array<string> {
+    getRelaysBy(authorId: UID, read: boolean, write:boolean) : Array<string> {
         let result = new Set<string>();
-        let network = followManager.getFollowNetwork(authorId);
-        for(let [relay, value]  of network.relays) {
-            if(value.read)
-                result.add(relay);
-        }
-        let recommendRelays = recommendRelayManager.authorRelays.get(authorId);
-        if(recommendRelays) {
-            for(let relay of recommendRelays) {
-                result.add(relay);
+        let authorRelays = this.authorRelays.get(authorId);
+        if(authorRelays) {
+            for(let [url, value] of authorRelays) {
+                if(value.read && read)
+                    result.add(url);
+                if(value.write && write)
+                    result.add(url);
             }
         }
         return [...result];
     }
 
+    getAuthorRelays(authorId: UID) : Map<string, PublicRelaySettings> {
+        let relays = this.authorRelays.get(authorId);
+        if(!relays) {
+            relays = new Map<string, PublicRelaySettings>();
+            this.authorRelays.set(authorId, relays);
+        }
+        return relays;
+    }
+
+    getAuthorRelaySettings(authorId: UID, url: string) : PublicRelaySettings {
+        let authorRelays = this.getAuthorRelays(authorId);
+        let settings = authorRelays.get(url);
+        if(!settings) {
+            settings = {read: true, write: true};
+            authorRelays.set(url, settings);
+        }
+        return settings;
+    }
+
+    addRelaySettings(authorId: UID, url: string, settings: PublicRelaySettings) {
+        let authorRelay = this.getAuthorRelaySettings(authorId, url);
+        if((authorRelay?.created_at || 0) < (settings?.created_at || 0))  
+            authorRelay.created_at = settings.created_at;
+        return authorRelay;
+    }
+
+
+    addRelayAuthor(authorId: UID, url: string) {
+        let relayAuthors = this.relayAuthors.get(url);    
+        if(!relayAuthors) {
+            relayAuthors = new Set<UID>();
+            this.relayAuthors.set(url, relayAuthors);
+        }
+        relayAuthors.add(authorId);
+        return relayAuthors;
+    }
+
+    addRecord(relay: string) {
+        let record = this.records.get(relay);
+        if(!record) {
+            record = new RelayRecord();
+            this.records.set(relay, record);
+        }
+        return record;
+    }
+    
+
+    addRelay(authorId: UID, url: string, settings: PublicRelaySettings) {
+        this.addRelaySettings(authorId, url, settings);
+        this.addRelayAuthor(authorId, url);
+        this.addRecord(url);
+    }
+
+
     allRelays() : Array<string> {
-        let urls = new Set([...this.records.keys(), ...recommendRelayManager.relayAuthors.keys(), ...followManager.relayAuthors.keys()]);
+        let urls = Array.from(this.records.keys());
         return [...urls];
     }
 
@@ -151,7 +215,12 @@ class ServerManager {
         this.table.save(record.url, record); // Save to the database, async in bulk
     }
 
-
+    getMetrics() {
+        this.table.count().then((count) => this.metrics.Table = count);
+        //this.metrics.Authors = this.authorRelays.size;
+        return this.metrics;
+      }
+    
 
     // #getRelayData(relay: string) : RelayMetadata {
     //     let relayData = this.relays.get(relay);
