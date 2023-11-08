@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { FeedOption } from '../network/WOTPubSub';
+import { FeedOption } from '../network/provider';
 import { DataProvider } from '../network/provider/DataProvider';
 import { NoteContainer } from '../model/ContainerTypes';
 import { ProviderStatus } from '../network/provider';

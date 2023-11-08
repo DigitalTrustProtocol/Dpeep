@@ -6,7 +6,7 @@ import { getEventReplyingTo, isRepost } from '@/nostr/utils';
 import { translate as t } from '@/translations/Translation.mjs';
 import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/provider';
 import FeedVirtual from '@/dwotr/components/feed/FeedVirtual';
 
 const Global: React.FC<RouteProps> = () => {

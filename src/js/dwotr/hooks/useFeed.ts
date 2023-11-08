@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Event } from 'nostr-tools';
 
-import { FeedOption } from '../network/WOTPubSub';
+import { FeedOption } from '../network/provider';
 import { FeedProvider } from '../network/FeedProvider';
 import feedManager from '../FeedManager';
 

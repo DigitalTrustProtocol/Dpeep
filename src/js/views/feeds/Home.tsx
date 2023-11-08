@@ -6,7 +6,7 @@ import { translate as t } from '@/translations/Translation.mjs';
 //import { RouteProps } from '@/views/types.ts';
 import View from '@/views/View.tsx';
 import { useFollows } from '@/dwotr/hooks/useFollows';
-import { FeedOption as FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption as FeedOption } from '@/dwotr/network/provider';
 //import FeedTanStack from '@/dwotr/components/feed/FeedTanStack';
 import { Feed } from '@/dwotr/components/feed/Feed';
 import FollowingCursor from '@/dwotr/network/provider/FollowingCursor';

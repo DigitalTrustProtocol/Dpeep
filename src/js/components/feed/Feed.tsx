@@ -9,9 +9,10 @@ import Helpers from '@/utils/Helpers';
 
 import InfiniteScroll from 'react-infinite-scroll-component';
 import useFeed from '@/dwotr/hooks/useFeed';
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+
 import NewEventsButton from '@/dwotr/components/NewEventsButton';
 import ShowNewEvents from './ShowNewEvents';
+import { FeedOption } from '@/dwotr/network/provider';
 
 export type FeedProps = {
   filterOptions: FeedOption[];

@@ -2,7 +2,7 @@ import { Event } from 'nostr-tools';
 import { ICursor } from './types';
 import { ID, UID } from '@/utils/UniqueIds';
 
-import { FeedOption } from './WOTPubSub';
+import { FeedOption } from './provider';
 import embedLoader from './embed/EmbedLoader';
 
 export class FeedProvider {

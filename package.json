@@ -34,7 +34,7 @@
     "lodash": "^4.17.21",
     "lokijs": "^1.5.12",
     "nostr-relaypool": "^0.6.28",
-    "nostr-tools": "^1.14.2",
+    "nostr-tools": "^1.17.0",
     "preact": "^10.17.1",
     "preact-async-route": "^2.2.1",
     "preact-router": "^4.1.2",

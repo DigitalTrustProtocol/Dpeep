@@ -1,4 +1,4 @@
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import reactionManager, { Reaction, ReactionMap } from '@/dwotr/ReactionManager';
 import { ReactionContainer } from '@/dwotr/model/ContainerTypes';
 import { BaseCursor } from './BaseCursor';

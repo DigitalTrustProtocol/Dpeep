@@ -2,7 +2,6 @@ import { Event, Filter } from 'nostr-tools';
 import Events from '../nostr/Events';
 import SocialNetwork from '../nostr/SocialNetwork';
 import Key from '../nostr/Key';
-import { throttle } from 'lodash';
 import Identicon from 'identicon.js';
 import OneCallQueue from './Utils/OneCallQueue';
 import storage from './Storage';
@@ -14,7 +13,7 @@ import EventCallbacks from './model/EventCallbacks';
 import ProfileRecord, { ProfileMemory } from './model/ProfileRecord';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
-import wotPubSub, { FeedOption } from './network/WOTPubSub';
+import { FeedOption } from './network/provider';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
 import eventDeletionManager from './EventDeletionManager';
@@ -57,6 +56,8 @@ class ProfileManager {
 
   //--------------------------------------------------------------------------------
   // Mapping profiles from relay server
+
+
   mapProfiles(profileIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>, forceFullSync = false) {
     let latestSync: Array<UID> = [];
     let fullSync: Array<UID> = [];
@@ -95,6 +96,17 @@ class ProfileManager {
     }
   }
 
+  // ---------------------------------------------------------------------------------------------
+
+  mapAuthors(authorsIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>, forceFullSync = false) {
+
+  }
+
+  //mapProfilesPool(profileIds: Set<UID> | Array<UID>, since?: number, kinds?: Array<number>, forceFullSync = false) {
+
+
+
+
   #names(ids: Set<UID> | Array<UID>): Array<string> {
     let names: Array<string> = [];
     for (const id of ids) {
@@ -128,7 +140,7 @@ class ProfileManager {
       onClose,
     } as FeedOption;
 
-    relaySubscription.once(options, 3000);
+    relaySubscription.getEvent(options);
   }
 
   //--------------------------------------------------------------------------------
@@ -468,9 +480,9 @@ class ProfileManager {
   subscribeMyself(since?: number, until?: number ) {
     const myPub = Key.getPubKey();
     this.mapProfiles([ID(myPub)]);
-    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735], since, until }]); // mentions, reactions, DMs
-    wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4], since, until }]); // dms for us
-    wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4], since, until }]); // dms by us
+    // relaySubscription.map([{ '#p': [myPub], kinds: [1, 3, 6, 7, 9735], since, until }]); // mentions, reactions, DMs
+    // wotPubSub.subscribeFilter([{ '#p': [myPub], kinds: [4], since, until }]); // dms for us
+    // wotPubSub.subscribeFilter([{ authors: [myPub], kinds: [4], since, until }]); // dms by us
     //Events.subscribeGroups();
   }
 

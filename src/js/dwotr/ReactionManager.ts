@@ -1,6 +1,6 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
-import wotPubSub, { FeedOption, ReactionKind } from './network/WOTPubSub';
+import { FeedOption, ReactionKind } from './network/provider';
 import { getNostrTime } from './Utils';
 import storage from './Storage';
 import followManager from './FollowManager';
@@ -12,6 +12,7 @@ import { ReactionEvent } from './network/types';
 import { BulkStorage } from './network/BulkStorage';
 import EventCallbacks from './model/EventCallbacks';
 import relaySubscription from './network/RelaySubscription';
+import serverManager from './ServerManager';
 
 
 
@@ -111,7 +112,7 @@ class ReactionManager {
 
     this.addValue(reaction);
 
-    wotPubSub.publish(event); // Publish the event to the network
+    serverManager.publish(event); // Publish the event to the network
 
     let record = {
       id: event.id,
@@ -296,9 +297,9 @@ class ReactionManager {
   getEvent(reaction: Reaction) : Event | undefined {
     let event = this.createEvent(STR(reaction.subjectEventId), STR(reaction.subjectAuthorId), reaction.value, reaction.created_at, false);
 
-    event.id = STR(reaction.id);
+    event.id = STR(reaction.id) as string;
     event.created_at = reaction.created_at;
-    event.pubkey = STR(reaction.authorId);
+    event.pubkey = STR(reaction.authorId) as string;
 
     return event as Event;
   }
@@ -309,7 +310,7 @@ class ReactionManager {
     value: number = 1,
     time = getNostrTime(),
     sign = true
-  ): Partial<Event> {
+  ): Event {
     let content = value == 1 ? '+' : value == -1 ? '-' : '';
 
     const event = {
@@ -320,10 +321,10 @@ class ReactionManager {
         ['e', subjectEventId], // 
         ['p', subjectAuthorPubKey], // Profile ID
       ],
-    } as Partial<Event>;
+    } as Event;
 
     if (sign)
-      wotPubSub.sign(event);
+      serverManager.sign(event);
 
     return event;
   }

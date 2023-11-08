@@ -39,7 +39,8 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const loadDB = async () => {
     setState((state: any) => ({ ...state, dbStatus: 'loading' }));
 
-    await serverManager.load(); // Load relay list
+    await serverManager.loadRelays(); // Load relays from local database
+    await serverManager.initializePool(); // Initialize relay pool, then load databases as relay servers are connected
     // Filtering events - blocks out unwanted events
     muteManager.load(); // Only me
     await eventDeletionManager.load(); 
@@ -78,9 +79,9 @@ const InitializeWoT = (props: InitializeWoTProps) => {
       );
     else console.log('No notes loaded from Database');
 
-    // await profileManager.subscribeMyselfOnce(since);
-    // await followManager.subscribeFollowsOnce(since);
-    // await graphNetwork.subscribeOnce(since);
+    //await profileManager.subscribeMyselfOnce(since);
+    //await followManager.subscribeFollowsOnce(since);
+    //await graphNetwork.subscribeOnce(since);
 
     console.log('loadNetwork done');
     //await graphNetwork.load();
@@ -90,9 +91,9 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const subscribe = () => {
     setState((state: any) => ({ ...state, subscribeStatus: 'loading' }));
 
-    profileManager.subscribeMyself();
-    followManager.subscribeFollowsMap();
-    graphNetwork.subscribeMap();
+    //profileManager.subscribeMyself();
+    //followManager.subscribeFollowsMap();
+    //graphNetwork.subscribeMap();
 
     console.log('subscribe done');
 

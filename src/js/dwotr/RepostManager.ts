@@ -7,7 +7,7 @@ import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
 import { BulkStorage } from './network/BulkStorage';
-import { RepostKind } from './network/WOTPubSub';
+import { RepostKind } from './network/provider';
 import noteManager from './NoteManager';
 import { EventContainer, RepostContainer } from './model/ContainerTypes';
 

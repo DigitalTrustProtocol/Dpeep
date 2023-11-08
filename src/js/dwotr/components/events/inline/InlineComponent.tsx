@@ -1,5 +1,5 @@
 import { NoteContainer, NoteSubtype } from '@/dwotr/model/ContainerTypes';
-import { RepostKind } from '@/dwotr/network/WOTPubSub';
+import { RepostKind } from '@/dwotr/network/provider';
 import InlineReply from './InlineReply';
 import InlineNote from './InlineNote';
 import InlineRepost from './InlineRepost';

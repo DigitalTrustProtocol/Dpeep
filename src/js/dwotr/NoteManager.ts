@@ -1,9 +1,9 @@
 import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import { TextKind, highlightKind } from './network/WOTPubSub';
+import { TextKind, highlightKind } from './network/provider';
 import blockManager from './BlockManager';
-import eventManager, { eventDWoTR as EventDWoTR } from './EventManager';
+import eventManager, { DWoTREvent } from './EventManager';
 import SortedMap from '@/utils/SortedMap/SortedMap';
 import EventCallbacks from './model/EventCallbacks';
 import relaySubscription from './network/RelaySubscription';
@@ -53,6 +53,7 @@ export class NoteManager {
   registerHandlers() {
     noteKinds.forEach((kind) => { eventManager.eventHandlers.set(kind, this.handle.bind(this)) });
     noteKinds.forEach((kind) => { eventManager.containerParsers.set(kind, this.parse.bind(this)) });
+    noteKinds.forEach((kind) => { eventManager.eventLoaders.set(kind, this.loadEvent.bind(this)) });
   }
 
   hasNode(id: UID) {
@@ -92,8 +93,15 @@ export class NoteManager {
   // Optionally save and load view order on nodes, so that we can display them in the same order, even if they are received out of order
   // This could be for like the last viewed 100 to 1000 events, as the time sort should be good enough for the rest.
 
+  loadEvent(note: Event) {
+    if (this.#canAdd(note)) {
+      let noteId = ID(note.id);
+      this.notes.set(noteId, note);
+  }
+}
+
   async load() {
-    let notes = await storage.notes.toArray() as EventDWoTR[];
+    let notes = await storage.notes.toArray() as DWoTREvent[];
     this.metrics.Loaded = notes.length;
 
     //let deltaDelete: Array<string> = [];
@@ -105,7 +113,7 @@ export class NoteManager {
         this.notes.set(noteId, note);
         eventManager.eventIndex.set(noteId, note);
 
-        if(note?.dwotr?.relay) eventManager.increaseRelayEventCount(note["dwotr"].relay);
+        //if(note?.dwotr?.relay) eventManager.increaseRelayEventCount(note["dwotr"].relay);
 
       } else {
         //deltaDelete.push(container.id);

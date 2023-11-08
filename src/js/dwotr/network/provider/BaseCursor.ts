@@ -1,5 +1,5 @@
 import { Cursor } from '.';
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import { EPOCH } from '@/dwotr/Utils/Nostr';
 import { getNostrTime } from '@/dwotr/Utils';
 

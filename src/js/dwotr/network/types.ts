@@ -1,5 +1,5 @@
 import { Event } from 'nostr-tools';
-import { FeedOption } from './WOTPubSub';
+import { FeedOption } from './provider';
 import { Reaction } from '../ReactionManager';
 
 export type Events = Array<Event>;

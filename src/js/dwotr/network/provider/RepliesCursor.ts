@@ -1,4 +1,4 @@
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import { ReplyContainer } from '@/dwotr/model/ContainerTypes';
 import { RelayCursor } from './RelayCursor';
 import replyManager from '@/dwotr/ReplyManager';

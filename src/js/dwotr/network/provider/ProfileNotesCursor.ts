@@ -1,5 +1,5 @@
 import { NotesCursor } from './NotesCursor';
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 
 
 class ProfileNotesCursor extends NotesCursor {

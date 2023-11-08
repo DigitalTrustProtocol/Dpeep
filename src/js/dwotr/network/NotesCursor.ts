@@ -1,5 +1,5 @@
 import { Event } from 'nostr-tools';
-import { FeedOption, OnClose, OnDone, RepostKind } from './WOTPubSub';
+import { FeedOption, OnClose, OnDone, RepostKind } from './provider';
 import { Events, ICursor } from './types';
 import noteManager from '../NoteManager';
 import { EPOCH } from '../Utils/Nostr';

@@ -4,7 +4,7 @@ import blockManager from './BlockManager';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
-import { RelayListKind } from './network/WOTPubSub';
+import { RelayListKind } from './network/provider';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 import { Url } from './network/Url';

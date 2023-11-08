@@ -3,7 +3,7 @@
 import { Event } from 'nostr-tools';
 
 import { first } from 'hurdak';
-import { FeedOption, ReactionKind } from './WOTPubSub';
+import { FeedOption, ReactionKind } from './provider';
 import relaySubscription from './RelaySubscription';
 import NotesCursor from './NotesCursor';
 import { ID, UID } from '@/utils/UniqueIds';
@@ -87,7 +87,7 @@ export class LikesCursor extends NotesCursor {
 
     this.loading = true;
     //console.time('RepliesCursor:load:relaySubscription.once');
-    await relaySubscription.once(this.options, timeOut);
+    await relaySubscription.getEvent(this.options);
     //console.timeEnd('RepliesCursor:load:relaySubscription.once');
     this.loading = false;
 

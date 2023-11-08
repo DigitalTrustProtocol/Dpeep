@@ -1,7 +1,7 @@
 import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event, Filter } from 'nostr-tools';
 import Key from '@/nostr/Key';
-import wotPubSub, { ContactsKind, FeedOption, OnEvent } from './network/WOTPubSub';
+import { ContactsKind, FeedOption, OnEvent } from './network/provider/';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
 import EventCallbacks from './model/EventCallbacks';
@@ -10,7 +10,6 @@ import storage from './Storage';
 import graphNetwork from './GraphNetwork';
 import { EventParser, PTagContact } from './Utils/EventParser';
 import blockManager from './BlockManager';
-import Relays from '@/nostr/Relays';
 import relaySubscription from './network/RelaySubscription';
 import { EPOCH } from './Utils/Nostr';
 import { BulkStorage } from './network/BulkStorage';
@@ -120,27 +119,6 @@ class FollowManager {
 
     this.onEvent.dispatch(authorId, item);
   }
-
-  // updateNetwork() {
-  //   // Possible throttle this function
-
-  //   this.#updateSubscriptions();
-  //   this.#updateUnsubscriptions();
-  // }
-
-  // #updateSubscriptions() {
-  //   let list = this.subsQueue;
-  //   list.forEach((id) => (this.getItem(id).pubsubRegistered = true));
-  //   this.subsQueue = new Set();
-  //   wotPubSub.subscribeAuthors(list);
-  // }
-
-  // #updateUnsubscriptions() {
-  //   let list = this.unsubQueue;
-  //   list.forEach((id) => (this.getItem(id).pubsubRegistered = false));
-  //   this.unsubQueue = new Set();
-  //   wotPubSub.unsubscribeFlow(list);
-  // }
 
   #getPetNames(metadata: any | undefined) {
     let pTags = metadata?.pTags;
@@ -256,7 +234,6 @@ class FollowManager {
       let urls = metadata.pTags
         .filter((tag) => tag.valid && tag.relayUrl)
         .map((tag) => tag.relayUrl);
-      wotPubSub.updateRelays(urls); // Update relays from the p tags
 
       this.updateFollowSuggestionsSetting();
     }
@@ -286,7 +263,7 @@ class FollowManager {
 
     this.save(event);
 
-    wotPubSub.publish(event);
+    serverManager.publish(event);
   }
 
   addFollower(target: AuthorFollowNetwork, followerId: UID): void {
@@ -379,8 +356,12 @@ class FollowManager {
     let pTags = [...item.follows].map((id) => ['p', STR(id), '']);
 
     const relaysObj: any = {};
-    for (const url of Relays.enabledRelays()) {
-      relaysObj[url] = { read: true, write: true };
+
+
+    let myRelays = serverManager.ensureAuthorRelays(myId);
+
+    for (const [url, settings] of myRelays) {
+      relaysObj[url] = { read: settings.read, write: settings.write };
     }
     const content = JSON.stringify(relaysObj);
 
@@ -391,7 +372,7 @@ class FollowManager {
       tags: [...pTags],
     } as Event;
 
-    wotPubSub.sign(event);
+    serverManager.sign(event);
 
     return event;
   }
@@ -454,7 +435,7 @@ class FollowManager {
       onClose: () => this.relayContactsRequests.delete(id),
     } as FeedOption;
 
-    relaySubscription.once(opt);
+    relaySubscription.getEvent(opt);
   }
 
   relayFollowedByRequests = new Set<UID>();

@@ -1,6 +1,6 @@
 import graphNetwork from '../../GraphNetwork';
 import { EntityType, Vertice } from '../../model/Graph';
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import { NotesCursor } from './NotesCursor';
 
 class TrustNetworkCursor extends NotesCursor {

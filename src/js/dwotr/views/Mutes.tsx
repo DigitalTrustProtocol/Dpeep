@@ -99,7 +99,6 @@ function useLoadMutes(hexKey: string | undefined, view: string | undefined) {
       //   //setMutes(list);
       // }
 
-      // let unsub = wotPubSub?.subscribeTrust(undefined, 0, cb, [MuteKind]);
 
       // let list: Array<string> = [];
       // for(const v in graphNetwork.g.vertices)  {

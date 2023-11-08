@@ -1,4 +1,4 @@
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import { RelayCursor } from './RelayCursor';
 import noteManager from '@/dwotr/NoteManager';

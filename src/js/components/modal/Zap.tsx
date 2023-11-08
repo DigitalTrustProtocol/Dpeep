@@ -6,7 +6,6 @@ import useLocalState from '@/state/useLocalState.ts';
 
 import Events from '../../nostr/Events';
 import Key from '../../nostr/Key';
-import Relays from '../../nostr/Relays';
 import Helpers from '../../utils/Helpers';
 import {
   LNURL,
@@ -21,6 +20,7 @@ import Name from '../user/Name';
 
 import Modal from './Modal';
 import { formatSats } from '@/utils/Lightning';
+import serverManager from '@/dwotr/ServerManager';
 
 // Code kindly contributed by @Kieran and @verbiricha from Snort
 
@@ -170,7 +170,7 @@ export default function SendSats(props: ZapProps) {
         tags: [
           ['e', note],
           ['p', recipient],
-          ['relays', ...Relays.relays.keys()],
+          ['relays', ...serverManager.pool.connectedRelays()],
         ],
       };
       const id = Events.getEventHash(ev);

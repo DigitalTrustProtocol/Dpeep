@@ -2,10 +2,11 @@ import { ID, STR, UID } from '@/utils/UniqueIds';
 import { Event } from 'nostr-tools';
 import { EventParser } from './Utils/EventParser';
 import Key from '@/nostr/Key';
-import wotPubSub, { MuteKind } from './network/WOTPubSub';
+import { MuteKind } from './network/provider';
 import { getNostrTime } from './Utils';
 import localState from '@/state/LocalState';
 import EventCallbacks from './model/EventCallbacks';
+import serverManager from './ServerManager';
 
 const MUTE_STORE_KEY = 'Mutes';
 
@@ -45,7 +46,7 @@ class MuteManager {
 
     let event = await muteManager.createEvent();
     this.save(event);
-    wotPubSub.publish(event);
+    serverManager.publish(event);
   }
 
   async addMutes(event: Event) {
@@ -96,7 +97,7 @@ class MuteManager {
     });
   }
 
-  async createEvent(): Promise<Partial<Event>> {
+  async createEvent(): Promise<Event> {
     let deltaPublicKeys = [...this.profileMutes].filter(
       (id) => !this.privateMutes.has(id) && !this.noteMutes.has(id),
     );

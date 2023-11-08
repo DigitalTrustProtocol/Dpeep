@@ -2,11 +2,12 @@ import { throttle } from 'lodash';
 import { Event } from 'nostr-tools';
 import storage from './Storage';
 import { ID,  UID } from '@/utils/UniqueIds';
-import wotPubSub, { EventDeletionKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
-import noteManager from './NoteManager';
+import { EventDeletionKind } from './network/provider';
+import serverManager from './ServerManager';
+
 
 
 
@@ -104,9 +105,9 @@ class EventDeletionManager {
       //   ['e', eventId], // Event ID
       //   ['p', eventPubKey], // Profile ID
       // ],
-    };
+    } as Event;
 
-    wotPubSub.sign(event);
+    serverManager.sign(event);
 
     return event;
   }

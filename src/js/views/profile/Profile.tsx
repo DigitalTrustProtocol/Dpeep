@@ -16,7 +16,7 @@ import { useProfile } from '@/dwotr/hooks/useProfile.ts';
 import { useKey } from '@/dwotr/hooks/useKey.tsx';
 import blockManager from '@/dwotr/BlockManager.ts';
 import { ID } from '@/utils/UniqueIds.ts';
-import { FeedOption } from '@/dwotr/network/WOTPubSub.ts';
+import { FeedOption } from '@/dwotr/network/provider';
 import ProfileNotesCursor from '@/dwotr/network/provider/ProfileNotesCursor.ts';
 import { Feed } from '@/dwotr/components/feed/Feed.tsx';
 import { LikesCursor } from '@/dwotr/network/provider/LikesCursor.ts';
@@ -106,8 +106,8 @@ function Profile(props) {
 
     let id = ID(hexPub);
     let isSubscribed = relaySubscription.subscribedAuthors.has(id);
-    let profileCursor = isSubscribed ? ProfileNotesCursor : ProfileRelayCursor;
-    let likesCursor = isSubscribed ? LikesCursor : LikesRelayCursor;
+    let profileCursor = false ? ProfileNotesCursor : ProfileRelayCursor;
+    let likesCursor = false ? LikesCursor : LikesRelayCursor;
 
     return [
       {

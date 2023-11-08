@@ -4,12 +4,13 @@ import { EventParser } from './Utils/EventParser';
 import graphNetwork from './GraphNetwork';
 import { Vertice } from './model/Graph';
 import Key from '@/nostr/Key';
-import wotPubSub, { BlockKind } from './network/WOTPubSub';
 import { getNostrTime } from './Utils';
 import EventCallbacks from './model/EventCallbacks';
 import { throttle } from 'lodash';
 import storage from './Storage';
 import eventManager from './EventManager';
+import serverManager from './ServerManager';
+import { BlockKind } from './network/provider';
 
 class BlockVertice extends Vertice {
   blocks?: Set<UID>;
@@ -100,7 +101,7 @@ class BlockManager {
 
     let event = await blockManager.createEvent(myV);
     this.save(event); // Save the event to the local database
-    wotPubSub.publish(event); // Publish the event to the network
+    serverManager.publish(event); // Publish the event to the network
   }
 
   addBlocks(profileV: BlockVertice, blockIDs: Set<UID>): void {

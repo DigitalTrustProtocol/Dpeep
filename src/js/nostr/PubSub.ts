@@ -2,13 +2,14 @@ import throttle from 'lodash/throttle';
 import { Event, Filter, matchFilter } from 'nostr-tools';
 
 //import EventDB from '@/nostr/EventDB';
-import getRelayPool from '@/nostr/relayPool';
+//import getRelayPool from '@/nostr/relayPool';
 
-import Events from '../nostr/Events';
+//import Events from '../nostr/Events';
 import localState from '../state/LocalState.ts';
 
 //import IndexedDB from './IndexedDB';
-import Relays from './Relays';
+//import Relays from './Relays';
+import serverManager from '@/dwotr/ServerManager.ts';
 
 type Subscription = {
   filter: Filter;
@@ -60,21 +61,11 @@ const PubSub = {
       filter.authors.forEach((a) => this.subscribedAuthors.add(a));
     }
 
-    // TODO if filter.ids & found in EventDB, don't ask others
-
-    //callback && EventDB.find(filter, callback);
-
-    // if (dev.indexedDbLoad !== false) {
-    //   setTimeout(() => {
-    //     // seems blocking. use web worker? bulk get?
-    //     IndexedDB.find(filter);
-    //   });
-    // }
-
-    const unsubRelays = this.subscribeRelayPool(filter, sinceLastOpened, mergeSubscriptions);
+    const sub = serverManager.pool.sub([], [filter], undefined);
+    if(callback) sub.on('event', callback);
 
     return () => {
-      unsubRelays?.();
+      sub?.unsub();
       if (currentSubscriptionId) {
         this.subscriptions.delete(currentSubscriptionId);
       }
@@ -82,7 +73,7 @@ const PubSub = {
   },
 
   publish(event: Event) {
-    getRelayPool().publish(event, Array.from(Relays.enabledRelays()));
+    serverManager.pool.publish(undefined, event);
   },
 
   handle(event: Event & { id: string }) {
@@ -93,35 +84,35 @@ const PubSub = {
     }
   },
 
-  subscribeRelayPool(filter: Filter, sinceLastOpened: boolean, mergeSubscriptions: boolean) {
-    return () => {};
-    let relays;
-    if (filter.search) {
-      relays = Array.from(Relays.searchRelays.keys());
-    } else if (mergeSubscriptions || filter.authors?.length !== 1) {
-      relays = Relays.enabledRelays();
-    }
+  // subscribeRelayPool(filter: Filter, sinceLastOpened: boolean, mergeSubscriptions: boolean) {
+  //   return () => {};
+  //   let relays;
+  //   if (filter.search) {
+  //     //relays = Array.from(Relays.searchRelays.keys());
+  //   } else if (mergeSubscriptions || filter.authors?.length !== 1) {
+  //     //relays = Relays.enabledRelays();
+  //   }
 
-    if (sinceLastOpened) {
-      filter.since = lastOpened;
-    }
+  //   if (sinceLastOpened) {
+  //     filter.since = lastOpened;
+  //   }
 
-    return getRelayPool().subscribe(
-      [filter],
-      relays,
-      (event, _, url) => {
-        setTimeout(() => {
-          Events.handle(event);
-          if (url) {
-            Events.handleEventMetadata({ url, event });
-          }
-        });
-      },
-      mergeSubscriptions ? 100 : 0,
-      undefined,
-      { defaultRelays: Relays.enabledRelays() },
-    );
-  },
+  //   return getRelayPool().subscribe(
+  //     [filter],
+  //     relays,
+  //     (event, _, url) => {
+  //       setTimeout(() => {
+  //         Events.handle(event);
+  //         if (url) {
+  //           Events.handleEventMetadata({ url, event });
+  //         }
+  //       });
+  //     },
+  //     mergeSubscriptions ? 100 : 0,
+  //     undefined,
+  //     { defaultRelays: Relays.enabledRelays() },
+  //   );
+  // },
 };
 
 export default PubSub;

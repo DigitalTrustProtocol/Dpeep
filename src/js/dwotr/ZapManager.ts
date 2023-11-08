@@ -2,7 +2,7 @@ import { throttle } from 'lodash';
 import { Event, Filter } from 'nostr-tools';
 import storage from './Storage';
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import wotPubSub, { FeedOption, OnEvent, ZapKind } from './network/WOTPubSub';
+import { FeedOption, OnEvent, ZapKind } from './network/provider';
 import { getNostrTime } from './Utils';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
@@ -10,6 +10,7 @@ import relaySubscription from './network/RelaySubscription';
 import { decodeInvoice } from '@/utils/Lightning';
 import { getZappingUser } from '@/nostr/utils';
 import Key from '@/nostr/Key';
+import serverManager from './ServerManager';
 
 
 
@@ -111,7 +112,7 @@ class ZapManager {
       // ],
     };
 
-    wotPubSub.sign(event);
+    serverManager.sign(event as Event);
 
     return event;
   }

@@ -4,7 +4,7 @@ import blockManager from './BlockManager';
 import eventManager from './EventManager';
 import EventCallbacks from './model/EventCallbacks';
 import eventDeletionManager from './EventDeletionManager';
-import { RecommendRelayKind } from './network/WOTPubSub';
+import { RecommendRelayKind } from './network/provider';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 import { Url } from './network/Url';

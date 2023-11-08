@@ -1,18 +1,18 @@
 //import * as bech32 from 'bech32-buffer'; /* eslint-disable-line @typescript-eslint/no-var-requires */
 import Graph, { Edge, EdgeRecord, EntityType, Vertice } from './model/Graph';
 import { MAX_DEGREE } from './model/TrustScore';
-import { debounce, throttle } from 'lodash';
+import { debounce } from 'lodash';
 import Key from '@/nostr/Key';
 import { ID } from '@/utils/UniqueIds';
 
 import verticeMonitor from './VerticeMonitor';
 import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
-import wotPubSub from './network/WOTPubSub';
 import storage from './Storage';
 import relaySubscription from './network/RelaySubscription';
 import profileManager from './ProfileManager';
 import { BulkStorage } from './network/BulkStorage';
+import trustManager from './TrustManager';
 
 export type ResolveTrustCallback = (result: any) => any;
 
@@ -125,7 +125,7 @@ class GraphNetwork {
         if (preVal == currentVal) return; // In the end, if trust value has not changed, then don't publish the trust to the network
 
         // Publish the trust to the network is pretty slow, may be web workers can be used to speed it up UI
-        wotPubSub.publishTrust(
+        trustManager.publishTrust(
           to,
           currentVal,
           comment,

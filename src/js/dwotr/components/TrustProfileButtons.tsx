@@ -6,7 +6,7 @@ import useVerticeMonitor from '../hooks/useVerticeMonitor';
 import TrustScore from '../model/TrustScore';
 import { ID } from '@/utils/UniqueIds';
 import profileManager from '../ProfileManager';
-import { Trust1Kind } from '../network/WOTPubSub';
+import { Trust1Kind } from '../network/provider';
 
 const TrustProfileButtons = ({str}: any) => {
   const [state, setState] = useState({

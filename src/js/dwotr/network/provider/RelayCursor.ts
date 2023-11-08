@@ -1,16 +1,14 @@
 import { Event } from 'nostr-tools';
-
 import { seconds } from 'hurdak';
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import { EPOCH } from '../../Utils/Nostr';
 import relaySubscription from '../RelaySubscription';
-import eventManager from '@/dwotr/EventManager';
 import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import { BaseCursor } from './BaseCursor';
-
+import eventManager from '@/dwotr/EventManager';
 
 export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
-  
+  factor = 10;
   limit = 50;
   //  An event matches a filter if since <= created_at <= until holds.
   delta = seconds(10, 'minute');
@@ -23,78 +21,66 @@ export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
     this.since = this.until - this.delta;
   }
 
-
   reset() {
     super.reset();
     this.buffer = [];
   }
 
-
   async next(): Promise<T | undefined> {
+    if (this.done) return;
 
-    if(this.done) return;
+    if (this.buffer.length) return this.buffer.shift() as T;
 
-    if(this.buffer.length)
-      return this.buffer.shift() as T;
-    
-    await this.load(this.timeout);
+    await this.load();
     this.#sort(); // Sort the buffer
 
     // Potentially a dead loop if the relay is not returning events and not closing
     return await this.next();
   }
 
-
-  async load(timeOut: number = 10000): Promise<number> {
+  async load(): Promise<number> {
     // If we're already loading, or we have enough buffered, do nothing
-    if (this.done) {
-      return 0;
-    }
+    if (this.done) return 0;
 
     const { limit, since, until } = this;
     const { filter } = this.options;
 
     let options = {
-      filter: { ...filter,  until, limit, since },
-      onEvent: (event: Event ) => { //afterEose: boolean, relayUrl: string
-        
-        this.until = Math.min(until, event.created_at) - 1;
-
-        let container = eventManager.getContainerByEvent(event) as T;
-        if(!container) return;
-
-        this.buffer.push(container);
-      },
-      maxDelayms: 0,
-      onClose: () => { // subId:number
-
-        // Relays can't be relied upon to return events in descending order, do exponential
-        // windowing to ensure we get the most recent stuff on first load, but eventually find it all
-        let factor = 10;
-
-        if (this.since <= EPOCH) {
-          // We've reached the end of EPOCH, we're done
-          this.done = true;
-
-        } else {
-          this.since -= this.delta;
-          //let factor = Math.floor(this.limit / this.buffer.length + 1);
-          if(this.buffer.length < 10) {
-            this.delta *= factor;
-            if(this.timeout < 3000) 
-              this.timeout += 1000; // Increase timeout if we're not getting events
-          }
-        }
-      },
+      filter: { ...filter, until, limit, since },
+      eoseSubTimeout: this.timeout,
     } as FeedOption;
 
-    await relaySubscription.once(options, timeOut);
+    let events = await relaySubscription.list(options);
+
+    if (!events || events.length == 0) {
+      if (this.since <= EPOCH) {
+        this.done = true;
+        return 0;
+      }
+
+      this.since -= this.delta;
+      //let factor = Math.floor(this.limit / this.buffer.length + 1);
+      if (this.buffer.length < 10) {
+        this.delta *= this.factor;
+        if (this.timeout < 3000) this.timeout += 1000; // Increase timeout if we're not getting events
+      }
+    } else {
+      events.forEach((event) => this.#addEvent(event, until));
+    }
 
     return this.buffer.length;
+  }
+
+  #addEvent(event: Event, until: number) {
+    let container = eventManager.getContainerByEvent(event) as T;
+    if (!container) return;
+
+    this.until = Math.min(until, event.created_at) - 1;
+
+    this.buffer.push(container);
   }
 
   #sort() {
     this.buffer.sort((a, b) => b.event!.created_at - a.event!.created_at);
   }
-
 }

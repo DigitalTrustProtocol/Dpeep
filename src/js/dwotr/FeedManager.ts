@@ -1,6 +1,5 @@
 import { FeedProvider } from "./network/FeedProvider";
-import { FeedOption } from "./network/WOTPubSub";
-
+import { FeedOption } from "./network/provider";
 
 class FeedManager {
 

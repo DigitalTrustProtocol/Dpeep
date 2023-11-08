@@ -4,7 +4,7 @@ import { useLayoutEffect, useEffect, useRef } from 'preact/hooks';
 import useHistoryState from '@/state/useHistoryState.ts';
 
 import useFeed from '@/dwotr/hooks/useFeed';
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/provider';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Show from '@/components/helpers/Show';

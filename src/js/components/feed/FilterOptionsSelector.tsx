@@ -1,4 +1,4 @@
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from "@/dwotr/network/provider";
 
 type FilterOptionsProps = {
   filterOptions: FeedOption[];

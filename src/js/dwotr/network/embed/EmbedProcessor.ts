@@ -1,6 +1,6 @@
 import { EmbedData } from '.';
 import { ID, STR, UID } from '@/utils/UniqueIds';
-import { MetadataKind, ReactionKind, RepostKind, TextKind } from '../WOTPubSub';
+import { MetadataKind, ReactionKind, RepostKind, TextKind } from '../provider';
 import profileManager from '../../ProfileManager';
 import eventManager from '../../EventManager';
 import {

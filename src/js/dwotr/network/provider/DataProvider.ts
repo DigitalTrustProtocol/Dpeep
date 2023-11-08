@@ -1,6 +1,6 @@
 import { UID } from '@/utils/UniqueIds';
 import { Cursor, DataProviderEvents, ProviderStatus } from '.';
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import embedLoader from '../embed/EmbedLoader';
 

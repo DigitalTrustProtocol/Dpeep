@@ -1,5 +1,5 @@
 import { Event } from 'nostr-tools';
-import { FeedOption } from './WOTPubSub';
+import { FeedOption } from './provider';
 import { ID, UID } from '@/utils/UniqueIds';
 import NotesCursor from './NotesCursor';
 import eventManager from '../EventManager';

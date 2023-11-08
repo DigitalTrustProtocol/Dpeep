@@ -4,7 +4,6 @@ import { Link } from 'preact-router';
 import graphNetwork from '../GraphNetwork';
 
 import ScrollView from '@/components/ScrollView';
-import WOTPubSub from '../network/WOTPubSub';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { Event } from 'nostr-tools';
 import { throttle } from 'lodash';
@@ -13,7 +12,6 @@ import MyAvatar from '@/components/user/Avatar';
 import Name from '@/components/user/Name';
 import Key from '@/nostr/Key';
 import { ID, STR } from '@/utils/UniqueIds';
-import eventManager from '../EventManager';
 import PubSub from '@/nostr/PubSub';
 
 type TestDataProps = {

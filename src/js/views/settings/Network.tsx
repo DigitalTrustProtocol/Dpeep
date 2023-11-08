@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'preact/compat';
 
-import Relays, { PopularRelay } from '../../nostr/Relays';
+//import Relays, { PopularRelay } from '../../nostr/Relays';
 import localState from '../../state/LocalState.ts';
 import { translate as t } from '../../translations/Translation.mjs';
-import getRelayPool from '@/nostr/relayPool.ts';
-import serverManager from '@/dwotr/ServerManager.ts';
+import serverManager, { PopularRelay } from '@/dwotr/ServerManager.ts';
+
+export type RelayMetadata = { enabled: boolean; url: string };
+
 
 const Network = () => {
-  const [relays, setRelays] = useState(Array.from(Relays.relays.values()));
+  const [relays, setRelays] = useState<RelayMetadata[]>([]);
   const [popularRelays, setPopularRelays] = useState([] as PopularRelay[]);
   const [newRelayUrl, setNewRelayUrl] = useState('');
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setRelays(Array.from(Relays.relays.values()));
+      
+      let arr: RelayMetadata[] = [];
+      for(let url of serverManager.pool.connectedRelays()) {
+        arr.push({url, enabled: true});
+      }
+      setRelays(arr);
     }, 2000);
     return () => clearInterval(interval);
   });
@@ -25,7 +32,7 @@ const Network = () => {
   
       let allRelays = serverManager.allRelays();
       for (const url of allRelays) {
-        let container = serverManager.getRelayContainer(url);
+        let container = serverManager.relayContainer(url);
         let authorCount = container.recommendBy.size + container.referenceBy.size;
         let eventCount = container.eventCount;
         result.push({ url, authorCount, eventCount });
@@ -42,8 +49,8 @@ const Network = () => {
   }, []);
 
   const handleRemoveRelay = (relay) => {
-    localState.get('relays').get(relay.url).put(null);
-    Relays.remove(relay.url);
+    //localState.get('relays').get(relay.url).put(null);
+    //Relays.remove(relay.url);
   };
 
   const ensureProtocol = (relay) => {
@@ -59,13 +66,13 @@ const Network = () => {
       .get(newRelayUrlWithProtocol)
       .put({ enabled: true, newRelayUrlWithProtocol });
     event.preventDefault(); // prevent the form from reloading the page
-    Relays.add(newRelayUrlWithProtocol); // add the new relay using the Nostr method
+    //Relays.add(newRelayUrlWithProtocol); // add the new relay using the Nostr method
     setNewRelayUrl(''); // reset the new relay URL
   };
 
   const getStatus = (relay) => {
     try {
-      return getRelayPool().relayByUrl.get(relay.url).status;
+      return serverManager.pool.connection[relay.url].status;
     } catch (e) {
       return 3;
     }
@@ -105,7 +112,7 @@ const Network = () => {
               checked={relay.enabled !== false}
               onChange={() => {
                 relay.enabled = !(relay.enabled !== false);
-                relay.enabled ? Relays.enable(relay.url) : Relays.disable(relay.url);
+                /* relay.enabled ? Relays.enable(relay.url) : Relays.disable(relay.url); */
               }}
             />
           </div>
@@ -128,10 +135,10 @@ const Network = () => {
           </div>
         </div>
         <div className="flex gap-2 my-2">
-          <button className="btn btn-neutral" onClick={() => Relays.saveToContacts()}>
+          <button className="btn btn-neutral" onClick={() => {/* Relays.saveToContacts() */} }>
             {t('save_relays_publicly')}
           </button>
-          <button className="btn btn-neutral" onClick={() => Relays.restoreDefaults()}>
+          <button className="btn btn-neutral" onClick={() => {/* Relays.restoreDefaults() */} }>
             {t('restore_defaults')}
           </button>
         </div>

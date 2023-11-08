@@ -3,7 +3,7 @@ import { NoteContainer } from '@/dwotr/model/ContainerTypes';
 import Reply from './Reply';
 import Repost from './Repost';
 import Note from './Note';
-import { RepostKind } from '@/dwotr/network/WOTPubSub';
+import { RepostKind } from '@/dwotr/network/provider';
 import { UID } from '@/utils/UniqueIds';
 import useVerticeMonitor from '@/dwotr/hooks/useVerticeMonitor';
 import { useEventContainer } from '@/dwotr/hooks/useEventContainer';

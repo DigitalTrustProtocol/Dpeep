@@ -1,7 +1,7 @@
 //import { memo } from 'preact/compat';
 import { Fragment, useCallback, useRef } from 'react';
 
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/provider';
 //import ShowNewEvents from '@/components/feed/ShowNewEvents';
 import useVirtual from 'react-cool-virtual';
 import EventComponent from '../events/EventComponent';

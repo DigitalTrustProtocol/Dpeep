@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/provider';
 import { FeedSelect } from './FeedSelect';
 import FeedInfinity from './FeedInfinity';
 import useHistoryState from '@/state/useHistoryState';

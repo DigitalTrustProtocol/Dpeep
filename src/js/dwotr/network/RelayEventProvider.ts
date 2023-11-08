@@ -1,7 +1,7 @@
 // import { Event } from 'nostr-tools';
 // import { getNostrTime, toNostrUTCstring } from '../Utils';
 // import embedLoader from './embed/EmbedLoader';
-// import { FeedOption } from './WOTPubSub';
+// import { FeedOption } from './provider';
 // import relaySubscription from './RelaySubscription';
 // import { first } from 'hurdak';
 // import { IEventProvider } from './types';

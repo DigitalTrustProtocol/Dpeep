@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FeedOption } from '@/dwotr/network/WOTPubSub';
+import { FeedOption } from '@/dwotr/network/provider';
 import { Filter } from 'nostr-tools';
 
 import { ID } from '@/utils/UniqueIds';

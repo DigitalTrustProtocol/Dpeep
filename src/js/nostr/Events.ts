@@ -19,7 +19,7 @@ import {
   // getRepostedEventId,
   // isRepost,
 } from '@/nostr/utils';
-import { ID, STR, UniqueIds } from '@/utils/UniqueIds';
+import { ID, UniqueIds } from '@/utils/UniqueIds';
 
 import localState from '../state/LocalState.ts';
 import Node from '../state/Node.ts';

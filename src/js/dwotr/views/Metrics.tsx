@@ -3,7 +3,6 @@ import { formatValue } from '../components/Display/HtmlFormatValue';
 import followManager from '../FollowManager';
 import profileManager from '../ProfileManager';
 import eventManager from '../EventManager';
-import wotPubSub from '../network/WOTPubSub';
 import Header from '@/components/header/Header';
 import reactionManager from '../ReactionManager';
 import graphNetwork from '../GraphNetwork';
@@ -48,7 +47,6 @@ const useMetrics = (): { data: Metrics; time: number } => {
       d.Profiles = profileManager.getMetrics();
       d.Events = eventManager.getMetrics();
       d.Follow = followManager.getMetrics();
-      //d.Relays = wotPubSub.getMetrics();
       d.Reactions = reactionManager.getMetrics();
       d.Notes = noteManager.getMetrics();
       d.Subscriptions = relaySubscription.getMetrics();

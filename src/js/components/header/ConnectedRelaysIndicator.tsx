@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 
-import Relays from '@/nostr/Relays.ts';
 import { translate as t } from '@/translations/Translation.mjs';
 import Icons from '@/utils/Icons.tsx';
+import serverManager from '@/dwotr/ServerManager';
 
 export default function ConnectedRelaysIndicator() {
-  const [connectedRelays, setConnectedRelays] = useState(Relays.getConnectedRelayCount());
-
-  const updateRelayCount = () => {
-    const count = Relays.getConnectedRelayCount();
-    setConnectedRelays(count);
-  };
+  const [connectedRelays, setConnectedRelays] = useState(serverManager.pool.connectedRelays().length);
 
   useEffect(() => {
+    const updateRelayCount = () => {
+      const count = serverManager.pool.connectedRelays().length;
+      setConnectedRelays(count);
+    };
+
     updateRelayCount();
-    const intervalId = setInterval(updateRelayCount, 1000);
+    const intervalId = setInterval(updateRelayCount, 3000);
 
     // Cleanup when the component unmounts
     return () => {

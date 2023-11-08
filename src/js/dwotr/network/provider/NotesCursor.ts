@@ -1,6 +1,6 @@
 import { Event } from 'nostr-tools';
 import { NoteContainer, ResolvedContainer } from '@/dwotr/model/ContainerTypes';
-import { FeedOption, RepostKind } from '../WOTPubSub';
+import { FeedOption, RepostKind } from '../provider';
 import noteManager from '@/dwotr/NoteManager';
 import { UID } from '@/utils/UniqueIds';
 import eventManager from '@/dwotr/EventManager';

@@ -3,7 +3,7 @@ import { route } from 'preact-router';
 import { NoteContainer, RepostContainer } from '@/dwotr/model/ContainerTypes';
 import Reply from '../Reply';
 import Note from '../Note';
-import { RepostKind } from '@/dwotr/network/WOTPubSub';
+import { RepostKind } from '@/dwotr/network/provider';
 import { BECH32, UID } from '@/utils/UniqueIds';
 import InlineNote from '../inline/InlineNote';
 

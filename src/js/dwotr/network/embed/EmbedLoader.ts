@@ -1,7 +1,7 @@
 import { Event, Filter } from 'nostr-tools';
 import { STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from '../RelaySubscription';
-import { DisplayKinds, MetadataKind } from '../WOTPubSub';
+import { DisplayKinds, MetadataKind } from '../provider';
 import { Events } from '../types';
 import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import eventManager from '@/dwotr/EventManager';

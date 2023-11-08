@@ -1,5 +1,5 @@
 import { NotesCursor } from './NotesCursor';
-import { FeedOption } from '../WOTPubSub';
+import { FeedOption } from '../provider';
 import followManager from '@/dwotr/FollowManager';
 
 

@@ -1,11 +1,8 @@
 import { ID, UID } from '@/utils/UniqueIds';
 import { Event, verifySignature } from 'nostr-tools';
-import { EdgeRecord, EntityType } from './model/Graph';
-import graphNetwork from './GraphNetwork';
 import {
   BlockKind,
   ContactsKind,
-  EntityItem,
   EventDeletionKind,
   MetadataKind,
   MuteKind,
@@ -15,10 +12,8 @@ import {
   RepostKind,
   Trust1Kind,
   ZapKind,
-} from './network/WOTPubSub';
+} from './network/provider';
 import muteManager from './MuteManager';
-import { EventParser } from './Utils/EventParser';
-import { getNostrTime } from './Utils';
 import blockManager from './BlockManager';
 import followManager from './FollowManager';
 import profileManager from './ProfileManager';
@@ -32,17 +27,19 @@ import recommendRelayManager from './RecommendRelayManager';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 import relayListManager from './RelayListManager';
+import trustManager from './TrustManager';
 
 // Define the event with the DWoTR metadata object
-export type eventDWoTR = Event & {
+export type DWoTREvent = Event & {
   dwotr: {
-    relay: string;
+    //relay: string;
+    relays?: string[];
   };
 };
 class EventManager {
   relayEventCount: Map<string, number> = new Map();
 
-  seenRelayEvents: Set<UID> = new Set();
+  seenRelayEvents: Map<UID, Set<string>> = new Map();
 
   eventIndex: Map<UID, Event> = new Map();
 
@@ -51,6 +48,7 @@ class EventManager {
   containerParsers: Map<number, (event: Event, url?: string) => EventContainer | undefined> =
     new Map();
   eventHandlers: Map<number, (event: Event, url?: string) => void> = new Map();
+  eventLoaders: Map<number, (event: Event) => void> = new Map();
 
   table = new BulkStorage(storage.events);
 
@@ -113,98 +111,29 @@ class EventManager {
     return container;
   }
 
-  createTrustEvent(
-    entityPubkey: string,
-    val: number,
-    content: string = '',
-    context: string = 'nostr',
-    entityType: EntityType = 1,
-    timestamp?: number,
-  ) {
-    // pubkey should be in hex format
 
-    // d = target[hex-address|'multi']|v|context
-    const d = `${entityPubkey}|${val.toString()}|${context}`; // Specify target. [target | context]
-
-    const subjectTag = entityType == EntityType.Key ? 'p' : 'e';
-
-    const event = {
-      kind: Trust1Kind, // trust event kind id
-      content: content || '', // The reason for the trust
-      created_at: timestamp || getNostrTime(), // Optional, but recommended
-      tags: [
-        [subjectTag, entityPubkey], // Subject
-        ['d', d], // NIP-33 Parameterized Replaceable Events
-        ['c', context], // context = nostr
-        ['v', val.toString()], // 1, 0, -1
-        //['t', entityType.toString()], // replaced by p and e tags
-      ],
-    };
-    return event;
-  }
-
-  createTrustEventFromEdge(edge: EdgeRecord) {
-    // pubkey should be in hex format
-    let event = eventManager.createTrustEvent(
-      edge.to,
-      edge.type,
-      edge.note,
-      edge.context,
-      edge.entityType,
-    );
-    return event;
-  }
-
-  createMultiEvent(
-    entities: EntityItem[],
-    groupKey: string,
-    val: number,
-    content: string = '',
-    context: string = 'nostr',
-    timestamp?: number,
-  ) {
-    // d = groupkey|v|context
-    // groupkey is the usually the pubkey of the subject of the trust, but can be any string
-    const d = `${groupKey}|${val.toString()}|${context}`; // Specify target. [target | value of the trust | context]
-
-    const peTags = entities.map((e) => [e.entityType == EntityType.Key ? 'p' : 'e', e.pubkey]);
-
-    const event = {
-      kind: Trust1Kind, // trust event kind id
-      content: content || '', // The reason for the trust
-      created_at: timestamp || getNostrTime(), // Optional, but recommended
-      tags: [
-        ...peTags,
-        ['d', d], // NIP-33 Parameterized Replaceable Events
-        ['c', context], // context = nostr
-        ['v', val.toString()], // 1, 0, -1
-      ],
-    };
-    return event;
-  }
-
-  parseTrustEvent(event: Event) {
-    let note: string;
-    let pubKey = event.pubkey;
-    let timestamp = event.created_at;
-
-    let { p, e, d, v, c: context } = EventParser.parseTags(event);
-    note = event.content;
-
-    let val = parseInt(v || '0');
-    if (isNaN(val) || val < -1 || val > 1) val = 0; // Invalid value, the default to 0
-    context = context || 'nostr';
-
-    return { p, e, context, d, v, val, note, pubKey, timestamp };
-  }
 
   seen(eventId: UID) {
     if (eventId == 0) return true; // 0 is a special case, as representing null event, therefore it is always seen
     return this.seenRelayEvents.has(eventId);
   }
 
-  addSeen(eventId: UID) {
-    this.seenRelayEvents.add(eventId);
+  seenRelay(eventId: UID, relay: string) {
+    if (eventId == 0) return true; // 0 is a special case, as representing null event, therefore it is always seen
+    let relays = this.seenRelayEvents.get(eventId);
+    if (!relays) return false;
+    return relays.has(relay);
+  }
+
+  addSeen(eventId: UID, relay?: string) {
+    if (eventId == 0) return; // 0 is a special case, as representing null event, therefore it is always seen
+
+    let relays = this.seenRelayEvents.get(eventId);
+    if (!relays) {
+      relays = new Set();
+      this.seenRelayEvents.set(eventId, relays);
+    }
+    if(relay) relays.add(relay);
   }
 
   verify(event: Event) {
@@ -231,20 +160,18 @@ class EventManager {
     if (!event) return false;
 
     eventManager.addSeen(ID(event.id));
-    // Increment the event count for the relay, so we know how many events we have received from the relay
-    eventManager.increaseRelayEventCount(url || '');
 
     // Check if the event has been ordered deleted
     if (EventDeletionManager.deleted.has(ID(event.id))) return false;
 
     eventManager.metrics.HandleEvents++;
 
-    if (url) {
-      // Add the relay to the event, so we know where it came from.
-      event['dwotr'] = {
-        relay: url,
-      };
-    }
+    // if (url) {
+    //   // Add the relay to the event, so we know where it came from.
+    //   event['dwotr'] = {
+    //     relays: [url],
+    //   };
+    // }
 
     // Handle the event as a note
     if (noteManager.supportedKinds.has(event.kind)) return noteManager.handle(event, url);
@@ -280,7 +207,7 @@ class EventManager {
         break;
 
       case Trust1Kind:
-        await eventManager.trustEvent(event);
+        await trustManager.handle(event);
         break;
       case MuteKind:
         await muteManager.handle(event);
@@ -301,20 +228,21 @@ class EventManager {
     return true;
   }
 
-  async trustEvent(event: Event) {
-    let { p: pTags, e: eTags, val, pubKey, note, context, timestamp } = this.parseTrustEvent(event);
+  async load() {
+    // Load all events from storage
+    let events = await this.table.toArray() as DWoTREvent[]; 
+    for (let event of events) {
+      let id = ID(event.id);
+      this.eventIndex.set(id, event);
+      this.addSeen(id);
+      this.#addRelayEventCount(event);
 
-    // Add the trust to the local graph, and update the score
-    // The doing the addEdge() method it will check for the created_at timestamp of the event,
-    // and only process the event if it is newer than the current data
-
-    for (const p of pTags) {
-      graphNetwork.setTrustAndProcess(p, pubKey, EntityType.Key, val, note, context, timestamp);
+      this.eventCallback(event);
     }
+  }
 
-    for (const e of eTags) {
-      graphNetwork.setTrustAndProcess(e, pubKey, EntityType.Item, val, note, context, timestamp);
-    }
+  #addRelayEventCount(event: DWoTREvent) {
+    event.dwotr?.relays?.forEach((relay) => this.increaseRelayEventCount(relay));
   }
 
   getMetrics() {

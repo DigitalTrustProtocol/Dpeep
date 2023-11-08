@@ -4,15 +4,15 @@ import publicState from '@/state/PublicState.ts';
 import Helpers from '@/utils/Helpers.tsx';
 
 import localState from '../state/LocalState.ts';
-import IrisTo from '../utils/IrisTo';
-import { ID } from '../utils/UniqueIds';
+//import IrisTo from '../utils/IrisTo';
+//import { ID } from '../utils/UniqueIds';
 
 import Events from './Events';
 import IndexedDB from './IndexedDB';
 import Key from './Key';
-import PubSub from './PubSub';
-import Relays from './Relays';
-import SocialNetwork from './SocialNetwork';
+//import PubSub from './PubSub';
+//import Relays from './Relays';
+//import SocialNetwork from './SocialNetwork';
 
 
 let loggedIn = false;
@@ -88,7 +88,7 @@ const Session = {
         document.documentElement.setAttribute('data-theme', 'dark');
       });
     if (window.location.pathname === '/') {
-      Relays.init();
+      //Relays.init();
     }
     IndexedDB.init();
     // const timeout = setTimeout(() => {
@@ -129,7 +129,7 @@ const Session = {
     localState.get('loggedIn').on(() => this.onLoggedIn());
     Helpers.showConsoleWarning();
     if (window.location.pathname !== '/') {
-      Relays.init();
+      //Relays.init();
     }
   },
 };
