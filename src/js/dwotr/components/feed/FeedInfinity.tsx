@@ -14,7 +14,7 @@ export type FeedProps = {
 };
 
 const FeedInfinity = ({ feedOption }: FeedProps) => {
-  const [loadMoreRequest, setLoadMoreRequest] = useState<boolean>(false);
+  const [loadMoreRequest, setLoadMoreRequest] = useState<number>(0);
 
   const {
     containers,
@@ -33,15 +33,15 @@ const FeedInfinity = ({ feedOption }: FeedProps) => {
     resetItems: resetInfiniteScroll,
   } = useInfiniteScroll({
     itemCount: containers.length,
-    loadMore: () => setLoadMoreRequest(true),
+    loadMore: () => setLoadMoreRequest(Date.now()), // Trigger the useEffect load more with a new value number
   });
 
   useEffect(() => {
     if (!loadMoreRequest) return; // No request to load more
     if (!hasMore) return; // No more items to load
-    if (status != 'idle') return; // Already loading, or something else
+    if (status != 'idle' && status != 'error') return; // Already loading, or something else
 
-    setLoadMoreRequest(false); // Reset the request
+    setLoadMoreRequest(0); // Reset the request
     loadMore(); // Load more items
   }, [loadMoreRequest, status, hasMore]);
 
@@ -58,12 +58,11 @@ const FeedInfinity = ({ feedOption }: FeedProps) => {
   );
 
   return (
-    <>
+    <div class="flex flex-col">
       <div style={{ height: `${topHeight}px` }} />
-      {items.map((item) => {
+      {items && items.map((item) => {
         let id = containers[item.index]?.id;
         if (id == undefined) return null;
-
         return (
           <div key={id} data-index={item.index} ref={measureRef} style={{ minHeight: item.height }}>
             <EventComponent id={id} showReplies={feedOption?.showReplies} />
@@ -77,18 +76,19 @@ const FeedInfinity = ({ feedOption }: FeedProps) => {
           <div className="loading">🔄</div>
         </div>
       )}
-      {!hasMore && items.length > 0 && status == 'idle' && (
+      {!hasMore && items?.length > 0 && status == 'idle' && (
         <p style={{ textAlign: 'center' }}>
           <b>No more notes</b>
         </p>
       )}
-      {!items.length && !hasMore && status == 'idle' && (
+      {!items?.length && !hasMore && status == 'idle' && (
         <p style={{ textAlign: 'center' }}>
           <b>No notes</b>
         </p>
       )}
       {hasNew && <ShowNewEvents onClick={loadNew} />}
-    </>
+
+      </div>
   );
 };
 

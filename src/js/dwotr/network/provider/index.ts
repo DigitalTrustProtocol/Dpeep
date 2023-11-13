@@ -1,8 +1,7 @@
 import { EventContainer } from "@/dwotr/model/ContainerTypes";
 import { UID } from "@/utils/UniqueIds";
 import {Filter, Event} from "nostr-tools";
-import { EntityType } from '../model/Graph';
-import { getNostrTime } from '../Utils';
+import { EntityType } from "@/dwotr/model/Graph";
 
 export type ProviderStatus = 'idle' | 'loading' | 'waiting' | 'error';
 

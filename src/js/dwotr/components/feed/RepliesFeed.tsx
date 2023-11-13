@@ -37,7 +37,6 @@ export const RepliesFeed = ({ eventId }: RepliesFeedProps) => {
 
   return (
     <>
-      <hr className="opacity-10 mt-2" />
       <FeedInfinity key={localScope} feedOption={option} setScope={setScope} />
     </>
   );

@@ -4,6 +4,7 @@ import InlineMention from './nostr/InlineMention';
 import NostrNip19 from './nostr/Nip19';
 import NostrNpub from './nostr/NostrNpub';
 import NostrNote from './nostr/NostrNote';
+import { Url } from '../Url';
 //import NostrNote from './nostr/NostrNote';
 
 export type EmbedItem = {
@@ -21,14 +22,15 @@ export class EmbedData {
 
   setEvent(item: EmbedItem, defaultRelay?: string) {
     if((!item?.relays || item.relays.length == 0) && defaultRelay) item.relays = [defaultRelay];
+    item.relays = Url.normalizeArray(item.relays);
     this.events.set(item?.id || '', item);
   }
 
   setAuthor(item: EmbedItem, defaultRelay?: string) {
     if((!item?.relays || item.relays.length == 0) && defaultRelay) item.relays = [defaultRelay];
+    item.relays = Url.normalizeArray(item.relays);
     this.authors.set(item?.author || '', item);
   }
-
 
   add(embedEvent: EmbedData) {
     for(let author of embedEvent.authors.values()) {

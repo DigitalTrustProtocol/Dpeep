@@ -8,7 +8,7 @@ import eventManager from './EventManager';
 import { Event, Relay, getEventHash, getSignature } from 'nostr-tools';
 import Key from '@/nostr/Key';
 import RelayPool from './network/provider/RelayPool';
-import { normalizeURL } from 'nostr-tools/utils';
+import { Url } from './network/Url';
 
 // NIP-65 - Each author has a read/write on a relay
 export type PublicRelaySettings = {
@@ -51,7 +51,7 @@ type RelayContainer = {
 // Handles the relays in the context of Dpeep
 // RelayManager name is too close to ReplyManager so it was renamed to ServerManager
 class ServerManager {
-  maxConnectedRelays = 100; // Max number of relays to connect to
+  maxConnectedRelays = 10; // Max number of relays to connect to
   maxConnectionWait = 5000; // Max time to wait for a relay to connect
 
   poolOptions = {
@@ -201,13 +201,15 @@ class ServerManager {
 
   // Relay add and get ----------------------
 
+
   addRecord(url: string, init?: RelayRecord): RelayRecord {
-    url = normalizeURL(url);
-    let record = this.records.get(url);
+    let normurl = Url.normalize(url);
+    if(!normurl) throw new Error('Invalid url: ' + url);
+    let record = this.records.get(normurl);
     if (!record) {
       record = init || new RelayRecord();
-      record.url = url;
-      this.records.set(url, record);
+      record.url = normurl;
+      this.records.set(normurl, record);
       this.save(record);
     }
     return record;

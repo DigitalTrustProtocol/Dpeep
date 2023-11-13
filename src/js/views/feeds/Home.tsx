@@ -11,6 +11,7 @@ import { FeedOption as FeedOption } from '@/dwotr/network/provider';
 import { Feed } from '@/dwotr/components/feed/Feed';
 import FollowingCursor from '@/dwotr/network/provider/FollowingCursor';
 import TrustNetworkCursor from '@/dwotr/network/provider/TrustNetworkCursor';
+import FollowingRelayCursor from '@/dwotr/network/provider/FollowingRelayCursor';
 //import FeedInView from '@/dwotr/components/feed/FeedInView';
 
 const Home = () => {
@@ -24,7 +25,7 @@ const Home = () => {
         includeReplies: true,
         includeReposts: true,
         mergeReposts: true,
-        cursor: FollowingCursor,
+        cursor: FollowingRelayCursor,
       } as FeedOption,
       {
         id: 'wot',

@@ -48,7 +48,6 @@ export class ProfileRelayCursor extends RelayCursor<NoteContainer> {
     if (this.options.postFilter && !this.options.postFilter(container)) return false; // Skip events that don't match the filterFn, undefined means match
 
     return true;
-    // Implement your filtering logic here
   }
 
 }

@@ -13,7 +13,10 @@ type RepostProps = {
 const Repost = ({ container, focusId, showReplies, isThread }: RepostProps) => {
   const { repostOf, repostCount } = useRepost(container!);
 
-  if (!repostOf) return null;
+  if (!repostOf) {
+    // Cannot find the repostOf for a reason!?
+    return <p>Cannot find repostOf</p>;
+  } 
 
   return (
     <>

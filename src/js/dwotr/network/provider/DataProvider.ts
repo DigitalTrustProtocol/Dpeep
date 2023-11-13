@@ -36,6 +36,7 @@ export class DataProvider {
 
   private setError(error: any) {
     this.setStatus('error');
+    console.log("DataProvider error: ", error); // TODO: Remove this
     this.listeners?.onError?.(error);
   }
 

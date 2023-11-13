@@ -168,6 +168,24 @@ class FollowManager {
     return metadata;
   }
 
+  // Get the relays that are popular and enabled among the followed authors
+  followingRelays(authorId: UID): Array<string> {
+    let relays = new Set<string>();
+
+
+    
+    let authorRelays = serverManager.authorRelays.get(authorId);
+    if (authorRelays) {
+      for (let [url, value] of authorRelays) {
+        if (value.write) relays.add(url);
+      }
+    }
+    return [...relays];
+
+  }
+
+
+
   #getUrlsFromFollowEvent(event: Event): Map<string, PublicRelaySettings> {
     const urls = new Map<string, PublicRelaySettings>();
     if (!event.content) return urls;

@@ -308,40 +308,45 @@ export default {
   ): Unsubscribe {
     const id = ID(address);
     const hexPub = STR(id) as string;
+
+
     const callback = () => {
       cb?.(this.profiles.get(id), address);
     };
 
-    const profile = this.profiles.get(id);
-    // TODO subscribe & callback
-    if (profile) {
-      callback();
-      if (verifyNip05 && profile.nip05 && !profile.nip05valid) {
-        Key.verifyNip05Address(profile.nip05, address).then((isValid) => {
-          console.log('NIP05 address is valid?', isValid, profile.nip05, address);
-          profile.nip05valid = isValid;
+    callback();
 
-          profileManager.dispatchProfile(profile); // Sets the profile in memory if it's not already there and is newer
-          callback();
-        });
-      }
-    } else {
-      profileManager.loadProfile(hexPub).then((profile) => {
-        if (profile) {
-          // exists in DB
+    return () => {};
+    // const profile = this.profiles.get(id);
+    // // TODO subscribe & callback
+    // if (profile) {
+    //   callback();
+    //   if (verifyNip05 && profile.nip05 && !profile.nip05valid) {
+    //     Key.verifyNip05Address(profile.nip05, address).then((isValid) => {
+    //       console.log('NIP05 address is valid?', isValid, profile.nip05, address);
+    //       profile.nip05valid = isValid;
 
-          profileManager.dispatchProfile(profile);
-          callback();
-        } else {
-          profileManager.fetchProfile(hexPub).then((profile) => {
-            if (!profile) return;
-            Events.handle(profile);
-            callback();
-          });
-        }
-      });
-    }
-    return PubSub.subscribe({ kinds: [0], authors: [address], limit: 1 }, callback, false);
+    //       profileManager.dispatchProfile(profile); // Sets the profile in memory if it's not already there and is newer
+    //       callback();
+    //     });
+    //   }
+    // } else {
+    //   profileManager.loadProfile(hexPub).then((profile) => {
+    //     if (profile) {
+    //       // exists in DB
+
+    //       profileManager.dispatchProfile(profile);
+    //       callback();
+    //     } else {
+    //       profileManager.fetchProfile(hexPub).then((profile) => {
+    //         if (!profile) return;
+    //         Events.handle(profile);
+    //         callback();
+    //       });
+    //     }
+    //   });
+    // }
+    // return PubSub.subscribe({ kinds: [0], authors: [address], limit: 1 }, callback, false);
   },
 
   setMetadata(data: any) {

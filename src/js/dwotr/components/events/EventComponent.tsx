@@ -39,7 +39,11 @@ const EventComponent = ({
     '',
   ) as any;
 
-  if (!container) return null;
+  if (!container) {
+    // Cannot find the container for a reason!?
+    console.error('Cannot find container', id);
+    return null;
+  }
 
   // If no focusId is provided, use the container id as starting point
   // This way the first component will know it is the first one
@@ -62,7 +66,11 @@ const EventComponent = ({
 
   if (container.kind == RepostKind) Component = Repost;
 
-  if (!Component && Component != Note) return null;
+  if (!Component) {
+    // Cannot find the component for a reason!?
+    console.error('Cannot find component for container', container);
+    return null;
+  }
 
   return (
     <Component
