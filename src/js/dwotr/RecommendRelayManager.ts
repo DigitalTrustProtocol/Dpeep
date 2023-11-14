@@ -45,7 +45,7 @@ class RecommendRelayManager {
     if (eventDeletionManager.deleted.has(ID(event.id))) return false;
     if (blockManager.isBlocked(ID(event!.pubkey))) return false; // May already been blocked, so redudant code
 
-    if (!Url.isWss(event.content)) return false;
+    if (!Url.isWebSocket(event.content)) return false;
 
     return true;
   }

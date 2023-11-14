@@ -1,5 +1,5 @@
 import { min } from 'lodash';
-import { EPOCH, normalizeRelayUrl } from './Utils/Nostr';
+import { EPOCH } from './Utils/Nostr';
 import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 import { UID } from '@/utils/UniqueIds';
@@ -186,6 +186,9 @@ class ServerManager {
 
     relay.on('notice', (msg) => {
       console.log('notice from relay:', url, msg);
+      relay.close();
+      delete this.pool.connections[url];
+      console.log('closed relay:', url);
     });
 
     relay.on('auth', (challenge) => {
@@ -196,6 +199,8 @@ class ServerManager {
         ' - time in milisec:',
         Date.now() - startTimer,
       );
+
+
     });
   }
 
@@ -203,13 +208,11 @@ class ServerManager {
 
 
   addRecord(url: string, init?: RelayRecord): RelayRecord {
-    let normurl = Url.normalize(url);
-    if(!normurl) throw new Error('Invalid url: ' + url);
-    let record = this.records.get(normurl);
+    let record = this.records.get(url);
     if (!record) {
       record = init || new RelayRecord();
-      record.url = normurl;
-      this.records.set(normurl, record);
+      record.url = url;
+      this.records.set(url, record);
       this.save(record);
     }
     return record;
@@ -280,6 +283,11 @@ class ServerManager {
   }
 
   addRelay(authorId: UID, url: string, settings: PublicRelaySettings) {
+
+    let normalizedUrl = Url.normalizeRelay(url); // Normalize the url make sure it is a valid wss url
+    if(!normalizedUrl) return;
+
+
     this.addRelaySettings(authorId, url, settings);
     this.addRelayAuthor(authorId, url);
     this.addRecord(url);

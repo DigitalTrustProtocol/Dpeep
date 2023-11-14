@@ -15,8 +15,6 @@ export type EmbedItem = {
 
 export class EmbedData {
 
-
-
   authors: Map<string, EmbedItem> = new Map<string, EmbedItem>();
   events: Map<string, EmbedItem> = new Map<string, EmbedItem>();
 

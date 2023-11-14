@@ -72,7 +72,7 @@ const Network = () => {
 
   const getStatus = (relay) => {
     try {
-      return serverManager.pool.connection[relay.url].status;
+      return serverManager.pool.connections[relay.url].status;
     } catch (e) {
       return 3;
     }

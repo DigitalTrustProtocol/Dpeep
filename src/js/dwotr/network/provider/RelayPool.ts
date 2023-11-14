@@ -28,10 +28,10 @@ export default class RelayPool {
   private seenOnEnabled: boolean = true;
   private batchInterval: number = 100;
 
-  public connection: { [url: string]: Relay };
+  public connections: { [url: string]: Relay };
   public seenOn: { [id: string]: Set<string> } = {}; // a map of all events we've seen in each relay
 
-  public slowRelays: Set<string> = new Set();
+  public slowRelays: Map<string, number> = new Map();
 
   constructor(
     options: {
@@ -41,7 +41,7 @@ export default class RelayPool {
       batchInterval?: number;
     } = {},
   ) {
-    this.connection = {};
+    this.connections = {};
     this.eoseSubTimeout = options.eoseSubTimeout || 3400;
     this.getTimeout = options.getTimeout || 3400;
     this.seenOnEnabled = options.seenOnEnabled !== false;
@@ -50,7 +50,7 @@ export default class RelayPool {
 
   close(relays: string[]): void {
     relays.forEach((url) => {
-      let relay = this.connection[normalizeURL(url)];
+      let relay = this.connections[normalizeURL(url)];
       if (relay) relay.close();
     });
   }
@@ -59,15 +59,15 @@ export default class RelayPool {
   createRelay(url: string): Relay {
     url = normalizeURL(url);
 
-    if (!this.connection[url]) {
-      this.connection[url] = relayInit(url, {
+    if (!this.connections[url]) {
+      this.connections[url] = relayInit(url, {
         getTimeout: this.getTimeout * 0.9,
         listTimeout: this.getTimeout * 0.9,
         countTimeout: this.getTimeout * 0.9,
       });
     }
 
-    const relay = this.connection[url];
+    const relay = this.connections[url];
     return relay;
   }
 
@@ -80,15 +80,14 @@ export default class RelayPool {
   }
 
   connectedRelays(): string[] {
-    return Object.keys(this.connection).filter((url) => {
-      return this.connection[url].status === 1;
+    return Object.keys(this.connections).filter((url) => {
+      return this.connections[url].status === 1;
     });
   }
 
   removeSlowRelays(relays: string[]): string[] {
-    return relays.filter((url) => !this.slowRelays.has(url));
+    return relays.filter((url) => (this.slowRelays.get(url) || 0) < 3); // remove relays that have been marked as slow more than 3 times
   }
-
 
   sub<K extends number = number>(
     relays: string[],
@@ -127,7 +126,7 @@ export default class RelayPool {
         eoseTimeout = setTimeout(
         () => {
             eoseSent = true;
-            //eoseRelays.forEach((url) => this.slowRelays.add(url)); // mark all relays as slow if they didn't respond in time
+            eoseRelays.forEach((url) => this.slowRelays.set(url, (this.slowRelays.get(url) || 0) + 1)); // mark all relays as slow if they didn't respond in time
             console.log('eose timeout - slow relays:', [...eoseRelays], ' - time in miliSec:', Date.now() - startTimer);
             for (let cb of eoseListeners.values()) cb(eoseRelays);
         },

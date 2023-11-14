@@ -13,13 +13,20 @@ const NostrNip19: Embed = {
       const { type, data } = nip19.decode(match);
       
       if (type === 'nprofile') {
-        r.setAuthor(data);
+        let { pubkey, relays } = data;
+        r.setAuthor({ author: pubkey, relays });
+        
       } else if (type === 'nevent') {
-        r.setEvent(data);
 
-      if(data.author && data.author.length == 64) // Add author if it's a pubkey
-        r.setAuthor(data);
-      } 
+        let { id, relays, author } = data;
+
+        r.setEvent({ id, author, relays });
+      }
+        //r.setEvent(data);
+
+      //if(data.author && data.author.length == 64) // Add author if it's a pubkey
+//        r.setAuthor(data);
+      //} 
     } catch (e) {
       console.log(e);
     }

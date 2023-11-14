@@ -72,7 +72,7 @@ export class EmbedProcessor extends EmbedData {
         let author = Key.sanitize(tag[1]);
         if(!Key.validate(author)) continue; // Invalid key
         if(this.#hasProfile(ID(author))) continue; // Already seen
-        let relay = Url.isValid(tag[2]) ? tag[2] : defaultRelay;
+        let relay = Url.normalizeRelay(tag[2]) ? tag[2] : defaultRelay;
         this.setAuthor(EmbedData.create(undefined, author, relay));
       }
 
@@ -80,7 +80,7 @@ export class EmbedProcessor extends EmbedData {
         let id = Key.sanitize(tag[1]);
         if(!Key.validate(id)) continue; // Invalid key
         if(eventManager.seen(ID(id))) continue; // Already seen
-        let relay = Url.isValid(tag[2]) ? tag[2] : defaultRelay;
+        let relay = Url.normalizeRelay(tag[2]) ? tag[2] : defaultRelay;
         this.setEvent(EmbedData.create(id, undefined, relay));
       }
     }
@@ -90,15 +90,17 @@ export class EmbedProcessor extends EmbedData {
     let embedEvent = ExstractEmbeds(container?.event!.content || '', container.event!);
     let defaultRelay = container.relay;
 
+
+
     for (let item of embedEvent.authors.values()) {
       if(!item.author) continue;
       if(this.#hasProfile(ID(item.author))) continue; // Already seen
-      this.setAuthor(item, defaultRelay);
+      this.setAuthor(item, item?.relays?.[0] || defaultRelay);
     }
     for (let item of embedEvent.events.values()) {
       if(!item?.id) continue;
       if(eventManager.seen(ID(item.id))) continue; // Already seen
-      this.setEvent(item, defaultRelay);
+      this.setEvent(item, item?.relays?.[0] || defaultRelay);
     }
   }
 
