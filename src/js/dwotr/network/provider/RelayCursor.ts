@@ -27,15 +27,15 @@ export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
   }
 
   async next(): Promise<T | undefined> {
-    if (this.done) return;
+    while (true) {
+      if (this.done) break;
 
-    if (this.buffer.length) return this.buffer.shift() as T;
+      if (this.buffer.length) return this.buffer.shift() as T;
 
-    await this.load();
-    this.#sort(); // Sort the buffer
-
-    // Potentially a dead loop if the relay is not returning events and not closing
-    return await this.next();
+      await this.load();
+      this.#sort(); // Sort the buffer
+    }
+    return;
   }
 
   async load(): Promise<number> {
@@ -58,24 +58,30 @@ export class RelayCursor<T extends EventContainer> extends BaseCursor<T> {
         return 0;
       }
 
+      this.until = this.since;
       this.since -= this.delta;
+
       //let factor = Math.floor(this.limit / this.buffer.length + 1);
+
       if (this.buffer.length < 10) {
         this.delta *= this.factor;
         if (this.timeout < 3000) this.timeout += 1000; // Increase timeout if we're not getting events
       }
     } else {
-      events.forEach((event) => this.#addEvent(event, until));
+      for (let event of events) {
+        this.#addEvent(event);
+
+        this.until = Math.min(this.until, event.created_at) - 1;
+      }
+      this.since = this.until - this.delta;
     }
 
     return this.buffer.length;
   }
 
-  #addEvent(event: Event, until: number) {
+  #addEvent(event: Event) {
     let container = eventManager.getContainerByEvent(event) as T;
     if (!container) return;
-
-    this.until = Math.min(until, event.created_at) - 1;
 
     this.buffer.push(container);
   }

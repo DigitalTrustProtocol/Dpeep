@@ -139,7 +139,12 @@ export default class RelayPool {
       eoseTimeout = setTimeout(
         () => {
           eoseSent = true;
-          eoseRelays.forEach((url) => (this.relayInstances[url] as RelayMetadata).slowCount++); // mark all relays as slow if they didn't respond in time
+          for(let url of eoseRelays) {
+            let relayInstance = this.relayInstances[url] as RelayMetadata;
+            if(!relayInstance) continue;
+            relayInstance.message = 'eose timeout';
+            relayInstance.slowCount += 1; // mark as slow
+          }
 
           console.log(
             'eose timeout - slow relays:',
