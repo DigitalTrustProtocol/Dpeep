@@ -187,7 +187,7 @@ class ServerManager {
     relay.on('notice', (msg) => {
       console.log('notice from relay:', url, msg);
       relay.close();
-      delete this.pool.connections[url];
+      delete this.pool.relayInstances[url];
       console.log('closed relay:', url);
     });
 
