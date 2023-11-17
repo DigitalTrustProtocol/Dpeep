@@ -37,7 +37,6 @@ export type DWoTREvent = Event & {
   };
 };
 class EventManager {
-  relayEventCount: Map<string, number> = new Map();
 
   seenRelayEvents: Map<UID, Set<string>> = new Map();
 
@@ -57,12 +56,6 @@ class EventManager {
     Loaded: 0,
     HandleEvents: 0,
   };
-
-  increaseRelayEventCount(relay: string) {
-    let count = this.relayEventCount.get(relay) || 0;
-    count++;
-    this.relayEventCount.set(relay, count);
-  }
 
   getContainer<T extends EventContainer>(id: UID): T | undefined {
     let container = eventManager.containers.get(id) as T;
@@ -235,14 +228,9 @@ class EventManager {
       let id = ID(event.id);
       this.eventIndex.set(id, event);
       this.addSeen(id);
-      this.#addRelayEventCount(event);
 
       this.eventCallback(event);
     }
-  }
-
-  #addRelayEventCount(event: DWoTREvent) {
-    event.dwotr?.relays?.forEach((relay) => this.increaseRelayEventCount(relay));
   }
 
   getMetrics() {

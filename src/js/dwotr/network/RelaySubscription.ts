@@ -207,7 +207,7 @@ class RelaySubscription {
   }
 
   #createParams(options: FeedOption) {
-    let relays = options.relays || serverManager.getActiveRelays([]);
+    let relays = serverManager.getActiveRelays(options.relays);
     let opts = {
       alreadyHaveEvent: this.alreadyHaveEvent.bind(this),
       eoseSubTimeout: options.eoseSubTimeout,
@@ -265,8 +265,6 @@ class RelaySubscription {
     let eventId = ID(id);
 
     this.#addEventRelay(eventId, relay); // Add the relay to the event, so we know where it came from, even if we already have it
-    // Increment the event count for the relay, so we know how many events we have received from the relay
-    eventManager.increaseRelayEventCount(relay || '');
 
     if (eventManager.seen(eventId)) return true;
 

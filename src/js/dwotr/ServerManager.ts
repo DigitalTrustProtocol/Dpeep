@@ -4,11 +4,11 @@ import { BulkStorage } from './network/BulkStorage';
 import storage from './Storage';
 import { UID } from '@/utils/UniqueIds';
 import recommendRelayManager from './RecommendRelayManager';
-import eventManager from './EventManager';
 import { Event, Relay, getEventHash, getSignature } from 'nostr-tools';
 import Key from '@/nostr/Key';
 import RelayPool from './network/provider/RelayPool';
 import { Url } from './network/Url';
+import { f } from 'vitest/dist/reporters-2ff87305.js';
 
 // NIP-65 - Each author has a read/write on a relay
 export type PublicRelaySettings = {
@@ -37,13 +37,13 @@ export class RelayRecord {
   search: boolean = false; // If the relay is a search relay
   connectionStatus: string = ''; // Last status of the relay
   connectionError: string = ''; // Last error of the relay
+  eventCount: number = 0; // Number of events received from this relay, higher is better
 }
 
 type RelayContainer = {
   record: RelayRecord;
   referenceBy: Set<UID>; // Number of references to this relay by users and events, higher is better
   recommendBy: Set<UID>; // Number of recommendations for this relay, higher is better
-  eventCount: number; // Number of events received from this relay, higher is better
 
   instance?: Relay; // Instance of the relay
 };
@@ -72,8 +72,6 @@ class ServerManager {
   records: Map<string, RelayRecord> = new Map();
 
   table = new BulkStorage(storage.relays);
-
-  activeRelays: Array<string> = [];
 
   pool: RelayPool;
 
@@ -110,12 +108,19 @@ class ServerManager {
   // Best when the relays data have been loaded from the database
   // This method should be called before any subscriptions are made, for best performance
   async initializePool(): Promise<Relay> {
-    let containers = this.popularRelays().slice(0, this.maxConnectedRelays);
+    let containers = this.popularRelays();
 
     console.log('Initializing relay pool with', containers.length, 'relays');
     let relays: any = [];
     for (const container of containers) {
       if (!container.instance) {
+
+
+        let url = Url.normalizeRelay(container.record.url);
+        console.log('normalizeRelay to relay:', url);
+
+        if(!url) continue; // Invalid url, skip, could be a local url, onion, etc.
+
         container.instance = this.pool.createRelay(container.record.url); // Connecting to relay
         this.subscribeRelayStatus(container.instance); // Subscribe to relay status
 
@@ -127,6 +132,7 @@ class ServerManager {
           container.record.connectionError = error?.['message'] || 'Unknown';
         });
       }
+      if(relays.length >= this.maxConnectedRelays) break;
     }
     // A promise that rejects after 3 seconds
     let timeoutPromise = new Promise((_, reject) => {
@@ -208,6 +214,7 @@ class ServerManager {
 
 
   addRecord(url: string, init?: RelayRecord): RelayRecord {
+
     let record = this.records.get(url);
     if (!record) {
       record = init || new RelayRecord();
@@ -219,13 +226,13 @@ class ServerManager {
   }
 
   relayContainer(url: string): RelayContainer {
+    if(url.endsWith('/')) url = url.slice(0, -1);
     let container = this.containers.get(url);
     if (!container) {
       container = {
         record: this.addRecord(url),
         referenceBy: serverManager.relayAuthors.get(url) || new Set(),
         recommendBy: recommendRelayManager.relayAuthors.get(url) || new Set(),
-        eventCount: eventManager.relayEventCount.get(url) || 0,
         //instance: () => getRelayPool().relayByUrl.get(url), // Instance of the relay, may be undefined
       } as RelayContainer;
       this.containers.set(url, container);
@@ -266,10 +273,13 @@ class ServerManager {
   }
 
   addRelaySettings(authorId: UID, url: string, settings: PublicRelaySettings) {
-    let authorRelay = this.ensureAuthorRelaySettings(authorId, url);
-    if ((authorRelay?.created_at || 0) < (settings?.created_at || 0))
-      authorRelay.created_at = settings.created_at;
-    return authorRelay;
+    let currentSettings = this.ensureAuthorRelaySettings(authorId, url);
+    if ((currentSettings?.created_at || 0) < (settings?.created_at || 0)) {
+      currentSettings.created_at = settings.created_at;
+      currentSettings.read = settings.read;
+      currentSettings.write = settings.write;
+    }
+    return currentSettings;
   }
 
   addRelayAuthor(authorId: UID, url: string) {
@@ -286,7 +296,6 @@ class ServerManager {
 
     let normalizedUrl = Url.normalizeRelay(url); // Normalize the url make sure it is a valid wss url
     if(!normalizedUrl) return;
-
 
     this.addRelaySettings(authorId, url, settings);
     this.addRelayAuthor(authorId, url);
@@ -325,25 +334,112 @@ class ServerManager {
 
     let containers = this.allRelayContainers()
       .filter((r) => r.record.enabled)
-      .sort((a, b) => b.eventCount - a.eventCount);
+      .sort((a, b) => b.record.eventCount - a.record.eventCount);
     return containers;
   }
 
-  getActiveRelays(extraRelays: string[]): Array<string> {
+  getActiveRelays(extraRelays: string[] = []): Array<string> {
     let urls = this.allRelayContainers()
       .filter((r) => r.record.enabled && r.instance && r.instance.status === 1)
       .map((r) => r.record.url);
+
+    if(extraRelays) 
+      extraRelays = extraRelays.filter((r) => !urls.includes(r));
+    
     return [...urls, ...extraRelays];
   }
 
-  removeActiveRelay(relay: string) {
-    if (this.logging) console.log('RelayManager:removeActiveRelay:', relay);
-    this.activeRelays = this.activeRelays.filter((r) => r !== relay);
+  // Find the relays that are used by the authors
+  relaysByAuthors(authorIds: UID[], write=true, read=true): Array<string> {
+    // let result = new Set<string>();
+    // for (const authorId of authorIds) {
+    //   let relays = this.ensureRelaysBy(authorId, read, write);
+    //   for (const url of relays) {
+    //     result.add(url);
+    //   }
+    // }
+    let result = this.groupByInner(authorIds);
+    return result;
   }
+
+  isRelayOk(url: string) {
+    let container = this.relayContainer(url);
+    if (container.record.connectionStatus == 'error') return false;
+    if (container.record.timeoutCount >= 3) return false;
+    return true;
+  }
+
+  // Get the relays that are used by the authors
+  groupByInner(authorIds: UID[]) : Array<string> {
+    let result: string[] = [];
+    let relays = new Map<string, Set<UID>>();
+
+    // First count the relays used by the authors
+    for (const authorId of authorIds) {
+      let authorRelays = this.ensureRelaysBy(authorId, true, true);
+      for (const url of authorRelays) {
+        let users = relays.get(url);
+        if(!users)  {
+          users=  new Set<UID>();
+          relays.set(url, users);
+        }
+        users.add(authorId);
+      }
+    }
+
+    // Sort the relays by count highest first
+    let sorted = [...relays.entries()].sort((a, b) => b[1].size - a[1].size);
+
+    let rest = new Set<UID>(authorIds);
+
+    // Filter out relays that are not ok and only used by few authors
+    for(const [url, users] of sorted) {
+      if(!this.isRelayOk(url)) continue; // Skip relays that are not ok
+
+      let beforeSize = rest.size;
+      for(const authorId of users) {
+        rest.delete(authorId);
+      }
+
+      if(rest.size != beforeSize) {
+        result.push(url);
+      }
+
+      if(rest.size == 0 && result.length >= 3) break;
+    }
+
+    console.log("groupByInner - Authors:", authorIds, " - Relays:", result, " - rest-authors:", rest.size);
+
+    return result;
+  }
+
+
 
   getLastSync(relayData: RelayRecord[]): number {
     return min(relayData.map((r) => r.lastSync)) || EPOCH;
   }
+
+  increaseEventCount(url: string, now: number = Date.now()) {
+    let container = this.relayContainer(url);
+    container.record.eventCount++;
+    container.record.lastActive = now;
+    this.save(container.record);
+  }
+
+  increaseTimeoutCount(url: string, now: number = Date.now()) {
+    let container = this.relayContainer(url);
+    container.record.timeoutCount++;
+    container.record.lastActive = now;
+    this.save(container.record);
+  }
+
+  setConnectionStatus(url: string, status: string, error?: string) {
+    let container = this.relayContainer(url);
+    container.record.connectionStatus = status;
+    container.record.connectionError = error || '';
+    this.save(container.record);
+  }
+
 
   async load(): Promise<void> {
     let records = await this.table.toArray();
@@ -362,14 +458,6 @@ class ServerManager {
     return this.metrics;
   }
 
-  // #getRelayData(relay: string) : RelayMetadata {
-  //     let relayData = this.relays.get(relay);
-  //     if(!relayData) {
-  //         relayData = new RelayMetadata();
-  //         this.relays.set(relay, relayData);
-  //     }
-  //     return relayData;
-  // }
 }
 
 const serverManager = new ServerManager();
@@ -399,31 +487,3 @@ const SEARCH_RELAYS = [
   'wss://nostr.novacisko.cz',
 ];
 
-// urlCount = 0;
-// urlId: Map<string, number> = new Map();
-// urlLookup: Map<number, string> = new Map();
-// sourceRelays: Map<UID, Set<number>> = new Map(); // Event Id, Relay Ids. Possible source relays for the event id, used to specify the relay to use when querying for the event
-
-// addRelayUrl(url: string) : number {
-//     if(this.urlId.has(url))
-//         return this.urlId.get(url) || 0;
-
-//     const id = ++this.urlCount;
-//     this.urlLookup.set(id, url);
-//     this.urlId.set(url, id);
-//     return id;
-// }
-
-// getRelayUrl(id: number) : string {
-//     return this.urlLookup.get(id) || '';
-// }
-
-// getRelayId(url: string) : number {
-//     return this.urlId.get(url) || 0;
-// }
-
-// addSourceRelay(eventId: UID, relayId: number) {
-//     if(!this.sourceRelays.has(eventId))
-//         this.sourceRelays.set(eventId, new Set());
-//     this.sourceRelays.get(eventId)?.add(relayId);
-// }

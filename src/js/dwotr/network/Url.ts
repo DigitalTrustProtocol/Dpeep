@@ -15,6 +15,15 @@ export class Url {
     return ['wss:', 'ws:'].includes(protocol);
   }
 
+  public static isOnion(hostname: string) {
+    if(hostname.endsWith('.onion')) return true;
+    if(hostname.endsWith('.local')) return true;
+    return false;
+  }
+    
+  
+
+
   public static sanitize(urlString: string) : string |undefined {
     try {
       const url = new URL(urlString?.trim());
@@ -29,6 +38,7 @@ export class Url {
       if(hostname.startsWith('127.')) return true;
       if(hostname.startsWith('192.168.')) return true;
       if(hostname.startsWith('10.')) return true;
+      if(hostname.startsWith('100.')) return true;
       if(hostname.startsWith('172.')) {
         let parts = hostname.split('.');
         if(parts.length != 4) return false;
@@ -37,6 +47,13 @@ export class Url {
       }
     return false;
   }
+
+  public static isValidPort(port: string) {
+    if(!port || port == "80" || port == "443") return true;
+    return false;
+  }
+
+  
 
 
 
@@ -55,9 +72,9 @@ export class Url {
     if(typeof urls == 'string') urls = [urls];
     let normalized: Set<string> = new Set<string>();
     for(const url in urls) {
-      let n = Url.normalize(url);
+      let n = Url.normalizeRelay(url);
       if(!n) continue; // invalid url, empty string, etc.
-      normalized.add(url.toString().replace(/\/$/, ''));
+      normalized.add(url);
     }
     return [...normalized]; // return as array filtering out duplicates
   }
@@ -67,9 +84,13 @@ export class Url {
     if(!relay) return;
     let url = Url.normalize(relay);
     if(!url) return;
+    if(url.indexOf("%20wss/") > -1) url = url.replace("%20wss/", "");
     let urlInstance = new URL(url);
     if(!Url.isWebSocket(urlInstance.protocol)) return; // Not a websocket
     if(Url.isLocal(urlInstance.hostname)) return; // Local
+    if(Url.isOnion(urlInstance.hostname)) return; // Tor not supported yet
+    if(!Url.isValidPort(urlInstance.port)) return; // Invalid port
+    url = url.toString().replace(/\/$/, ''); // Remove trailing slash
     return url;
   }
 

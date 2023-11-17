@@ -60,16 +60,22 @@ const FeedInfinity = ({ feedOption }: FeedProps) => {
   return (
     <div class="flex flex-col">
       <div style={{ height: `${topHeight}px` }} />
-      {items && items.map((item) => {
-        let id = containers[item.index]?.id;
-        if (id == undefined) return null;
-        return (
-          <div key={id} data-index={item.index} ref={measureRef} style={{ minHeight: item.height }}>
-            <EventComponent id={id} showReplies={feedOption?.showReplies} />
-            <hr className="opacity-10 mb-2 mt-2" />
-          </div>
-        );
-      })}
+      {items &&
+        items.map((item) => {
+          let id = containers[item.index]?.id;
+          if (id == undefined) return null;
+          return (
+            <div
+              key={id}
+              data-index={item.index}
+              ref={measureRef}
+              style={{ minHeight: item.height }}
+            >
+              <EventComponent id={id} showReplies={feedOption?.showReplies} />
+              <hr className="opacity-10 mb-2 mt-2" />
+            </div>
+          );
+        })}
       <div style={{ height: `${bottomHeight}px` }} />
       {status == 'loading' && (
         <div className="justify-center items-center flex w-full mt-4 mb-4">
@@ -87,8 +93,7 @@ const FeedInfinity = ({ feedOption }: FeedProps) => {
         </p>
       )}
       {hasNew && <ShowNewEvents onClick={loadNew} />}
-
-      </div>
+    </div>
   );
 };
 
@@ -179,7 +184,6 @@ const useInfiniteScroll = ({
       inViewItems.push(item);
     }
 
-
     if (inViewItemsChanged) {
       setItems(inViewItems);
       // Update the heights of the empty div space above and below the items
@@ -191,7 +195,7 @@ const useInfiniteScroll = ({
       return; // No items in view, exit method
     }
 
-    let itemIndex = itemCount > loadMoreWithin ? itemCount - loadMoreWithin: itemCount;
+    let itemIndex = itemCount > loadMoreWithin ? itemCount - loadMoreWithin : itemCount;
     let lastItem = getItem(itemIndex - 1);
 
     if (lastItem.inView && !newItems) {
@@ -242,12 +246,12 @@ const useInfiniteScroll = ({
       for (let entry of entries) {
         let node = entry.target as HTMLElement;
         let index = node.getAttribute('data-index') || 0;
-
+        
         const { height } = entry.contentRect;
 
         let item = getItem(Number(index));
         if (item.height < height) {
-          item.top = node.offsetTop;
+          item.top = node.offsetTop; // May not be accurate
           item.height = height;
         }
       }
@@ -264,19 +268,10 @@ const useInfiniteScroll = ({
       const index = node.getAttribute('data-index');
       if (index == null) return;
 
-      const { height } = node.getBoundingClientRect();
-
-      let item = getItem(Number(index));
-      if (item.height < height) {
-        item.top = node.offsetTop;
-        item.height = height;
-      }
-
       // Handles images, videos, etc that change the height of the item asynchronously
       observer.current?.observe(node);
 
       return () => {
-        if (!node) return;
         observer.current?.unobserve(node);
       };
     },

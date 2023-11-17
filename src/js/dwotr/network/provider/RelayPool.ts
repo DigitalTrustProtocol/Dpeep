@@ -10,6 +10,8 @@ import {
   type SubscriptionOptions,
 } from 'nostr-tools';
 import { normalizeURL } from 'nostr-tools/utils';
+import { Url } from '../Url';
+import serverManager from '@/dwotr/ServerManager';
 
 type BatchedRequest = {
   filters: Filter<any>[];
@@ -18,12 +20,6 @@ type BatchedRequest = {
   events: Event<any>[];
 };
 
-type RelayMetadata = Relay & {
-  slowCount: number;
-  eventCount: number;
-  connectionFailure: boolean;
-  message: string;
-};
 
 // From nostr tools simple pool
 // Modified for relay optimizations, e.g. filtering out slow relays etc.
@@ -39,6 +35,8 @@ export default class RelayPool {
   public seenOn: { [id: string]: Set<string> } = {}; // a map of all events we've seen in each relay
 
   public slowRelays: Map<string, number> = new Map();
+
+  public logging = false;
 
   constructor(
     options: {
@@ -72,10 +70,6 @@ export default class RelayPool {
         countTimeout: this.getTimeout * 0.9,
       });
 
-      let metadata = relay as RelayMetadata;
-      metadata.slowCount = 0;
-      metadata.eventCount = 0;
-
       this.relayInstances[url] = relay;
     }
 
@@ -95,8 +89,28 @@ export default class RelayPool {
     });
   }
 
-  removeSlowRelays(relays: string[]): string[] {
-    return relays.filter((url) => ((this.relayInstances[url] as RelayMetadata).slowCount || 0) < 3); // remove relays that have been marked as slow more than 3 times
+  // Remove slow relays from array
+  removeBadRelays(relays: string[]): string[] {
+    let filteredRelays: string[] = [];
+    for(let url of relays) {
+      let container = serverManager.relayContainer(url);
+      if(container.record.connectionStatus == 'error') continue;
+      if(container.record.timeoutCount < 3) 
+        filteredRelays.push(url);
+    }
+    return filteredRelays;
+  }
+
+  #relayFilter(relays: string[]): string[] {
+    if (relays.length > 0) {
+      relays = (relays.map(Url.normalizeRelay).filter((url) => url as string) as string[]) || []; // normalize urls
+      relays = [...new Set(relays)]; // remove duplicates
+    } else {
+      relays = this.connectedRelays(); // if no relays are specified, use all connected relays
+    }
+    relays = this.removeBadRelays(relays || []); // remove slow/unresponsive relays
+
+    return relays;
   }
 
   sub<K extends number = number>(
@@ -107,14 +121,11 @@ export default class RelayPool {
     let _knownIds: Set<string> = new Set();
     let modifiedOpts = { ...(opts || {}) };
 
-    if (relays.length === 0) relays = this.connectedRelays(); // if no relays are specified, use all connected relays
-    relays = relays.map(normalizeURL); // normalize urls
-    relays = [...new Set(relays)]; // remove duplicates
-    relays = this.removeSlowRelays(relays); // remove slow/unresponsive relays
+    relays = this.#relayFilter(relays);
 
     modifiedOpts.alreadyHaveEvent = (id, url) => {
-      let relayInstance = this.relayInstances[url] as RelayMetadata;
-      if (relayInstance) relayInstance.eventCount++;
+
+      serverManager.increaseEventCount(url);
 
       if (opts?.alreadyHaveEvent?.(id, url)) return true;
 
@@ -139,11 +150,9 @@ export default class RelayPool {
       eoseTimeout = setTimeout(
         () => {
           eoseSent = true;
-          for(let url of eoseRelays) {
-            let relayInstance = this.relayInstances[url] as RelayMetadata;
-            if(!relayInstance) continue;
-            relayInstance.message = 'eose timeout';
-            relayInstance.slowCount += 1; // mark as slow
+          let now = Date.now();
+          for (let url of eoseRelays) {
+            serverManager.increaseTimeoutCount(url, now);
           }
 
           console.log(
@@ -162,7 +171,7 @@ export default class RelayPool {
       eoseRelays.delete(url);
       if (eoseRelays.size === 0) {
         if (eoseTimeout) clearTimeout(eoseTimeout);
-        console.log('eose - time in milisec:', Date.now() - startTimer);
+        //console.log('eose - time in milisec:', Date.now() - startTimer);
         for (let cb of eoseListeners.values()) cb(eoseRelays);
       }
     }
@@ -172,10 +181,9 @@ export default class RelayPool {
       try {
         relayInstance = await this.ensureRelay(relayUrl);
       } catch (err: any) {
-        let relayInstance = this.relayInstances[relayUrl] as RelayMetadata;
-        relayInstance.connectionFailure = true; // mark as connection failure
-        relayInstance.message = err?.message;
-        relayInstance.slowCount = 3; // mark as slow
+
+        serverManager.setConnectionStatus(relayUrl, 'error', err?.message);
+        
         handleEose(relayUrl);
         return;
       }
@@ -324,7 +332,4 @@ export default class RelayPool {
     });
   }
 
-  //   seenOn(id: string): string[] {
-  //     return Array.from(this.seenOn[id]?.values?.() || [])
-  //   }
 }

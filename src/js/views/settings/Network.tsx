@@ -34,7 +34,7 @@ const Network = () => {
       for (const url of allRelays) {
         let container = serverManager.relayContainer(url);
         let authorCount = container.recommendBy.size + container.referenceBy.size;
-        let eventCount = container.eventCount;
+        let eventCount = container.record.eventCount;
         result.push({ url, authorCount, eventCount });
       }
   

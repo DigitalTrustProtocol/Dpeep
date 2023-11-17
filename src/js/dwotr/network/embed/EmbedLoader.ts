@@ -1,12 +1,13 @@
 import { Event, Filter } from 'nostr-tools';
-import { STR, UID } from '@/utils/UniqueIds';
+import { ID, STR, UID } from '@/utils/UniqueIds';
 import relaySubscription from '../RelaySubscription';
-import { DisplayKinds, MetadataKind } from '../provider';
+import { ContactsKind, DisplayKinds, MetadataKind, RelayListKind } from '../provider';
 import { Events } from '../types';
 import { EventContainer } from '@/dwotr/model/ContainerTypes';
 import eventManager from '@/dwotr/EventManager';
 import { EmbedProcessor } from './EmbedProcessor';
 import { EmbedData } from '.';
+import serverManager from '@/dwotr/ServerManager';
 
 
 
@@ -85,25 +86,37 @@ export class EmbedLoader {
     return embeds;
   }
 
-  async #load(embeds: EmbedData): Promise<Events> {
+  async #load(embedData: EmbedData): Promise<Events> {
 
-    let eventsLoaded = await this.#loadEvents(embeds);
-    let profilesLoaded = await this.#loadProfiles(embeds);
+    // Load profiles first, so we can get the relays the profiles uses
+    let profilesLoaded = await this.#loadProfiles(embedData);
+
+    let eventsLoaded = await this.#loadEvents(embedData);
 
     return [...eventsLoaded, ...profilesLoaded];
   }
 
 
-  async #loadEvents(embeds: EmbedData) : Promise<Events> {
+  async #loadEvents(embedData: EmbedData) : Promise<Events> {
 
-    let items = [...embeds.events.values()];
+    let items = [...embedData.events.values()];
 
     let events: Events = [];
     let filter = { kinds: DisplayKinds } as Filter;
     filter.ids = items.filter((item) => item?.id).map((item) => item.id!) as string[]; 
 
     if(filter.ids.length == 0) return events;
-    let relays = embeds.getEventRelays();
+    let relays = embedData.getEventRelays(); // Get relays embedded in the events
+
+    // Get relays from the authors in events
+    let authorIds = [...embedData.authors.keys()].map((str) => ID(str));
+    let authorRelays = serverManager.relaysByAuthors(authorIds);
+
+    if(this.logging && (relays?.length > 0 || authorRelays.length > 0))
+      console.log("EmbedLoader:loadEvents:Relays:", relays, " - AuthorRelays:", authorRelays);
+
+    // Combine relays in the events with the relays from authors in the events
+    relays = [...relays, ...authorRelays];
     
     const cb = (event: Event, _afterEose: boolean, _url: string | undefined) => {
       events.push(event);
@@ -115,15 +128,18 @@ export class EmbedLoader {
     return events;
   }
 
-  async #loadProfiles(embeds: EmbedData) : Promise<Events> {
+  async #loadProfiles(embedData: EmbedData) : Promise<Events> {
     let events: Events = [];
-    let items = [...embeds.authors.values()];
+    let items = [...embedData.authors.values()];
 
-    let filter = { kinds: [MetadataKind] } as Filter;
+    let filter = { kinds: [MetadataKind, ContactsKind, RelayListKind] } as Filter; // Get all profile information and relays the profile is on
     filter.authors = items.filter((item) => item?.author).map((item) => item.author!) as string[];
 
     if(filter.authors.length == 0) return events;
-    let relays = embeds.getAuthorRelays();
+    let relays = embedData.getAuthorRelays(); // Get profiles from relays embedded in the events
+
+    if(this.logging && relays?.length > 0)
+      console.log("EmbedLoader:loadProfiles:Relays:", relays);
 
     const cb = (event: Event, _afterEose: boolean, _url: string | undefined) => {
       events.push(event);
@@ -135,6 +151,7 @@ export class EmbedLoader {
 
     return events;
   }
+
 
 }
 
