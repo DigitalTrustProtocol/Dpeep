@@ -39,8 +39,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
   const loadDB = async () => {
     setState((state: any) => ({ ...state, dbStatus: 'loading' }));
 
-    await serverManager.loadRelays(); // Load relays from local database
-    await serverManager.initializePool(); // Initialize relay pool, then load databases as relay servers are connected
+
     // Filtering events - blocks out unwanted events
     muteManager.load(); // Only me
     await eventDeletionManager.load(); 
@@ -59,6 +58,7 @@ const InitializeWoT = (props: InitializeWoTProps) => {
 
     // System events
     await serverManager.load();
+    await serverManager.initializePool(); // Initialize relay pool, then load databases as relay servers are connected
 
     console.log('loadDB done');
 

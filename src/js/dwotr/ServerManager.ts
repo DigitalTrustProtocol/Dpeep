@@ -8,7 +8,7 @@ import { Event, Relay, getEventHash, getSignature } from 'nostr-tools';
 import Key from '@/nostr/Key';
 import RelayPool from './network/provider/RelayPool';
 import { Url } from './network/Url';
-import { f } from 'vitest/dist/reporters-2ff87305.js';
+import followManager from './FollowManager';
 
 // NIP-65 - Each author has a read/write on a relay
 export type PublicRelaySettings = {
@@ -85,41 +85,25 @@ class ServerManager {
     this.pool = new RelayPool(this.poolOptions);
   }
 
-  async loadRelays() {
-    await this.load();
-
-    if (this.records.size === 0) {
-      let relays = DEFAULT_RELAYS;
-      for (const url of relays) {
-        this.addRecord(url);
-      }
-
-      let search = SEARCH_RELAYS;
-      for (const url of search) {
-        let init = new RelayRecord();
-        init.search = true;
-        let record = this.addRecord(url, init);
-        record.search = true;
-      }
-    }
-  }
 
   // Setup the pool with preferred and popular relays, and filter out unresponsive relays
   // Best when the relays data have been loaded from the database
   // This method should be called before any subscriptions are made, for best performance
-  async initializePool(): Promise<Relay> {
-    let containers = this.popularRelays();
+  async initializePool() {
+    let authorIds = followManager.getFollows(); // Get the authors that the user follows 
+    let urls = this.popularRelays(authorIds);
 
-    console.log('Initializing relay pool with', containers.length, 'relays');
-    let relays: any = [];
-    for (const container of containers) {
+    console.log('initializePool', urls);
+
+    let relays: Promise<void>[] = [];
+
+    for (let url of urls) {
+      //url = Url.normalizeRelay(url);
+      //if(!url) continue; // Invalid url, skip, could be a local url, onion, etc.
+
+      let container = this.relayContainer(url);
       if (!container.instance) {
 
-
-        let url = Url.normalizeRelay(container.record.url);
-        console.log('normalizeRelay to relay:', url);
-
-        if(!url) continue; // Invalid url, skip, could be a local url, onion, etc.
 
         container.instance = this.pool.createRelay(container.record.url); // Connecting to relay
         this.subscribeRelayStatus(container.instance); // Subscribe to relay status
@@ -150,7 +134,6 @@ class ServerManager {
       console.error(error);
       // Handle the timeout or other errors here
     }
-    return relays; // Return the relay containers that is trying to connect
   }
 
   async publish(event: Event) {
@@ -324,18 +307,22 @@ class ServerManager {
     return result;
   }
 
-  popularRelays(): Array<RelayContainer> {
-    if (this.records.size === 0) {
-      let relays = DEFAULT_RELAYS;
-      for (const url of relays) {
-        this.addRecord(url);
-      }
+  popularRelays(authorIds: Set<UID>): Array<string> {
+    
+    let result = this.preferredRelays(authorIds); // Get the preferred relays by the authors
+    if(result.length < this.maxConnectedRelays / 2) {
+      // Add some more relays, for better performance
+
+      let containers = this.allRelayContainers()
+        .filter((r) => r.record.enabled)
+        .sort((a, b) => b.record.eventCount - a.record.eventCount);
+
+      let extraRelays = containers.filter(this.isRelayOk).map((r) => r.record.url).slice(0, this.maxConnectedRelays);
+      let extraRelaysSet = new Set([...result, ...extraRelays]);
+      result = [...extraRelaysSet];
     }
 
-    let containers = this.allRelayContainers()
-      .filter((r) => r.record.enabled)
-      .sort((a, b) => b.record.eventCount - a.record.eventCount);
-    return containers;
+    return result;
   }
 
   getActiveRelays(extraRelays: string[] = []): Array<string> {
@@ -358,19 +345,19 @@ class ServerManager {
     //     result.add(url);
     //   }
     // }
-    let result = this.groupByInner(authorIds);
+    let result = this.preferredRelays(new Set(authorIds));
     return result;
   }
 
-  isRelayOk(url: string) {
-    let container = this.relayContainer(url);
+  isRelayOk(container: RelayContainer) {
+    if (!container.record.enabled) return false;
     if (container.record.connectionStatus == 'error') return false;
     if (container.record.timeoutCount >= 3) return false;
     return true;
   }
 
   // Get the relays that are used by the authors
-  groupByInner(authorIds: UID[]) : Array<string> {
+  preferredRelays(authorIds: Set<UID>) : Array<string> {
     let result: string[] = [];
     let relays = new Map<string, Set<UID>>();
 
@@ -394,7 +381,8 @@ class ServerManager {
 
     // Filter out relays that are not ok and only used by few authors
     for(const [url, users] of sorted) {
-      if(!this.isRelayOk(url)) continue; // Skip relays that are not ok
+      let container = this.relayContainer(url);
+      if(!this.isRelayOk(container)) continue; // Skip relays that are not ok
 
       let beforeSize = rest.size;
       for(const authorId of users) {
@@ -407,8 +395,6 @@ class ServerManager {
 
       if(rest.size == 0 && result.length >= 3) break;
     }
-
-    console.log("groupByInner - Authors:", authorIds, " - Relays:", result, " - rest-authors:", rest.size);
 
     return result;
   }
@@ -446,7 +432,23 @@ class ServerManager {
     for (let record of records) {
       this.records.set(record.url, record);
     }
+
+    if (this.records.size === 0) {
+      let relays = DEFAULT_RELAYS;
+      for (const url of relays) {
+        this.addRecord(url);
+      }
+
+      let search = SEARCH_RELAYS;
+      for (const url of search) {
+        let init = new RelayRecord();
+        init.search = true;
+        let record = this.addRecord(url, init);
+        record.search = true;
+      }
+    }
   }
+
 
   save(record: RelayRecord): void {
     this.table.save(record.url, record); // Save to the database, async in bulk
